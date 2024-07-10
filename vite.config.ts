@@ -6,12 +6,12 @@ export default defineConfig({
   build: {
     copyPublicDir: false,
     lib: {
-      entry: resolve(__dirname, "lib/main.ts"),
+      entry: resolve(__dirname, "lib/index.ts"),
       formats: ["es", "cjs"],
-      name: "@kinde/jwt-validator",
-      fileName: "jwt-validator",
+      name: "@kinde/js-utils",
+      fileName: "js-utils",
     },
-    target: "modules",
+    target: "esnext",
     outDir: "../dist",
     emptyOutDir: true,
   },
