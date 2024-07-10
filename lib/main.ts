@@ -32,13 +32,11 @@ export const generateAuthUrl = (
   type: IssuerRouteTypes = IssuerRouteTypes.login,
   options: LoginOptions,
 ): URL => {
-  console.log("generateAuthUrl", options);
-
   const authUrl = new URL(`${domain}/oauth2/auth`);
 
   const searchParams: Record<string, string> = {
     redirect_uri: sanitizeRedirect(options.callbackURL),
-    client_id: options.clientID,
+    client_id: options.clientId,
     response_type: options.responseType || "code",
     scope: options.scope.join(" "),
     state: options.state,
