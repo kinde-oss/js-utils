@@ -32,6 +32,7 @@ describe('mapLoginMethodParamsForUrl', () => {
       connectionId: 'conn123',
       redirectURL: 'https://example.com/',
       audience: 'audience123',
+      showCompleteScreen: true,
     };
     const expectedOutput = {
       login_hint: 'user@example.com',
@@ -39,7 +40,9 @@ describe('mapLoginMethodParamsForUrl', () => {
       connection_id: 'conn123',
       redirect_uri: 'https://example.com',
       audience: 'audience123',
-      scope: "email profile openid offline"
+      scope: "email profile openid offline",
+      show_complete_screen: 'true',
+
     };
     expect(mapLoginMethodParamsForUrl(options)).toEqual(expectedOutput);
   });

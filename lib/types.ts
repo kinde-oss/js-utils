@@ -17,6 +17,7 @@ export type LoginMethodParams = Pick<
   | "orgName"
   | "connectionId"
   | "redirectURL"
+  | "showCompleteScreen"
 >;
 
 export type LoginOptions = {
