@@ -27,9 +27,11 @@ export const mapLoginMethodParamsForUrl = (
     login_hint: options.loginHint,
     is_create_org: options.isCreateOrg?.toString(),
     connection_id: options.connectionId,
-    redirect_uri: options.redirectURL ? sanitizeRedirect(options.redirectURL) : undefined,
+    redirect_uri: options.redirectURL
+      ? sanitizeRedirect(options.redirectURL)
+      : undefined,
     audience: options.audience,
-    scope: options.scope?.join(" ") || 'email profile openid offline',
+    scope: options.scope?.join(" ") || "email profile openid offline",
     prompt: options.prompt,
     lang: options.lang,
     org_code: options.orgCode,
@@ -79,4 +81,3 @@ export const generateAuthUrl = (
   authUrl.search = new URLSearchParams(searchParams).toString();
   return authUrl;
 };
-

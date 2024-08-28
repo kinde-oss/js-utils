@@ -24,7 +24,7 @@ export type LoginOptions = {
   /** Audience to include in the token */
   audience?: string;
   /** Client ID of the application
-   * 
+   *
    * This can be found in the application settings in the Kinde dashboard
    */
   clientId: string;
@@ -38,7 +38,7 @@ export type LoginOptions = {
   codeChallengeMethod?: string;
   /**
    * Connection ID to use for the login
-   * 
+   *
    * This is found in the authentication settings in the Kinde dashboard
    */
   connectionId?: string;
@@ -52,7 +52,7 @@ export type LoginOptions = {
   lang?: string;
   /**
    * Login hint to use for the login
-   * 
+   *
    * This can be in one of the following formats:
    * - joe@blogs.com
    * - phone:+447700900000:gb
@@ -69,12 +69,12 @@ export type LoginOptions = {
   orgName?: string;
   /**
    * Prompt to use for the login
-   * 
+   *
    * This can be one of the following:
    * - login
    * - create
    * - none
-   * 
+   *
    */
   prompt: string;
   /**
@@ -83,13 +83,13 @@ export type LoginOptions = {
   redirectURL: string;
   /**
    * Response type to use for the login
-   * 
+   *
    * Kinde currently only supports `code`
    */
   responseType?: string;
   /**
    * Scopes to include in the token
-   * 
+   *
    * This can be one or more of the following:
    * - email
    * - profile
