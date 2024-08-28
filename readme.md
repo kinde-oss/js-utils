@@ -1,27 +1,31 @@
-# Kinde JWT validator
+# Kinde JS Utils
 
 ## Description
 
-Simple library to validate JWT tokens
+Collection of methods and helpers for usage interfacing with Kinde
 
 ## Installation
 
 ```bash
 # npm
-npm install @kinde/jwt-validator
+npm install @kinde/js-utils
 # yarn
-yarn add @kinde/jwt-validator
+yarn add @kinde/js-utils
 # pnpm
-pnpm install @kinde/jwt-validator
+pnpm install @kinde/js-utils
 ```
 
 ## Usage
 
-```js
-import { jwtValidator } from "@kinde/jwt-validator";
+### Methods
 
-const isValid: Boolean = jwtValidator("eyJhbGc...");
-```
+`base64UrlEncode` - creates a base64 encoding of a string
+
+`sanitizeRedirect` - removes any trailing spaces from end of redirect URL
+
+`mapLoginMethodParamsForUrl` - Maps all the login options to their relevant url query param
+
+`generateAuthUrl` - builds a authentication URL to redirect users to start auth flow
 
 ## Kinde documentation
 
