@@ -36,7 +36,7 @@ export const mapLoginMethodParamsForUrl = (
     lang: options.lang,
     org_code: options.orgCode,
     org_name: options.orgName,
-    show_complete_screen: options.showCompleteScreen?.toString(),
+    has_success_page: options.hasSuccessPage?.toString(),
   };
 
   Object.keys(translate).forEach(

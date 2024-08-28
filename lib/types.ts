@@ -17,7 +17,7 @@ export type LoginMethodParams = Pick<
   | "orgName"
   | "connectionId"
   | "redirectURL"
-  | "showCompleteScreen"
+  | "hasSuccessPage"
 >;
 
 export type LoginOptions = {
@@ -102,9 +102,9 @@ export type LoginOptions = {
    */
   state?: string;
   /**
-   * Whether to show the complete screen at the end of the flow, this is most useful when the callback is not a webpage.
+   * Whether to show the success screen at the end of the flow, this is most useful when the callback is not a webpage.
    */
-  showCompleteScreen?: boolean;
+  hasSuccessPage?: boolean;
 };
 
 export enum IssuerRouteTypes {
