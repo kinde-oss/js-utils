@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { base64UrlEncode, sanitizeRedirect, mapLoginMethodParamsForUrl, generateAuthUrl } from './main';
-import { LoginMethodParams, IssuerRouteTypes, LoginOptions, Scopes } from './types';
+import { base64UrlEncode, sanitizeRedirect, mapLoginMethodParamsForUrl, generateAuthUrl, Scopes, IssuerRouteTypes } from './index';
+import type { LoginMethodParams, LoginOptions } from './index';
 
 describe('base64UrlEncode', () => {
   it('should encode a string to base64 URL safe format', () => {
