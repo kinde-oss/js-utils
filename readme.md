@@ -27,6 +27,19 @@ pnpm install @kinde/js-utils
 
 `generateAuthUrl` - builds a authentication URL to redirect users to start auth flow
 
+### Session Managers
+
+exports `storageSettings` which can be used to configure the storage methods.
+
+```json
+{  
+  keyPrefix: "kinde-", // Prefix to be used on all storage items
+  maxLength: 2000, // Max length of storage block, will auto split into separate chunks if needed
+}
+```
+
+`MemoryStorage` - This holds the data in a simple memory store
+
 ## Kinde documentation
 
 [Kinde Documentation](https://kinde.com/docs/) - Explore the Kinde docs
