@@ -1,3 +1,4 @@
+import { stat } from "fs";
 import { IssuerRouteTypes, LoginMethodParams, LoginOptions } from "./types";
 
 /**
@@ -65,9 +66,10 @@ export const generateAuthUrl = (
     ...mapLoginMethodParamsForUrl(options),
   };
 
-  if (options.state) {
-    searchParams["state"] = options.state;
+  if (options.state.length < 8) {
+    throw new Error("State must be at least 8 characters long");
   }
+  searchParams["state"] = options.state;
 
   if (options.codeChallenge) {
     searchParams["code_challenge"] = options.codeChallenge;

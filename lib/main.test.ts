@@ -5,8 +5,8 @@ import {
   mapLoginMethodParamsForUrl,
   generateAuthUrl,
   Scopes,
-  IssuerRouteTypes,
 } from "./index";
+import { IssuerRouteTypes } from "./types";
 import type { LoginMethodParams, LoginOptions } from "./index";
 
 describe("base64UrlEncode", () => {
@@ -75,9 +75,10 @@ describe("generateAuthUrl", () => {
       redirectURL: "https://example.com",
       audience: "audience123",
       prompt: "login",
+      state: "state123",
     };
     const expectedUrl =
-      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&login_hint=user%40example.com&is_create_org=true&connection_id=conn123&redirect_uri=https%3A%2F%2Fexample.com&audience=audience123&scope=openid+profile&prompt=login";
+      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&login_hint=user%40example.com&is_create_org=true&connection_id=conn123&redirect_uri=https%3A%2F%2Fexample.com&audience=audience123&scope=openid+profile&prompt=login&state=state123";
 
     const result = generateAuthUrl(domain, IssuerRouteTypes.login, options);
     expect(result.toString()).toBe(expectedUrl);
@@ -109,9 +110,10 @@ describe("generateAuthUrl", () => {
       scope: [Scopes.openid, Scopes.profile, Scopes.offline_access],
       redirectURL: "https://example2.com",
       prompt: "create",
+      state: "state123",
     };
     const expectedUrl =
-      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&scope=openid+profile+offline_access&prompt=create";
+      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&scope=openid+profile+offline_access&prompt=create&state=state123";
 
     const result = generateAuthUrl(domain, IssuerRouteTypes.login, options);
     expect(result.toString()).toBe(expectedUrl);

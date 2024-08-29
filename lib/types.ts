@@ -100,7 +100,7 @@ export type LoginOptions = {
   /**
    * State to use for the login
    */
-  state?: string;
+  state: string;
   /**
    * Whether to show the success screen at the end of the flow, this is most useful when the callback is not a webpage.
    */
