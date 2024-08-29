@@ -1,6 +1,12 @@
 {
   "name": "@kinde/js-utils",
   "private": false,
+  "description": "Selection of JavaScript utilities for integrating with Kinde",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kinde-oss/js-utils.git"
+  },
+  "license": "MIT",
   "type": "module",
   "files": [
     "dist"
