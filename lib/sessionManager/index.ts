@@ -1,8 +1,4 @@
-type StorageSettingsType = {
-  storePassword: string;
-  keyPrefix: string;
-  maxLength: number;
-};
+import { StorageSettingsType } from "./types.ts";
 
 export const storageSettings: StorageSettingsType = {
   /**
