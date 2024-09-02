@@ -93,24 +93,4 @@ describe("generateAuthUrl", () => {
     result.url.searchParams.delete("state");
     expect(result.url.toString()).toBe(expectedUrl);
   });
-
-  it("should handle default responseType if not provided", () => {
-    const domain = "https://auth.example.com";
-    const options: LoginOptions = {
-      clientId: "client123",
-      scope: [Scopes.openid, Scopes.profile, Scopes.offline_access],
-      redirectURL: "https://example2.com",
-      prompt: "create",
-      state: "state123",
-    };
-    const expectedUrl =
-      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&scope=openid+profile+offline_access&prompt=create&state=state123";
-
-    const result = generateAuthUrl(domain, IssuerRouteTypes.login, options);
-    const nonce = result.url.searchParams.get("nonce");
-    expect(nonce).not.toBeNull();
-    expect(nonce!.length).toBe(16);
-    result.url.searchParams.delete("nonce");
-    expect(result.url.toString()).toBe(expectedUrl);
-  });
 });

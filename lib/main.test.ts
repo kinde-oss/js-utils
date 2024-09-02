@@ -4,7 +4,7 @@ import * as types from "./types";
 import * as utils from "./utils";
 import * as sessionManager from "./sessionManager";
 
-describe.only("index exports", () => {
+describe("index exports", () => {
   it("should export everything from types", () => {
     Object.keys(types).forEach((key) => {
       expect(index).toHaveProperty(key);
