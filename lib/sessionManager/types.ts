@@ -9,10 +9,10 @@ export enum StorageKeys {
   accessToken = "accessToken",
   idToken = "idToken",
   refreshToken = "refreshToken",
+  state = "state",
 }
 
 export type StorageSettingsType = {
-  storePassword: string;
   keyPrefix: string;
   maxLength: number;
 };
