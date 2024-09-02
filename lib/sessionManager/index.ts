@@ -2,10 +2,6 @@ import { StorageSettingsType } from "./types.ts";
 
 export const storageSettings: StorageSettingsType = {
   /**
-   * The password to encrypt the store. (cookies only)
-   */
-  storePassword: "",
-  /**
    * The prefix to use for the storage keys.
    */
   keyPrefix: "kinde-",
@@ -18,4 +14,5 @@ export const storageSettings: StorageSettingsType = {
 };
 
 export { MemoryStorage } from "./stores/memory.js";
+export { ChromeStore } from "./stores/chromeStore.js";
 export * from "./types.ts";
