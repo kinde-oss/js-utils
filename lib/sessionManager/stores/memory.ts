@@ -27,11 +27,16 @@ export class MemoryStorage<V = StorageKeys> implements SessionManager<V> {
     itemKey: V | StorageKeys,
     itemValue: unknown,
   ): Promise<void> {
+    // clear items first
+    await this.removeSessionItem(itemKey);
+
     if (typeof itemValue === "string") {
-      splitString(itemValue, storageSettings.maxLength).forEach((_, index) => {
-        this.memCache[`${storageSettings.keyPrefix}${itemKey}${index}`] =
-          itemValue;
-      });
+      splitString(itemValue, storageSettings.maxLength).forEach(
+        (splitValue, index) => {
+          this.memCache[`${storageSettings.keyPrefix}${itemKey}${index}`] =
+            splitValue;
+        },
+      );
       return;
     }
     this.memCache[`${storageSettings.keyPrefix}${String(itemKey)}0`] =

@@ -42,7 +42,7 @@ exports `storageSettings` which can be used to configure the storage methods.
 }
 ```
 
-#### Session storage types.
+#### Session storage types
 
 `MemoryStorage` - This holds the data in a simple memory store
 

@@ -2,11 +2,11 @@ import { storageSettings } from "../index.js";
 import { StorageKeys, type SessionManager } from "../types.js";
 import { splitString } from "../utils.js";
 
-function getStorageValue(key: string) {
+function getStorageValue(key: string): unknown | undefined {
   return new Promise((resolve, reject) => {
     chrome.storage.local.get([key], function (result) {
       if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
+        reject(undefined);
       } else {
         resolve(result[key]);
       }
@@ -37,11 +37,14 @@ export class ChromeStore<V = StorageKeys> implements SessionManager<V> {
     itemKey: V | StorageKeys,
     itemValue: unknown,
   ): Promise<void> {
+    // clear items first
+    await this.removeSessionItem(itemKey);
+
     if (typeof itemValue === "string") {
       splitString(itemValue, storageSettings.maxLength).forEach(
-        async (_, index) => {
+        async (splitValue, index) => {
           await chrome.storage.local.set({
-            [`${storageSettings.keyPrefix}${itemKey}${index}`]: itemValue,
+            [`${storageSettings.keyPrefix}${itemKey}${index}`]: splitValue,
           });
         },
       );
@@ -83,11 +86,11 @@ export class ChromeStore<V = StorageKeys> implements SessionManager<V> {
     // remove items from the chrome.storage
     let index = 0;
     while (
-      chrome.storage.local.get(
+      (await getStorageValue(
         `${storageSettings.keyPrefix}${String(itemKey)}${index}`,
-      ) !== undefined
+      )) !== undefined
     ) {
-      chrome.storage.local.remove(
+      await chrome.storage.local.remove(
         `${storageSettings.keyPrefix}${String(itemKey)}${index}`,
       );
       index++;
