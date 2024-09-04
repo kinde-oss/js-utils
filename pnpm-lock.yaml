@@ -8,6 +8,9 @@ devDependencies:
   '@eslint/js':
     specifier: ^9.9.1
     version: 9.9.1
+  '@types/chrome':
+    specifier: ^0.0.270
+    version: 0.0.270
   '@types/node':
     specifier: ^22.5.1
     version: 22.5.1
@@ -665,8 +668,29 @@ packages:
     resolution: {integrity: sha512-ebDJ9b0e702Yr7pWgB0jzm+CX4Srzz8RcXtLJDJB+BSccqMa36uyH/zUsSYao5+BD1ytv3k3rPYCq4mAE1hsXA==}
     dev: true
 
+  /@types/chrome@0.0.270:
+    resolution: {integrity: sha512-ADvkowV7YnJfycZZxL2brluZ6STGW+9oKG37B422UePf2PCXuFA/XdERI0T18wtuWPx0tmFeZqq6MOXVk1IC+Q==}
+    dependencies:
+      '@types/filesystem': 0.0.36
+      '@types/har-format': 1.2.15
+    dev: true
+
   /@types/estree@1.0.5:
     resolution: {integrity: sha512-/kYRxGDLWzHOB7q+wtSUQlFrtcdUccpfy+X+9iMBpHK8QLLhx2wIPYuS5DYtR9Wa/YlZAbIovy7qVdB1Aq6Lyw==}
+    dev: true
+
+  /@types/filesystem@0.0.36:
+    resolution: {integrity: sha512-vPDXOZuannb9FZdxgHnqSwAG/jvdGM8Wq+6N4D/d80z+D4HWH+bItqsZaVRQykAn6WEVeEkLm2oQigyHtgb0RA==}
+    dependencies:
+      '@types/filewriter': 0.0.33
+    dev: true
+
+  /@types/filewriter@0.0.33:
+    resolution: {integrity: sha512-xFU8ZXTw4gd358lb2jw25nxY9QAgqn2+bKKjKOYfNCzN4DKCFetK7sPtrlpg66Ywe3vWY9FNxprZawAh9wfJ3g==}
+    dev: true
+
+  /@types/har-format@1.2.15:
+    resolution: {integrity: sha512-RpQH4rXLuvTXKR0zqHq3go0RVXYv/YVqv4TnPH95VbwUxZdQlK1EtcMvQvMpDngHbt13Csh9Z4qT9AbkiQH5BA==}
     dev: true
 
   /@types/node@22.5.1:

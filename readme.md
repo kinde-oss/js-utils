@@ -27,6 +27,10 @@ pnpm install @kinde/js-utils
 
 `generateAuthUrl` - builds a authentication URL to redirect users to start auth flow
 
+`extractAuthResults` - Extracts tokens and expiry from implcit flow response
+
+`generateRandomString` - Generates a random sring of a defined length
+
 ### Session Managers
 
 exports `storageSettings` which can be used to configure the storage methods.
@@ -38,7 +42,11 @@ exports `storageSettings` which can be used to configure the storage methods.
 }
 ```
 
+#### Session storage types
+
 `MemoryStorage` - This holds the data in a simple memory store
+
+`ChromeStore` - This holds the data in chrome.store.local for use with Google Chrome extensions.
 
 ## Kinde documentation
 

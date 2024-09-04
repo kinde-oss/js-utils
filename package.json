@@ -14,7 +14,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.1.0",
+  "version": "0.2.0-12",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -26,9 +26,10 @@
   },
   "module": "dist/js-utils.js",
   "main": "dist/js-utils.cjs",
-  "types": "dist/index.d.ts",
+  "types": "dist/main.d.ts",
   "devDependencies": {
     "@eslint/js": "^9.9.1",
+    "@types/chrome": "^0.0.270",
     "@types/node": "^22.5.1",
     "@vitest/coverage-v8": "^2.0.5",
     "eslint": "^9.9.1",

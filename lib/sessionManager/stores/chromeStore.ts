@@ -2,19 +2,29 @@ import { storageSettings } from "../index.js";
 import { StorageKeys, type SessionManager } from "../types.js";
 import { splitString } from "../utils.js";
 
+function getStorageValue(key: string): unknown | undefined {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get([key], function (result) {
+      if (chrome.runtime.lastError) {
+        reject(undefined);
+      } else {
+        resolve(result[key]);
+      }
+    });
+  });
+}
+
 /**
  * Provides a memory based session manager implementation for the browser.
- * @class MemoryStorage
+ * @class ChromeStore
  */
-export class MemoryStorage<V = StorageKeys> implements SessionManager<V> {
-  private memCache: Record<string, unknown> = {};
-
+export class ChromeStore<V = StorageKeys> implements SessionManager<V> {
   /**
    * Clears all items from session store.
    * @returns {void}
    */
   async destroySession(): Promise<void> {
-    this.memCache = {};
+    await chrome.storage.local.clear();
   }
 
   /**
@@ -32,15 +42,17 @@ export class MemoryStorage<V = StorageKeys> implements SessionManager<V> {
 
     if (typeof itemValue === "string") {
       splitString(itemValue, storageSettings.maxLength).forEach(
-        (splitValue, index) => {
-          this.memCache[`${storageSettings.keyPrefix}${itemKey}${index}`] =
-            splitValue;
+        async (splitValue, index) => {
+          await chrome.storage.local.set({
+            [`${storageSettings.keyPrefix}${itemKey}${index}`]: splitValue,
+          });
         },
       );
       return;
     }
-    this.memCache[`${storageSettings.keyPrefix}${String(itemKey)}0`] =
-      itemValue;
+    await chrome.storage.local.set({
+      [`${storageSettings.keyPrefix}${itemKey}0`]: itemValue,
+    });
   }
 
   /**
@@ -49,18 +61,15 @@ export class MemoryStorage<V = StorageKeys> implements SessionManager<V> {
    * @returns {unknown | null}
    */
   async getSessionItem(itemKey: V | StorageKeys): Promise<unknown | null> {
-    if (
-      this.memCache[`${storageSettings.keyPrefix}${String(itemKey)}0`] ===
-      undefined
-    ) {
-      return null;
-    }
-
     let itemValue = "";
     let index = 0;
     let key = `${storageSettings.keyPrefix}${String(itemKey)}${index}`;
-    while (this.memCache[key] !== undefined) {
-      itemValue += this.memCache[key];
+    while (
+      (await getStorageValue(
+        `${storageSettings.keyPrefix}${String(itemKey)}${index}`,
+      )) !== undefined
+    ) {
+      itemValue += await getStorageValue(key);
       index++;
       key = `${storageSettings.keyPrefix}${String(itemKey)}${index}`;
     }
@@ -74,11 +83,17 @@ export class MemoryStorage<V = StorageKeys> implements SessionManager<V> {
    * @returns {void}
    */
   async removeSessionItem(itemKey: V | StorageKeys): Promise<void> {
-    // Remove all items with the key prefix
-    for (const key in this.memCache) {
-      if (key.startsWith(`${storageSettings.keyPrefix}${String(itemKey)}`)) {
-        delete this.memCache[key];
-      }
+    // remove items from the chrome.storage
+    let index = 0;
+    while (
+      (await getStorageValue(
+        `${storageSettings.keyPrefix}${String(itemKey)}${index}`,
+      )) !== undefined
+    ) {
+      await chrome.storage.local.remove(
+        `${storageSettings.keyPrefix}${String(itemKey)}${index}`,
+      );
+      index++;
     }
   }
 }
