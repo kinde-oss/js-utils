@@ -15,7 +15,7 @@ function getStorageValue(key: string): unknown | undefined {
 }
 
 /**
- * Provides a memory based session manager implementation for the browser.
+ * Provides a chrome.store.local based session manager implementation for the browser.
  * @class ChromeStore
  */
 export class ChromeStore<V = StorageKeys> implements SessionManager<V> {
@@ -28,7 +28,7 @@ export class ChromeStore<V = StorageKeys> implements SessionManager<V> {
   }
 
   /**
-   * Sets the provided key-value store to the memory cache.
+   * Sets the provided key-value store to the chrome.store.local.
    * @param {string} itemKey
    * @param {unknown} itemValue
    * @returns {void}
@@ -56,7 +56,7 @@ export class ChromeStore<V = StorageKeys> implements SessionManager<V> {
   }
 
   /**
-   * Gets the item for the provided key from the memory cache.
+   * Gets the item for the provided key from the chrome.store.local cache.
    * @param {string} itemKey
    * @returns {unknown | null}
    */
@@ -78,7 +78,7 @@ export class ChromeStore<V = StorageKeys> implements SessionManager<V> {
   }
 
   /**
-   * Removes the item for the provided key from the memory cache.
+   * Removes the item for the provided key from the chrome.store.local cache.
    * @param {string} itemKey
    * @returns {void}
    */
