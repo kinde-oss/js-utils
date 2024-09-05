@@ -10,6 +10,7 @@ export enum StorageKeys {
   idToken = "idToken",
   refreshToken = "refreshToken",
   state = "state",
+  nonce = "nonce",
 }
 
 export type StorageSettingsType = {
