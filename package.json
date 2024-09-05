@@ -32,6 +32,7 @@
     "@types/chrome": "^0.0.270",
     "@types/node": "^22.5.1",
     "@vitest/coverage-v8": "^2.0.5",
+    "@vitejs/plugin-react": "^4.3.1",
     "eslint": "^9.9.1",
     "globals": "^15.9.0",
     "prettier": "^3.3.3",
@@ -40,6 +41,9 @@
     "vite": "^5.4.2",
     "vite-plugin-dts": "^4.0.3",
     "vitest": "^2.0.5"
+  },
+  "optionalDependencies": {
+    "expo-secure-store": "*"
   },
   "packageManager": "pnpm@8.14.1+sha256.2df78e65d433d7693b9d3fbdaf431b2d96bb4f96a2ffecd51a50efe16e50a6a8"
 }

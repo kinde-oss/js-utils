@@ -48,6 +48,7 @@ describe("index exports", () => {
       "MemoryStorage",
       "ChromeStore",
       "storageSettings",
+      "ExpoSecureStore",
     ];
 
     expect(actualExports.sort()).toEqual(expectedExports.sort());

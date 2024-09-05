@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
 import dts from "vite-plugin-dts";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   build: {
@@ -14,9 +15,12 @@ export default defineConfig({
     target: "esnext",
     outDir: "../dist",
     emptyOutDir: true,
+    rollupOptions: {
+      external: ["react", "react-native"],
+    },
   },
   root: "lib",
   base: "",
   resolve: { alias: { src: resolve(__dirname, "./lib") } },
-  plugins: [dts({ insertTypesEntry: true, outDir: "../dist" })],
+  plugins: [dts({ insertTypesEntry: true, outDir: "../dist" }), react()],
 });
