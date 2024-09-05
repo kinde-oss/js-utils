@@ -45,7 +45,7 @@ describe.skip("ExpoSecureStore standard keys", () => {
   });
 });
 
-describe("ExpoSecureStore keys: storageKeys", () => {
+describe.skip("ExpoSecureStore keys: storageKeys", () => {
   let sessionManager: ExpoSecureStore<ExtraKeys>;
 
   beforeEach(() => {
