@@ -94,7 +94,7 @@ export class ExpoSecureStore<V = StorageKeys> implements SessionManager<V> {
       );
     }
 
-    return chunks.join("");
+    return chunks.join("") || null;
   }
 
   /**
