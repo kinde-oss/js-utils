@@ -7,7 +7,6 @@ let expoSecureStore: typeof import("expo-secure-store") | undefined = undefined;
 async function waitForExpoSecureStore() {
   let tries = 0;
   while (!expoSecureStore && tries < 20) {
-    console.log('waiting');
     await new Promise((resolve) => setTimeout(resolve, 100));
     tries++;
   }
