@@ -1,6 +1,37 @@
 # Changelog
 
 
+## 0.2.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.2.0...main)
+
+### 🚀 Enhancements
+
+- Add nonce to StorageKeys ([587a9f6](https://github.com/kinde-oss/js-utils/commit/587a9f6))
+- Add expo secure store session manager ([e86dd0f](https://github.com/kinde-oss/js-utils/commit/e86dd0f))
+- Add nonce external definition and remove redundant code random generator calls ([3010015](https://github.com/kinde-oss/js-utils/commit/3010015))
+
+### 🩹 Fixes
+
+- Make generateRandomString work when not crypto ([12bce7d](https://github.com/kinde-oss/js-utils/commit/12bce7d))
+- Ensure expo storage is loaded before using. ([7245aaa](https://github.com/kinde-oss/js-utils/commit/7245aaa))
+- Return null when item doesn't exist from expo store ([80d76c4](https://github.com/kinde-oss/js-utils/commit/80d76c4))
+- Error returning nonce and state ([3eb0cec](https://github.com/kinde-oss/js-utils/commit/3eb0cec))
+
+### 🏡 Chore
+
+- Correct js doc for chrome store ([925b8ba](https://github.com/kinde-oss/js-utils/commit/925b8ba))
+- Lint ([19b5f96](https://github.com/kinde-oss/js-utils/commit/19b5f96))
+- Remove console log ([b437cac](https://github.com/kinde-oss/js-utils/commit/b437cac))
+
+### ✅ Tests
+
+- Skip expo tests until mocked ([ae77939](https://github.com/kinde-oss/js-utils/commit/ae77939))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
 ## 0.1.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.1.0...main)
