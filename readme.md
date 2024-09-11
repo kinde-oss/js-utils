@@ -48,6 +48,8 @@ exports `storageSettings` which can be used to configure the storage methods.
 
 `ChromeStore` - This holds the data in chrome.store.local for use with Google Chrome extensions.
 
+`ExpoSecureStore` - Secure storage for Expo apps
+
 ## Kinde documentation
 
 [Kinde Documentation](https://kinde.com/docs/) - Explore the Kinde docs
