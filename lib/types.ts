@@ -17,7 +17,7 @@ export type LoginMethodParams = Pick<
   | "orgName"
   | "connectionId"
   | "redirectURL"
-  | "hasSuccessPage"  
+  | "hasSuccessPage"
 >;
 
 export type LoginOptions = {
