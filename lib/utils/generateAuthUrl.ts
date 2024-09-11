@@ -42,5 +42,9 @@ export const generateAuthUrl = (
   }
 
   authUrl.search = new URLSearchParams(searchParams).toString();
-  return { url: authUrl, state: generatedState, nonce: generatedNonce };
+  return {
+    url: authUrl,
+    state: searchParams["state"],
+    nonce: searchParams["nonce"],
+  };
 };
