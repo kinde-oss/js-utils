@@ -105,6 +105,10 @@ export type LoginOptions = {
    * Whether to show the success screen at the end of the flow, this is most useful when the callback is not a webpage.
    */
   hasSuccessPage?: boolean;
+  /**
+   * Single use code to prevent replay attacks
+   */
+  nonce?: string;
 };
 
 export enum IssuerRouteTypes {

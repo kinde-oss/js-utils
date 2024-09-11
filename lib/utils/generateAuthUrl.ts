@@ -22,11 +22,15 @@ export const generateAuthUrl = (
     ...mapLoginMethodParamsForUrl(options),
   };
 
-  const generatedState = generateRandomString(32);
-  const generatedNonce = generateRandomString(16);
+  if (!options.state) {
+    options.state = generateRandomString(32);
+  }
+  searchParams["state"] = options.state;
 
-  searchParams["state"] = options.state || generatedState;
-  searchParams["nonce"] = generatedNonce;
+  if (!options.nonce) {
+    options.nonce = generateRandomString(16);
+  }
+  searchParams["nonce"] = options.nonce;
 
   if (options.codeChallenge) {
     searchParams["code_challenge"] = options.codeChallenge;
@@ -38,5 +42,9 @@ export const generateAuthUrl = (
   }
 
   authUrl.search = new URLSearchParams(searchParams).toString();
-  return { url: authUrl, state: generatedState, nonce: generatedNonce };
+  return {
+    url: authUrl,
+    state: searchParams["state"],
+    nonce: searchParams["nonce"],
+  };
 };

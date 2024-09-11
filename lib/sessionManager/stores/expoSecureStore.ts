@@ -4,6 +4,14 @@ import { splitString } from "../utils.js";
 
 let expoSecureStore: typeof import("expo-secure-store") | undefined = undefined;
 
+async function waitForExpoSecureStore() {
+  let tries = 0;
+  while (!expoSecureStore && tries < 20) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    tries++;
+  }
+}
+
 /**
  * Provides a expo local store based session manager implementation for the browser.
  * @class ExpoSecureStore
@@ -42,6 +50,7 @@ export class ExpoSecureStore<V = StorageKeys> implements SessionManager<V> {
     itemKey: V | StorageKeys,
     itemValue: unknown,
   ): Promise<void> {
+    await waitForExpoSecureStore();
     // clear items first
     await this.removeSessionItem(itemKey);
 
@@ -66,6 +75,8 @@ export class ExpoSecureStore<V = StorageKeys> implements SessionManager<V> {
    * @returns {unknown | null}
    */
   async getSessionItem(itemKey: V | StorageKeys): Promise<unknown | null> {
+    await waitForExpoSecureStore();
+
     const chunks = [];
     let index = 0;
 
@@ -82,7 +93,7 @@ export class ExpoSecureStore<V = StorageKeys> implements SessionManager<V> {
       );
     }
 
-    return chunks.join("");
+    return chunks.join("") || null;
   }
 
   /**
@@ -91,6 +102,8 @@ export class ExpoSecureStore<V = StorageKeys> implements SessionManager<V> {
    * @returns {void}
    */
   async removeSessionItem(itemKey: V | StorageKeys): Promise<void> {
+    await waitForExpoSecureStore();
+
     let index = 0;
 
     let chunk = await expoSecureStore!.getItemAsync(
