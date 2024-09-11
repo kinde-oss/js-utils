@@ -22,11 +22,15 @@ export const generateAuthUrl = (
     ...mapLoginMethodParamsForUrl(options),
   };
 
-  const generatedState = generateRandomString(32);
-  const generatedNonce = generateRandomString(16);
+  if (!options.state) {
+    options.state = generateRandomString(32);
+  }
+  searchParams["state"] = options.state;
 
-  searchParams["state"] = options.state || generatedState;
-  searchParams["nonce"] = generatedNonce;
+  if (!options.nonce) {
+    options.nonce = generateRandomString(16);
+  }
+  searchParams["nonce"] = options.nonce;
 
   if (options.codeChallenge) {
     searchParams["code_challenge"] = options.codeChallenge;
