@@ -61,7 +61,7 @@ describe("generateAuthUrl", () => {
       state: "state123",
     };
     const expectedUrl =
-      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&scope=openid+profile+offline_access&prompt=create&state=state123";
+      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&scope=openid+profile+offline&prompt=create&state=state123";
 
     const result = generateAuthUrl(domain, IssuerRouteTypes.login, options);
     const nonce = result.url.searchParams.get("nonce");
@@ -80,7 +80,7 @@ describe("generateAuthUrl", () => {
       prompt: "create",
     };
     const expectedUrl =
-      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&scope=openid+profile+offline_access&prompt=create";
+      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&scope=openid+profile+offline&prompt=create";
 
     const result = generateAuthUrl(domain, IssuerRouteTypes.login, options);
     const nonce = result.url.searchParams.get("nonce");
