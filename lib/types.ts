@@ -2,7 +2,7 @@ export enum Scopes {
   email = "email",
   profile = "profile",
   openid = "openid",
-  offline_access = "offline_access",
+  offline_access = "offline",
 }
 
 export type LoginMethodParams = Pick<
