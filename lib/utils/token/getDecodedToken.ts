@@ -15,14 +15,11 @@ export const getDecodedToken = async <
   tokenType: "accessToken" | "idToken" = "accessToken",
 ): Promise<T | null> => {
   const activeStorage = getActiveStorage();
-  if (!activeStorage) {
-    throw new Error("Session manager is not initialized");
-  }
 
   const token = (await activeStorage.getSessionItem(
     tokenType === "accessToken" ? StorageKeys.accessToken : StorageKeys.idToken,
   )) as string;
-  console.log("token", token);
+
   if (!token) {
     return null;
   }

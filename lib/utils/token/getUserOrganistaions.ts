@@ -1,4 +1,4 @@
-import { getDecodedToken } from "./getDecodedToken";
+import { getDecodedToken } from ".";
 
 /**
  * Gets all the code of the organizations the user belongs to.
