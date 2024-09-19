@@ -9,6 +9,7 @@ describe("getFlag", () => {
   beforeEach(() => {
     setActiveStorage(storage);
   });
+
   it("when no token", async () => {
     await storage.setSessionItem(StorageKeys.idToken, null);
     const idToken = await getFlag("test");

@@ -2,8 +2,8 @@ import { createHmac } from "crypto";
 
 export const createMockAccessToken = (values = {}) => {
   const header = {
-    alg: "HS256", // Algorithm (HMAC with SHA-256)
-    typ: "JWT", // Type
+    alg: "HS256",
+    typ: "JWT",
   };
   const payload = {
     aud: [],

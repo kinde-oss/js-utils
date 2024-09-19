@@ -1,5 +1,5 @@
 import { JWTDecoded } from "@kinde/jwt-decoder";
-import { getDecodedToken } from "./getDecodedToken";
+import { getClaims } from "./getClaims";
 
 /**
  *
@@ -12,7 +12,7 @@ export const getClaim = async <T = JWTDecoded, V = string | number | string[]>(
   name: keyof T;
   value: V;
 } | null> => {
-  const claims = await getDecodedToken<T>("accessToken");
+  const claims = await getClaims<T>();
   if (!claims) {
     return null;
   }

@@ -1,4 +1,4 @@
-import { getDecodedToken } from "./getDecodedToken";
+import { getDecodedToken } from ".";
 
 export type UserProfile = {
   id: string;
