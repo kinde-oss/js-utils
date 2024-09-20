@@ -1,4 +1,4 @@
-import { SessionManager } from "../../sessionManager"; // Replace 'path/to/SessionManager' with the actual path to the SessionManager module
+import { SessionManager } from "../../sessionManager";
 
 import { getClaim } from "./getClaim";
 import { getClaims } from "./getClaims";
