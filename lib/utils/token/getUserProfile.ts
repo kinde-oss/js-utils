@@ -2,10 +2,10 @@ import { getDecodedToken } from ".";
 
 export type UserProfile = {
   id: string;
-  givenName: string;
-  familyName: string;
-  email: string;
-  picture: string;
+  givenName?: string;
+  familyName?: string;
+  email?: string;
+  picture?: string;
 };
 
 export const getUserProfile = async <T>(): Promise<
@@ -19,6 +19,11 @@ export const getUserProfile = async <T>(): Promise<
     picture: string;
   }>("idToken");
   if (!idToken) {
+    return null;
+  }
+  const { sub } = idToken;
+  if (!sub) {
+    console.error("No sub in idToken");
     return null;
   }
   return {
