@@ -16,7 +16,7 @@ describe("getDecodedToken", () => {
   beforeEach(() => {
     setActiveStorage(new MemoryStorage());
   });
-  it("error when no active storage is set", async () => {
+  it("returns null when no idToken is set", async () => {
     const idToken = await getDecodedToken("idToken");
     expect(idToken).toBe(null);
   });
@@ -28,7 +28,7 @@ describe("getDecodedToken idToken", () => {
     setActiveStorage(storage);
     storage.setSessionItem(StorageKeys.idToken, createMockAccessToken());
   });
-  it("error when no active storage is set", async () => {
+  it("returns the decoded idToken with the correct org_code", async () => {
     const idToken = await getDecodedToken("idToken");
     if (idToken === null) {
       throw new Error("idToken is null");
@@ -43,10 +43,10 @@ describe("getDecodedToken accessToken", () => {
     setActiveStorage(storage);
     storage.setSessionItem(StorageKeys.accessToken, createMockAccessToken());
   });
-  it("error when no active storage is set", async () => {
+  it("returns the decoded accessToken with the correct org_code", async () => {
     const accessToken = await getDecodedToken("accessToken");
     if (accessToken === null) {
-      throw new Error("idToken is null");
+      throw new Error("accessToken is null");
     }
     expect(accessToken.org_code).toBe("org_123456789");
   });
