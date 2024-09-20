@@ -48,6 +48,8 @@ exports `storageSettings` which can be used to configure the storage methods.
 
 `ChromeStore` - This holds the data in chrome.store.local for use with Google Chrome extensions.
 
+`ExpoSecureStore` - Secure storage for Expo apps
+
 ### Token Helpers
 
 Linking in with the activeStorage, a number of token helpers are available.
@@ -77,7 +79,6 @@ Linking in with the activeStorage, a number of token helpers are available.
 `getUserOrganizations` - get all the organizations the user has access to
 
 `getUserProfile` - get the profile of the user from the ID token
-
 
 ## Kinde documentation
 
