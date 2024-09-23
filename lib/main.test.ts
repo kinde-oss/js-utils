@@ -24,13 +24,9 @@ describe("index exports", () => {
   });
 
   it("should not export anything extra", () => {
-    const expectedExports = [
-      ...Object.keys(types),
-      ...Object.keys(utils),
-      ...Object.keys(sessionManager),
-    ];
+    const actualExports = Object.keys(index);
 
-    const actualExports = [
+    const expectedExports = [
       // types
       "IssuerRouteTypes",
       "Scopes",
@@ -49,6 +45,20 @@ describe("index exports", () => {
       "ChromeStore",
       "storageSettings",
       "ExpoSecureStore",
+
+      // token utils
+      "getActiveStorage",
+      "getClaim",
+      "getClaims",
+      "getCurrentOrganization",
+      "getDecodedToken",
+      "getFlag",
+      "getPermission",
+      "getPermissions",
+      "getRoles",
+      "getUserOrganizations",
+      "getUserProfile",
+      "setActiveStorage",
     ];
 
     expect(actualExports.sort()).toEqual(expectedExports.sort());
