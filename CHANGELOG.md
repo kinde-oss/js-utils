@@ -1,6 +1,19 @@
 # Changelog
 
 
+## 0.4.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.4.0...main)
+
+### 🩹 Fixes
+
+- Token utility export ([3ee4b53](https://github.com/kinde-oss/js-utils/commit/3ee4b53))
+- Be explicit on token utils export ([1fe6d7e](https://github.com/kinde-oss/js-utils/commit/1fe6d7e))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
 ## 0.3.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.3.0...main)
