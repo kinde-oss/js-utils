@@ -1,6 +1,6 @@
 import { getActiveStorage } from ".";
 import { StorageKeys } from "../../sessionManager";
-import { sanatizeURL } from "../sanatizeUrl";
+import { sanatizeURL } from "..";
 
 /**
  * refreshes the token
@@ -21,7 +21,8 @@ export const refreshToken = async (
       return false;
     }
 
-    const storage = getActiveStorage();
+    const storage = await getActiveStorage();
+
     const refreshTokenValue = await storage.getSessionItem(
       StorageKeys.refreshToken,
     );
