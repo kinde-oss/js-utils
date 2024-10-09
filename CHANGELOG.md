@@ -1,6 +1,48 @@
 # Changelog
 
 
+## 0.4.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.4.0...main)
+
+### 🩹 Fixes
+
+- Token utility export ([3ee4b53](https://github.com/kinde-oss/js-utils/commit/3ee4b53))
+- Be explicit on token utils export ([1fe6d7e](https://github.com/kinde-oss/js-utils/commit/1fe6d7e))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
+## 0.3.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.3.0...main)
+
+### 🚀 Enhancements
+
+- Add activeStorage, getDecodedToken and getUserOrganisations ([2221169](https://github.com/kinde-oss/js-utils/commit/2221169))
+- More helpers and tests ([0789079](https://github.com/kinde-oss/js-utils/commit/0789079))
+- Added getRoles and extended test coverage ([0b03912](https://github.com/kinde-oss/js-utils/commit/0b03912))
+- Add error when no sub in idtoken and getting user ([d34ee6e](https://github.com/kinde-oss/js-utils/commit/d34ee6e))
+
+### 🩹 Fixes
+
+- Offline scope ([a82c634](https://github.com/kinde-oss/js-utils/commit/a82c634))
+- Tests ([9be8fce](https://github.com/kinde-oss/js-utils/commit/9be8fce))
+
+### 📖 Documentation
+
+- Add helpers to readme ([60387bf](https://github.com/kinde-oss/js-utils/commit/60387bf))
+
+### 🏡 Chore
+
+- **deps-dev:** Bump vite in the npm_and_yarn group across 1 directory ([d29cf4b](https://github.com/kinde-oss/js-utils/commit/d29cf4b))
+- Remove todo comment ([8aaeca0](https://github.com/kinde-oss/js-utils/commit/8aaeca0))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
 ## 0.2.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.2.0...main)
