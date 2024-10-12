@@ -7,6 +7,10 @@ import { splitString } from "../utils.js";
  * @class LocalStorage
  */
 export class LocalStorage<V = StorageKeys> implements SessionManager<V> {
+  constructor() {
+    console.warn("LocalStorage store should not be used in production");
+  }
+
   setItems: Set<V | StorageKeys> = new Set<V>();
 
   /**
