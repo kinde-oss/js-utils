@@ -39,6 +39,8 @@ describe("index exports", () => {
       "generateRandomString",
       "mapLoginMethodParamsForUrl",
       "sanatizeURL",
+      "isAuthenticated",
+      "refreshToken",
 
       // session manager
       "MemoryStorage",
