@@ -43,6 +43,7 @@ describe("index exports", () => {
       // session manager
       "MemoryStorage",
       "ChromeStore",
+      "LocalStorage",
       "storageSettings",
       "ExpoSecureStore",
 
