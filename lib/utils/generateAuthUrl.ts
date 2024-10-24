@@ -1,3 +1,4 @@
+import { getActiveStorage, StorageKeys } from "../main";
 import { IssuerRouteTypes, LoginOptions } from "../types";
 import { generateRandomString } from "./generateRandomString";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
@@ -14,7 +15,7 @@ export const generateAuthUrl = (
   options: LoginOptions,
 ): { url: URL; state: string; nonce: string } => {
   const authUrl = new URL(`${domain}/oauth2/auth`);
-
+  const activeStorage = getActiveStorage();
   const searchParams: Record<string, string> = {
     client_id: options.clientId,
     response_type: options.responseType || "code",
@@ -24,6 +25,9 @@ export const generateAuthUrl = (
 
   if (!options.state) {
     options.state = generateRandomString(32);
+    if (activeStorage) {
+      activeStorage.setSessionItem(StorageKeys.state, options.state);
+    }
   }
   searchParams["state"] = options.state;
 
@@ -31,11 +35,12 @@ export const generateAuthUrl = (
     options.nonce = generateRandomString(16);
   }
   searchParams["nonce"] = options.nonce;
-
-  if (options.codeChallenge) {
-    searchParams["code_challenge"] = options.codeChallenge;
-    searchParams["code_challenge_method"] = "S256";
+  if (activeStorage) {
+    activeStorage.setSessionItem(StorageKeys.nonce, options.nonce);
   }
+
+  searchParams["code_challenge"] = (options.codeChallenge) ? options.codeChallenge : generateRandomString(32);
+  searchParams["code_challenge_method"] = "S256";
 
   if (options.codeChallengeMethod) {
     searchParams["code_challenge_method"] = options.codeChallengeMethod;
