@@ -13,7 +13,8 @@ export const storageSettings: StorageSettingsType = {
   maxLength: 2000,
 };
 
-export { MemoryStorage } from "./stores/memory.js";
-export { ChromeStore } from "./stores/chromeStore.js";
-export { ExpoSecureStore } from "./stores/expoSecureStore.js";
+export { MemoryStorage } from "./stores/memory.ts";
+export { ChromeStore } from "./stores/chromeStore.ts";
+export { ExpoSecureStore } from "./stores/expoSecureStore.ts";
+export { LocalStorage } from "./stores/localStorage.ts";
 export * from "./types.ts";
