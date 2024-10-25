@@ -1,5 +1,5 @@
 import { storageSettings } from "../index.js";
-import { StorageKeys, type SessionManager } from "../types.js";
+import { SessionBase, StorageKeys, type SessionManager } from "../types.js";
 import { splitString } from "../utils.js";
 
 function getStorageValue(key: string): unknown | undefined {
@@ -18,7 +18,10 @@ function getStorageValue(key: string): unknown | undefined {
  * Provides a chrome.store.local based session manager implementation for the browser.
  * @class ChromeStore
  */
-export class ChromeStore<V = StorageKeys> implements SessionManager<V> {
+export class ChromeStore<V extends string = StorageKeys>
+  extends SessionBase<V>
+  implements SessionManager<V>
+{
   /**
    * Clears all items from session store.
    * @returns {void}

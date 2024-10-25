@@ -1,24 +1,28 @@
 import { storageSettings } from "../index.js";
-import { StorageKeys, type SessionManager } from "../types.js";
+import { SessionBase, StorageKeys, type SessionManager } from "../types.js";
 import { splitString } from "../utils.js";
 
 /**
  * Provides a localStorage based session manager implementation for the browser.
  * @class LocalStorage
  */
-export class LocalStorage<V = StorageKeys> implements SessionManager<V> {
+export class LocalStorage<V extends string = StorageKeys>
+  extends SessionBase<V>
+  implements SessionManager<V>
+{
   constructor() {
+    super();
     console.warn("LocalStorage store should not be used in production");
   }
 
-  setItems: Set<V | StorageKeys> = new Set<V>();
+  private internalItems: Set<V | StorageKeys> = new Set<V>();
 
   /**
    * Clears all items from session store.
    * @returns {void}
    */
   async destroySession(): Promise<void> {
-    this.setItems.forEach((key) => {
+    this.internalItems.forEach((key) => {
       this.removeSessionItem(key);
     });
   }
@@ -35,7 +39,7 @@ export class LocalStorage<V = StorageKeys> implements SessionManager<V> {
   ): Promise<void> {
     // clear items first
     await this.removeSessionItem(itemKey);
-    this.setItems.add(itemKey);
+    this.internalItems.add(itemKey);
 
     if (typeof itemValue === "string") {
       splitString(itemValue, storageSettings.maxLength).forEach(
@@ -97,6 +101,6 @@ export class LocalStorage<V = StorageKeys> implements SessionManager<V> {
 
       index++;
     }
-    this.setItems.delete(itemKey);
+    this.internalItems.delete(itemKey);
   }
 }

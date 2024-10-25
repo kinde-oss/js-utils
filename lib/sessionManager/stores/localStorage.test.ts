@@ -34,7 +34,6 @@ describe("LocalStorage standard keys", () => {
   });
 
   it("should set and get an item in session storage", async () => {
-    console.log("here");
     await sessionManager.setSessionItem(StorageKeys.accessToken, "testValue");
     expect(await sessionManager.getSessionItem(StorageKeys.accessToken)).toBe(
       "testValue",
