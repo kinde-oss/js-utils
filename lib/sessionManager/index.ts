@@ -16,6 +16,7 @@ export const storageSettings: StorageSettingsType = {
 export { MemoryStorage } from "./stores/memory.js";
 export { ChromeStore } from "./stores/chromeStore.js";
 export { ExpoSecureStore } from "./stores/expoSecureStore.js";
+export { LocalStorage } from "./stores/localStorage.ts";
 export {
   type SessionManager,
   StorageKeys

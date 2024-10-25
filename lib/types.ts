@@ -18,6 +18,8 @@ export type LoginMethodParams = Pick<
   | "connectionId"
   | "redirectURL"
   | "hasSuccessPage"
+  | "workflowId"
+  | "releaseId"
 >;
 
 export type LoginOptions = {
@@ -109,6 +111,14 @@ export type LoginOptions = {
    * Single use code to prevent replay attacks
    */
   nonce?: string;
+  /**
+   * Workflow ID to trigger on authentication
+   */
+  workflowId?: string;
+  /**
+   * Release ID to trigger on authentication
+   */
+  releaseId?: string;
 };
 
 export enum IssuerRouteTypes {
