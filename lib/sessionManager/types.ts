@@ -11,6 +11,7 @@ export enum StorageKeys {
   refreshToken = "refreshToken",
   state = "state",
   nonce = "nonce",
+  codeVerifier = "codeVerifier",
 }
 
 export type StorageSettingsType = {
