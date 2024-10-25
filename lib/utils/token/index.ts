@@ -15,17 +15,34 @@ const storage = {
   value: null as SessionManager | null,
 };
 
+/**
+ * Sets the active storage
+ * @param store Session manager instance
+ */
 const setActiveStorage = (store: SessionManager) => {
   storage.value = store;
 };
 
+/**
+ * Gets the current active storage
+ * @returns Session manager instance or null
+ */
 const getActiveStorage = (): SessionManager | null => {
   return storage.value || null;
 };
 
+/**
+ * Checks if there is an active storage
+ * @returns boolean
+ */
+const hasActiveStorage = (): boolean => {  
+  return storage.value !== null;  
+};  
+
 export {
   setActiveStorage,
   getActiveStorage,
+  hasActiveStorage,
   getClaim,
   getClaims,
   getCurrentOrganization,
