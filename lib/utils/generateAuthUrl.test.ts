@@ -18,13 +18,16 @@ describe("generateAuthUrl", () => {
       state: "state123",
     };
     const expectedUrl =
-      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&login_hint=user%40example.com&is_create_org=true&connection_id=conn123&redirect_uri=https%3A%2F%2Fexample.com&audience=audience123&scope=openid+profile&prompt=login&state=state123";
+      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&login_hint=user%40example.com&is_create_org=true&connection_id=conn123&redirect_uri=https%3A%2F%2Fexample.com&audience=audience123&scope=openid+profile&prompt=login&state=state123&code_challenge_method=S256";
 
     const result = generateAuthUrl(domain, IssuerRouteTypes.login, options);
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
     expect(nonce!.length).toBe(16);
     result.url.searchParams.delete("nonce");
+    const codeChallenge = result.url.searchParams.get("code_challenge");
+    expect(codeChallenge!.length).toBe(32);
+    result.url.searchParams.delete("code_challenge");
     expect(result.url.toString()).toBe(expectedUrl);
   });
 
@@ -41,13 +44,14 @@ describe("generateAuthUrl", () => {
       prompt: "create",
     };
     const expectedUrl =
-      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&scope=openid+profile&prompt=create&state=state123&code_challenge=challenge123&code_challenge_method=S256";
+      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&audience=&scope=openid+profile&prompt=create&state=state123&code_challenge=challenge123&code_challenge_method=S256";
 
     const result = generateAuthUrl(domain, IssuerRouteTypes.login, options);
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
     expect(nonce!.length).toBe(16);
     result.url.searchParams.delete("nonce");
+    
     expect(result.url.toString()).toBe(expectedUrl);
   });
 
@@ -61,13 +65,18 @@ describe("generateAuthUrl", () => {
       state: "state123",
     };
     const expectedUrl =
-      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&scope=openid+profile+offline&prompt=create&state=state123";
+      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&audience=&scope=openid+profile+offline&prompt=create&state=state123&code_challenge_method=S256";
 
     const result = generateAuthUrl(domain, IssuerRouteTypes.login, options);
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
     expect(nonce!.length).toBe(16);
     result.url.searchParams.delete("nonce");
+
+    const codeChallenge = result.url.searchParams.get("code_challenge");
+    expect(codeChallenge!.length).toBe(32);
+    result.url.searchParams.delete("code_challenge");
+
     expect(result.url.toString()).toBe(expectedUrl);
   });
 
@@ -80,7 +89,7 @@ describe("generateAuthUrl", () => {
       prompt: "create",
     };
     const expectedUrl =
-      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&scope=openid+profile+offline&prompt=create";
+      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&start_page=login&redirect_uri=https%3A%2F%2Fexample2.com&audience=&scope=openid+profile+offline&prompt=create&code_challenge_method=S256";
 
     const result = generateAuthUrl(domain, IssuerRouteTypes.login, options);
     const nonce = result.url.searchParams.get("nonce");
@@ -89,6 +98,9 @@ describe("generateAuthUrl", () => {
     const state = result.url.searchParams.get("state");
     expect(state).not.toBeNull();
     expect(state!.length).toBe(32);
+    const codeChallenge = result.url.searchParams.get("code_challenge");
+    expect(codeChallenge!.length).toBe(32);
+    result.url.searchParams.delete("code_challenge");
     result.url.searchParams.delete("nonce");
     result.url.searchParams.delete("state");
     expect(result.url.toString()).toBe(expectedUrl);
