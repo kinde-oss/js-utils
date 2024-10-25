@@ -19,11 +19,8 @@ const setActiveStorage = (store: SessionManager) => {
   storage.value = store;
 };
 
-const getActiveStorage = () => {
-  if (!storage.value) {
-    throw new Error("Session manager is not initialized");
-  }
-  return storage.value;
+const getActiveStorage = (): SessionManager | null => {
+  return storage.value || null;
 };
 
 export {
