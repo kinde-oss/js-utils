@@ -31,7 +31,7 @@ export abstract class SessionBase<V extends string = StorageKeys>
   abstract removeSessionItem(itemKey: V | StorageKeys): Awaitable<void>;
   abstract destroySession(): Awaitable<void>;
 
-  async setItems(items: Partial<Record<V, unknown>>): Promise<void> {
+  async setItems(items: Partial<Record<V, unknown>>): Awaitable<void> {
     await Promise.all(
       Object.entries(items).map(([key, value]) => {
         return this.setSessionItem(key as V | StorageKeys, value);
@@ -72,5 +72,11 @@ export interface SessionManager<V extends string = StorageKeys> {
    */
   destroySession: () => Awaitable<void>;
 
-  setItems(items: Record<V, unknown>): void;
+
+  /**
+  * Sets multiple items simultaneously.
+  * @param {Record<V | StorageKeys, unknown>} items - Object containing key-value pairs to store
+  * @returns {Promise<void>}
+  */
+  setItems(items: Partial<Record<V, unknown>>): Awaitable<void>;
 }
