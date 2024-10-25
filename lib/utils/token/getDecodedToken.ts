@@ -19,7 +19,7 @@ export const getDecodedToken = async <
   if (!activeStorage) {
     return null;
   }
-  
+
   const token = (await activeStorage.getSessionItem(
     tokenType === "accessToken" ? StorageKeys.accessToken : StorageKeys.idToken,
   )) as string;

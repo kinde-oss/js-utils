@@ -1,4 +1,4 @@
-import { getActiveStorage, StorageKeys } from "../main";
+import { base64UrlEncode, getActiveStorage, StorageKeys } from "../main";
 import { IssuerRouteTypes, LoginOptions } from "../types";
 import { generateRandomString } from "./generateRandomString";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
@@ -9,11 +9,11 @@ import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
  * @param type
  * @returns URL to redirect to
  */
-export const generateAuthUrl = (
+export const generateAuthUrl = async (
   domain: string,
   type: IssuerRouteTypes = IssuerRouteTypes.login,
   options: LoginOptions,
-): { url: URL; state: string; nonce: string } => {
+): Promise<{ url: URL; state: string; nonce: string }> => {
   const authUrl = new URL(`${domain}/oauth2/auth`);
   const activeStorage = getActiveStorage();
   const searchParams: Record<string, string> = {
@@ -39,7 +39,15 @@ export const generateAuthUrl = (
     activeStorage.setSessionItem(StorageKeys.nonce, options.nonce);
   }
 
-  searchParams["code_challenge"] = (options.codeChallenge) ? options.codeChallenge : generateRandomString(32);
+  if (options.codeChallenge) {
+    searchParams["code_challenge"] = options.codeChallenge;
+  } else {
+    const { codeVerifier, codeChallenge } = await generatePKCEPair();
+    if (activeStorage) {
+      activeStorage.setSessionItem(StorageKeys.codeVerifier, codeVerifier);
+    }
+    searchParams["code_challenge"] = codeChallenge;
+  }
   searchParams["code_challenge_method"] = "S256";
 
   if (options.codeChallengeMethod) {
@@ -53,3 +61,14 @@ export const generateAuthUrl = (
     nonce: searchParams["nonce"],
   };
 };
+
+async function generatePKCEPair(): Promise<{
+  codeVerifier: string;
+  codeChallenge: string;
+}> {
+  const codeVerifier = generateRandomString(32);
+  const data = new TextEncoder().encode(codeVerifier);
+  const hashed = await crypto.subtle.digest("SHA-256", data);
+  const codeChallenge = base64UrlEncode(new TextDecoder().decode(hashed));
+  return { codeVerifier, codeChallenge };
+}

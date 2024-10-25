@@ -35,9 +35,9 @@ const getActiveStorage = (): SessionManager | null => {
  * Checks if there is an active storage
  * @returns boolean
  */
-const hasActiveStorage = (): boolean => {  
-  return storage.value !== null;  
-};  
+const hasActiveStorage = (): boolean => {
+  return storage.value !== null;
+};
 
 export {
   setActiveStorage,
