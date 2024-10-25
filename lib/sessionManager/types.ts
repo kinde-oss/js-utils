@@ -18,7 +18,23 @@ export type StorageSettingsType = {
   maxLength: number;
 };
 
-export interface SessionManager<V = StorageKeys> {
+
+export abstract class SessionBase<V extends string = StorageKeys> implements SessionManager<V> {
+  abstract getSessionItem<T = unknown>(itemKey: V | StorageKeys): Awaitable<T | unknown | null>;
+  abstract setSessionItem<T = unknown>(itemKey: V | StorageKeys, itemValue: T): Awaitable<void>;
+  abstract removeSessionItem(itemKey: V | StorageKeys): Awaitable<void>;
+  abstract destroySession(): Awaitable<void>;
+  
+  async setItems(items: Partial<Record<V, unknown>>): Promise<void> {
+    await Promise.all(
+      Object.entries(items).map(([key, value]) => {
+        return this.setSessionItem(key as V | StorageKeys, value);
+      })
+    );
+  }
+}
+
+export interface SessionManager<V extends string = StorageKeys> {
   /**
    *
    * Gets the item for the provided key from the storage.
@@ -49,4 +65,6 @@ export interface SessionManager<V = StorageKeys> {
    * Destroys the session
    */
   destroySession: () => Awaitable<void>;
+
+  setItems(items: Record<V, unknown>): void
 }

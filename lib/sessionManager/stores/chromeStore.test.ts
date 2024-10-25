@@ -43,6 +43,20 @@ describe.skip("GoogleStorage standard keys", () => {
       await sessionManager.getSessionItem(StorageKeys.accessToken),
     ).toBeNull();
   });
+
+
+  it("should set many items", async () => {
+    await sessionManager.setItems({
+      [StorageKeys.accessToken]: "accessTokenValue",
+      [StorageKeys.idToken]: "idTokenValue",
+    });
+    expect(await sessionManager.getSessionItem(StorageKeys.accessToken)).toBe(
+      "accessTokenValue",
+    );
+    expect(await sessionManager.getSessionItem(StorageKeys.idToken)).toBe(
+      "idTokenValue",
+    );
+  });
 });
 
 // TODO: Fix tests, need to mock chrome storage
