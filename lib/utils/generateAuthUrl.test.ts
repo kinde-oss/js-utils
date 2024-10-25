@@ -30,7 +30,7 @@ describe("generateAuthUrl", () => {
     expect(nonce!.length).toBe(16);
     result.url.searchParams.delete("nonce");
     const codeChallenge = result.url.searchParams.get("code_challenge");
-    expect(codeChallenge!.length).toBeGreaterThan(32);
+    expect(codeChallenge!.length).toBeGreaterThan(43);
     result.url.searchParams.delete("code_challenge");
     expect(result.url.toString()).toBe(expectedUrl);
   });
@@ -86,7 +86,7 @@ describe("generateAuthUrl", () => {
     result.url.searchParams.delete("nonce");
 
     const codeChallenge = result.url.searchParams.get("code_challenge");
-    expect(codeChallenge!.length).toBeGreaterThan(32);
+    expect(codeChallenge!.length).toBeGreaterThan(43);
     result.url.searchParams.delete("code_challenge");
 
     expect(result.url.toString()).toBe(expectedUrl);
@@ -115,7 +115,7 @@ describe("generateAuthUrl", () => {
     expect(state).not.toBeNull();
     expect(state!.length).toBe(32);
     const codeChallenge = result.url.searchParams.get("code_challenge");
-    expect(codeChallenge!.length).toBeGreaterThan(32);
+    expect(codeChallenge!.length).toBeGreaterThan(43);
     result.url.searchParams.delete("code_challenge");
     result.url.searchParams.delete("nonce");
     result.url.searchParams.delete("state");

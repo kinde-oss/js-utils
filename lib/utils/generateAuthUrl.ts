@@ -69,6 +69,8 @@ async function generatePKCEPair(): Promise<{
   const codeVerifier = generateRandomString(32);
   const data = new TextEncoder().encode(codeVerifier);
   const hashed = await crypto.subtle.digest("SHA-256", data);
-  const codeChallenge = base64UrlEncode(new TextDecoder().decode(hashed));
+  const hashArray = Array.from(new Uint8Array(hashed));
+  const hashString = hashArray.map(b => String.fromCharCode(b)).join('');
+  const codeChallenge = base64UrlEncode(hashString);
   return { codeVerifier, codeChallenge };
 }
