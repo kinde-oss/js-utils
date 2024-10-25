@@ -11,7 +11,7 @@ export const mapLoginMethodParamsForUrl = (
     redirect_uri: options.redirectURL
       ? sanatizeURL(options.redirectURL)
       : undefined,
-    audience: options.audience,
+    audience: options.audience || "",
     scope: options.scope?.join(" ") || "email profile openid offline",
     prompt: options.prompt,
     lang: options.lang,
