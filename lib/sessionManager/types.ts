@@ -33,10 +33,10 @@ export abstract class SessionBase<V extends string = StorageKeys>
 
   async setItems(items: Partial<Record<V, unknown>>): Awaitable<void> {
     await Promise.all(
-      Object.entries(items).map(([key, value]) => {
-        return this.setSessionItem(key as V | StorageKeys, value);
-      }),
-    );
+      (Object.entries(items) as [V | StorageKeys, unknown][]).map(([key, value]) => {
+              return this.setSessionItem(key, value);
+      }
+    ));
   }
 }
 
