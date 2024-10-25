@@ -16,7 +16,9 @@ async function waitForExpoSecureStore() {
  * Provides a expo local store based session manager implementation for the browser.
  * @class ExpoSecureStore
  */
-export class ExpoSecureStore<V extends string = StorageKeys> extends SessionBase<V> {
+export class ExpoSecureStore<
+  V extends string = StorageKeys,
+> extends SessionBase<V> {
   constructor() {
     super();
     this.loadExpoStore();

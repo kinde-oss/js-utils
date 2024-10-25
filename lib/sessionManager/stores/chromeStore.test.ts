@@ -44,7 +44,6 @@ describe.skip("GoogleStorage standard keys", () => {
     ).toBeNull();
   });
 
-
   it("should set many items", async () => {
     await sessionManager.setItems({
       [StorageKeys.accessToken]: "accessTokenValue",

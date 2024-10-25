@@ -6,7 +6,10 @@ import { splitString } from "../utils.js";
  * Provides a memory based session manager implementation for the browser.
  * @class MemoryStorage
  */
-export class MemoryStorage<V extends string = StorageKeys>  extends SessionBase<V> implements SessionManager<V> {
+export class MemoryStorage<V extends string = StorageKeys>
+  extends SessionBase<V>
+  implements SessionManager<V>
+{
   private memCache: Record<string, unknown> = {};
 
   /**

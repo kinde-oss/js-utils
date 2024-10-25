@@ -18,7 +18,10 @@ function getStorageValue(key: string): unknown | undefined {
  * Provides a chrome.store.local based session manager implementation for the browser.
  * @class ChromeStore
  */
-export class ChromeStore<V extends string = StorageKeys> extends SessionBase<V> implements SessionManager<V> {
+export class ChromeStore<V extends string = StorageKeys>
+  extends SessionBase<V>
+  implements SessionManager<V>
+{
   /**
    * Clears all items from session store.
    * @returns {void}
