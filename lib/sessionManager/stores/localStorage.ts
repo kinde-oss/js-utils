@@ -6,7 +6,10 @@ import { splitString } from "../utils.js";
  * Provides a localStorage based session manager implementation for the browser.
  * @class LocalStorage
  */
-export class LocalStorage<V extends string = StorageKeys> extends SessionBase<V> implements SessionManager<V> {
+export class LocalStorage<V extends string = StorageKeys>
+  extends SessionBase<V>
+  implements SessionManager<V>
+{
   constructor() {
     super();
     console.warn("LocalStorage store should not be used in production");

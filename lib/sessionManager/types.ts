@@ -72,11 +72,10 @@ export interface SessionManager<V extends string = StorageKeys> {
    */
   destroySession: () => Awaitable<void>;
 
-
   /**
-  * Sets multiple items simultaneously.
-  * @param {Record<V | StorageKeys, unknown>} items - Object containing key-value pairs to store
-  * @returns {Promise<void>}
-  */
+   * Sets multiple items simultaneously.
+   * @param {Record<V | StorageKeys, unknown>} items - Object containing key-value pairs to store
+   * @returns {Promise<void>}
+   */
   setItems(items: Partial<Record<V, unknown>>): Awaitable<void>;
 }
