@@ -1,16 +1,36 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { ExpoSecureStore } from "./expoSecureStore";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { LocalStorage } from "./localStorage";
 import { StorageKeys } from "../types";
 
 enum ExtraKeys {
   testKey = "testKey2",
 }
 
-describe.skip("ExpoSecureStore standard keys", () => {
-  let sessionManager: ExpoSecureStore;
+const localStorageMock = (function () {
+  let store: { [key: string]: string } = {};
+
+  return {
+    getItem(key: string) {
+      return store[key] || null;
+    },
+    setItem(key: string, value: string) {
+      store[key] = String(value);
+    },
+    removeItem(key: string) {
+      delete store[key];
+    },
+    clear() {
+      store = {};
+    },
+  };
+})();
+vi.stubGlobal("localStorage", localStorageMock);
+
+describe("LocalStorage standard keys", () => {
+  let sessionManager: LocalStorage;
 
   beforeEach(() => {
-    sessionManager = new ExpoSecureStore();
+    sessionManager = new LocalStorage();
   });
 
   it("should set and get an item in session storage", async () => {
@@ -37,32 +57,29 @@ describe.skip("ExpoSecureStore standard keys", () => {
     expect(await sessionManager.getSessionItem(StorageKeys.accessToken)).toBe(
       "testValue",
     );
-
     sessionManager.destroySession();
     expect(
       await sessionManager.getSessionItem(StorageKeys.accessToken),
     ).toBeNull();
   });
 
-  it("should set many items", async () => {
-    await sessionManager.setItems({
-      [StorageKeys.accessToken]: "accessTokenValue",
-      [StorageKeys.idToken]: "idTokenValue",
-    });
+  it("should clear all items from session storage", async () => {
+    await sessionManager.setSessionItem(StorageKeys.accessToken, true);
     expect(await sessionManager.getSessionItem(StorageKeys.accessToken)).toBe(
-      "accessTokenValue",
+      "true",
     );
-    expect(await sessionManager.getSessionItem(StorageKeys.idToken)).toBe(
-      "idTokenValue",
-    );
+    sessionManager.destroySession();
+    expect(
+      await sessionManager.getSessionItem(StorageKeys.accessToken),
+    ).toBeNull();
   });
 });
 
-describe.skip("ExpoSecureStore keys: storageKeys", () => {
-  let sessionManager: ExpoSecureStore<ExtraKeys>;
+describe("LocalStorage keys: storageKeys", () => {
+  let sessionManager: LocalStorage<ExtraKeys>;
 
   beforeEach(() => {
-    sessionManager = new ExpoSecureStore<ExtraKeys>();
+    sessionManager = new LocalStorage<ExtraKeys>();
   });
 
   it("should set and get an item in storage: StorageKeys", async () => {

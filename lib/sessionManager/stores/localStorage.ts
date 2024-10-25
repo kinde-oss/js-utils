@@ -2,37 +2,34 @@ import { storageSettings } from "../index.js";
 import { SessionBase, StorageKeys, type SessionManager } from "../types.js";
 import { splitString } from "../utils.js";
 
-function getStorageValue(key: string): unknown | undefined {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get([key], function (result) {
-      if (chrome.runtime.lastError) {
-        reject(undefined);
-      } else {
-        resolve(result[key]);
-      }
-    });
-  });
-}
-
 /**
- * Provides a chrome.store.local based session manager implementation for the browser.
- * @class ChromeStore
+ * Provides a localStorage based session manager implementation for the browser.
+ * @class LocalStorage
  */
-export class ChromeStore<V extends string = StorageKeys>
+export class LocalStorage<V extends string = StorageKeys>
   extends SessionBase<V>
   implements SessionManager<V>
 {
+  constructor() {
+    super();
+    console.warn("LocalStorage store should not be used in production");
+  }
+
+  private internalItems: Set<V | StorageKeys> = new Set<V>();
+
   /**
    * Clears all items from session store.
    * @returns {void}
    */
   async destroySession(): Promise<void> {
-    await chrome.storage.local.clear();
+    this.internalItems.forEach((key) => {
+      this.removeSessionItem(key);
+    });
   }
 
   /**
-   * Sets the provided key-value store to the chrome.store.local.
-   * @param {string} itemKey
+   * Sets the provided key-value store to the localStorage cache.
+   * @param {V} itemKey
    * @param {unknown} itemValue
    * @returns {void}
    */
@@ -42,37 +39,42 @@ export class ChromeStore<V extends string = StorageKeys>
   ): Promise<void> {
     // clear items first
     await this.removeSessionItem(itemKey);
+    this.internalItems.add(itemKey);
 
     if (typeof itemValue === "string") {
       splitString(itemValue, storageSettings.maxLength).forEach(
-        async (splitValue, index) => {
-          await chrome.storage.local.set({
-            [`${storageSettings.keyPrefix}${itemKey}${index}`]: splitValue,
-          });
+        (splitValue, index) => {
+          localStorage.setItem(
+            `${storageSettings.keyPrefix}${itemKey}${index}`,
+            splitValue,
+          );
         },
       );
       return;
     }
-    await chrome.storage.local.set({
-      [`${storageSettings.keyPrefix}${itemKey}0`]: itemValue,
-    });
+    localStorage.setItem(
+      `${storageSettings.keyPrefix}${itemKey}0`,
+      itemValue as string,
+    );
   }
 
   /**
-   * Gets the item for the provided key from the chrome.store.local cache.
+   * Gets the item for the provided key from the localStorage cache.
    * @param {string} itemKey
    * @returns {unknown | null}
    */
   async getSessionItem(itemKey: V | StorageKeys): Promise<unknown | null> {
+    if (
+      localStorage.getItem(`${storageSettings.keyPrefix}${itemKey}0`) === null
+    ) {
+      return null;
+    }
+
     let itemValue = "";
     let index = 0;
     let key = `${storageSettings.keyPrefix}${String(itemKey)}${index}`;
-    while (
-      (await getStorageValue(
-        `${storageSettings.keyPrefix}${String(itemKey)}${index}`,
-      )) !== undefined
-    ) {
-      itemValue += await getStorageValue(key);
+    while (localStorage.getItem(key) !== null) {
+      itemValue += localStorage.getItem(key);
       index++;
       key = `${storageSettings.keyPrefix}${String(itemKey)}${index}`;
     }
@@ -81,22 +83,24 @@ export class ChromeStore<V extends string = StorageKeys>
   }
 
   /**
-   * Removes the item for the provided key from the chrome.store.local cache.
-   * @param {string} itemKey
+   * Removes the item for the provided key from the localStorage cache.
+   * @param {V} itemKey
    * @returns {void}
    */
   async removeSessionItem(itemKey: V | StorageKeys): Promise<void> {
-    // remove items from the chrome.storage
+    // Remove all items with the key prefix
     let index = 0;
     while (
-      (await getStorageValue(
+      localStorage.getItem(
         `${storageSettings.keyPrefix}${String(itemKey)}${index}`,
-      )) !== undefined
+      ) !== null
     ) {
-      await chrome.storage.local.remove(
+      localStorage.removeItem(
         `${storageSettings.keyPrefix}${String(itemKey)}${index}`,
       );
+
       index++;
     }
+    this.internalItems.delete(itemKey);
   }
 }
