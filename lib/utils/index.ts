@@ -14,5 +14,5 @@ export {
   sanatizeURL,
   generateAuthUrl,
   mapLoginMethodParamsForUrl,
-  exchangeAuthCode
+  exchangeAuthCode,
 };

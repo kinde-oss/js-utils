@@ -15,7 +15,6 @@ export class MemoryStorage<V extends string = StorageKeys>
   /**
    * Clears all items from session store.
    * @returns {void}
-.04
    */
   async destroySession(): Promise<void> {
     this.memCache = {};

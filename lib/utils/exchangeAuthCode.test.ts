@@ -2,23 +2,23 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { exchangeAuthCode } from ".";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import { setActiveStorage } from "./token";
-import createFetchMock from 'vitest-fetch-mock';
+import createFetchMock from "vitest-fetch-mock";
 
 const fetchMock = createFetchMock(vi);
 
-describe.only("exhangeAuthCode",  () => {
+describe("exhangeAuthCode", () => {
   beforeEach(() => {
     fetchMock.enableMocks();
   });
-  
+
   afterEach(() => {
-    fetchMock.resetMocks(); 
+    fetchMock.resetMocks();
   });
 
-  it.only("missing state param", async () => {
+  it("missing state param", async () => {
     const urlParams = new URLSearchParams();
     urlParams.append("code", "test");
-    
+
     const result = await exchangeAuthCode({
       urlParams,
       domain: "http://test.kinde.com",
@@ -32,10 +32,10 @@ describe.only("exhangeAuthCode",  () => {
     });
   });
 
-  it.only("missing code param", async () => {
+  it("missing code param", async () => {
     const urlParams = new URLSearchParams();
     urlParams.append("state", "test");
-    
+
     const result = await exchangeAuthCode({
       urlParams,
       domain: "http://test.kinde.com",
@@ -49,20 +49,22 @@ describe.only("exhangeAuthCode",  () => {
     });
   });
 
-  it.only("missing active storage", async () => {
+  it("missing active storage", async () => {
     const urlParams = new URLSearchParams();
     urlParams.append("state", "test");
     urlParams.append("code", "test");
-    
-    expect(exchangeAuthCode({
-      urlParams,
-      domain: "http://test.kinde.com",
-      clientId: "test",
-      redirectURL: "http://test.kinde.com",
-    })).rejects.toThrowError("No active storage found");
+
+    expect(
+      exchangeAuthCode({
+        urlParams,
+        domain: "http://test.kinde.com",
+        clientId: "test",
+        redirectURL: "http://test.kinde.com",
+      }),
+    ).rejects.toThrowError("No active storage found");
   });
 
-  it.only("state mismatch", async () => {
+  it("state mismatch", async () => {
     const store = new MemoryStorage();
     setActiveStorage(store);
 
@@ -73,20 +75,19 @@ describe.only("exhangeAuthCode",  () => {
     const urlParams = new URLSearchParams();
     urlParams.append("state", "test");
     urlParams.append("code", "test");
-    
-   const result = await exchangeAuthCode({
+
+    const result = await exchangeAuthCode({
       urlParams,
       domain: "http://test.kinde.com",
       clientId: "test",
       redirectURL: "http://test.kinde.com",
-    })
+    });
 
     expect(result).toStrictEqual({
       success: false,
       error: "Invalid state; supplied test, expected storedState",
     });
   });
-
 
   it("should encode a simple string", async () => {
     const store = new MemoryStorage();
@@ -104,8 +105,14 @@ describe.only("exhangeAuthCode",  () => {
     urlParams.append("code", input);
     urlParams.append("state", state);
     urlParams.append("client_id", "test");
-    
-    fetchMock.mockResponseOnce(JSON.stringify({ access_token: "access_token", refresh_token: "refresh_token", id_token: "id_token" })); 
+
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "access_token",
+        refresh_token: "refresh_token",
+        id_token: "id_token",
+      }),
+    );
 
     const result = await exchangeAuthCode({
       urlParams,
@@ -122,8 +129,9 @@ describe.only("exhangeAuthCode",  () => {
 
     const postStoredState = await store.getSessionItem(StorageKeys.state);
     expect(postStoredState).toBeNull();
-    const postCodeVerifier = await store.getSessionItem(StorageKeys.codeVerifier);
+    const postCodeVerifier = await store.getSessionItem(
+      StorageKeys.codeVerifier,
+    );
     expect(postCodeVerifier).toBeNull();
   });
-
 });

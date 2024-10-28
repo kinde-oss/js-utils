@@ -10,10 +10,10 @@ export const exchangeAuthCode = async ({
   clientId,
   redirectURL,
 }: {
-  urlParams: URLSearchParams,
-  domain: string,
-  clientId: string,
-  redirectURL: string,
+  urlParams: URLSearchParams;
+  domain: string;
+  clientId: string;
+  redirectURL: string;
 }): Promise<unknown> => {
   const state = urlParams.get("state");
   const code = urlParams.get("code");
@@ -39,7 +39,7 @@ export const exchangeAuthCode = async ({
     );
   }
 
-  const storedState = await activeStorage.getSessionItem(StorageKeys.state)
+  const storedState = await activeStorage.getSessionItem(StorageKeys.state);
   if (state !== storedState) {
     console.error("Invalid state");
     return {
