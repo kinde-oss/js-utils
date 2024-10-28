@@ -5,6 +5,7 @@ import { extractAuthResults } from "./extractAuthResults";
 import { sanatizeURL } from "./sanatizeUrl";
 import { generateAuthUrl } from "./generateAuthUrl";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
+import { exchangeAuthCode } from "./exchangeAuthCode";
 
 export {
   base64UrlEncode,
@@ -13,4 +14,5 @@ export {
   sanatizeURL,
   generateAuthUrl,
   mapLoginMethodParamsForUrl,
+  exchangeAuthCode
 };
