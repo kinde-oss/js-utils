@@ -125,7 +125,6 @@ describe("generateAuthUrl", () => {
   });
 
   it("should update state when active state found", async () => {
-
     const store = new MemoryStorage();
     setActiveStorage(store);
 
@@ -142,15 +141,11 @@ describe("generateAuthUrl", () => {
       prompt: "login",
     };
 
-    await generateAuthUrl(
-      domain,
-      IssuerRouteTypes.login,
-      options,
-    );
+    await generateAuthUrl(domain, IssuerRouteTypes.login, options);
 
-    const state = await store.getSessionItem(StorageKeys.state)
-    const nonce = await store.getSessionItem(StorageKeys.nonce)
-    const codeVerifier = await store.getSessionItem(StorageKeys.state)
+    const state = await store.getSessionItem(StorageKeys.state);
+    const nonce = await store.getSessionItem(StorageKeys.nonce);
+    const codeVerifier = await store.getSessionItem(StorageKeys.state);
 
     expect(state).toBeDefined();
     expect(nonce).toBeDefined();

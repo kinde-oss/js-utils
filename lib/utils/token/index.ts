@@ -40,9 +40,8 @@ const hasActiveStorage = (): boolean => {
 };
 
 const clearActiveStorage = (): void => {
-  storage.value = null
+  storage.value = null;
 };
-
 
 export {
   setActiveStorage,
