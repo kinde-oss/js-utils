@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { IssuerRouteTypes, LoginOptions, Scopes } from "../types";
 import { generateAuthUrl } from "./generateAuthUrl";
+import { MemoryStorage, StorageKeys } from "../sessionManager";
+import { setActiveStorage } from "./token";
 
 describe("generateAuthUrl", () => {
   it("should generate the correct auth URL with required parameters", async () => {
@@ -120,5 +122,38 @@ describe("generateAuthUrl", () => {
     result.url.searchParams.delete("nonce");
     result.url.searchParams.delete("state");
     expect(result.url.toString()).toBe(expectedUrl);
+  });
+
+  it("should update state when active state found", async () => {
+
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+
+    const domain = "https://auth.example.com";
+    const options: LoginOptions = {
+      clientId: "client123",
+      responseType: "code",
+      scope: [Scopes.openid, Scopes.profile],
+      loginHint: "user@example.com",
+      isCreateOrg: true,
+      connectionId: "conn123",
+      redirectURL: "https://example.com",
+      audience: "audience123",
+      prompt: "login",
+    };
+
+    await generateAuthUrl(
+      domain,
+      IssuerRouteTypes.login,
+      options,
+    );
+
+    const state = await store.getSessionItem(StorageKeys.state)
+    const nonce = await store.getSessionItem(StorageKeys.nonce)
+    const codeVerifier = await store.getSessionItem(StorageKeys.state)
+
+    expect(state).toBeDefined();
+    expect(nonce).toBeDefined();
+    expect(codeVerifier).toBeDefined();
   });
 });

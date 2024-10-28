@@ -39,10 +39,16 @@ const hasActiveStorage = (): boolean => {
   return storage.value !== null;
 };
 
+const clearActiveStorage = (): void => {
+  storage.value = null
+};
+
+
 export {
   setActiveStorage,
   getActiveStorage,
   hasActiveStorage,
+  clearActiveStorage,
   getClaim,
   getClaims,
   getCurrentOrganization,

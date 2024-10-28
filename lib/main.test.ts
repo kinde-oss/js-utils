@@ -50,6 +50,7 @@ describe("index exports", () => {
       // token utils
       "getActiveStorage",
       "hasActiveStorage",
+      "clearActiveStorage",
       "getClaim",
       "getClaims",
       "getCurrentOrganization",
