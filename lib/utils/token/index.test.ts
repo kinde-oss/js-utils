@@ -6,19 +6,26 @@ import {
   setActiveStorage,
   clearActiveStorage,
 } from ".";
-
 describe("token index", () => {
-  it("hasActiveStorage", async () => {
+  it("hasActiveStorage returns true when storage is set", async () => {
     const storage = new MemoryStorage();
     setActiveStorage(storage);
     expect(hasActiveStorage()).toStrictEqual(true);
   });
-});
 
-describe("token index", () => {
-  it("hasActiveStorage when not set", async () => {
+  it("hasActiveStorage returns false when storage is cleared", async () => {
     clearActiveStorage();
-    console.log(getActiveStorage());
     expect(hasActiveStorage()).toStrictEqual(false);
+  });
+
+  it("getActiveStorage returns null when no storage is set", async () => {
+    clearActiveStorage();
+    expect(getActiveStorage()).toBeNull();
+  });
+
+  it("getActiveStorage returns storage instance when set", async () => {
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    expect(getActiveStorage()).toBe(storage);
   });
 });
