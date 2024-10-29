@@ -5,17 +5,27 @@ export const frameworkSettings: { framework: string; frameworkVersion: string } 
   frameworkVersion: "",
 };
 
+interface ExchangeAuthCodeParams {
+  urlParams: URLSearchParams;
+  domain: string;
+  clientId: string;
+  redirectURL: string;
+}
+
+interface ExchangeAuthCodeResult {
+  success: boolean;
+  error?: string;
+  [StorageKeys.accessToken]?: string;
+  [StorageKeys.idToken]?: string;
+  [StorageKeys.refreshToken]?: string;
+}
+
 export const exchangeAuthCode = async ({
   urlParams,
   domain,
   clientId,
   redirectURL,
-}: {
-  urlParams: URLSearchParams;
-  domain: string;
-  clientId: string;
-  redirectURL: string;
-}): Promise<unknown> => {
+}: ExchangeAuthCodeParams): Promise<ExchangeAuthCodeResult> => {
   const state = urlParams.get("state");
   const code = urlParams.get("code");
 
@@ -31,7 +41,6 @@ export const exchangeAuthCode = async ({
   if (!activeStorage) {
     throw new Error("No active storage found");
   }
-  activeStorage.getSessionItem(StorageKeys.state);
 
   // warn if framework and version has not been set
   if (!frameworkSettings.framework || !frameworkSettings.frameworkVersion) {
@@ -90,9 +99,9 @@ export const exchangeAuthCode = async ({
   activeStorage.removeItems(StorageKeys.state, StorageKeys.codeVerifier);
 
   // Clear all url params
-  // const url = new URL(window.location.toString());
-  // url.search = "";
-  // window.history.pushState({}, "", url);
+  const url = new URL(window.location.toString());
+  url.search = "";
+  window.history.pushState({}, "", url);
 
   return {
     success: true,
