@@ -63,6 +63,9 @@ describe("index exports", () => {
       "getUserOrganizations",
       "getUserProfile",
       "setActiveStorage",
+
+      // config
+      "frameworkSettings",
     ];
 
     expect(actualExports.sort()).toEqual(expectedExports.sort());

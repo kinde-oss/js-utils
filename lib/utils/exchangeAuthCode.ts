@@ -1,8 +1,9 @@
 import { getActiveStorage, StorageKeys } from "../main";
 
-// TODO: Set the framework and version
-const _framework = "";
-const _frameworkVersion = "";
+export const frameworkSettings: { framework: string; frameworkVersion: string } = {
+  framework: "",
+  frameworkVersion: "",
+};
 
 export const exchangeAuthCode = async ({
   urlParams,
@@ -33,7 +34,7 @@ export const exchangeAuthCode = async ({
   activeStorage.getSessionItem(StorageKeys.state);
 
   // warn if framework and version has not been set
-  if (!_framework || !_frameworkVersion) {
+  if (!frameworkSettings.framework || !frameworkSettings.frameworkVersion) {
     console.warn(
       "Framework and version not set. Please set the framework and version in the config object",
     );
@@ -52,14 +53,19 @@ export const exchangeAuthCode = async ({
     StorageKeys.codeVerifier,
   )) as string;
 
+  const headers: { 'Content-type': string, "Kinde-SDK"?: string } = {
+    "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+  }
+
+  if (frameworkSettings.framework) {
+    headers["Kinde-SDK"] = `${frameworkSettings.framework}/${frameworkSettings.frameworkVersion}`
+  }
+
   const response = await fetch(`${domain}/oauth2/token`, {
     method: "POST",
     // ...(isUseCookie && {credentials: 'include'}),
     credentials: "include",
-    headers: new Headers({
-      "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-      "Kinde-SDK": `${_framework}/${_frameworkVersion}`,
-    }),
+    headers,
     body: new URLSearchParams({
       client_id: clientId,
       code,

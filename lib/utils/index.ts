@@ -5,9 +5,13 @@ import { extractAuthResults } from "./extractAuthResults";
 import { sanatizeURL } from "./sanatizeUrl";
 import { generateAuthUrl } from "./generateAuthUrl";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
-import { exchangeAuthCode } from "./exchangeAuthCode";
+import { exchangeAuthCode, frameworkSettings } from "./exchangeAuthCode";
 
 export {
+  // config 
+  frameworkSettings,
+
+  // utils
   base64UrlEncode,
   generateRandomString,
   extractAuthResults,

@@ -3,6 +3,7 @@ import { exchangeAuthCode } from ".";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import { setActiveStorage } from "./token";
 import createFetchMock from "vitest-fetch-mock";
+import { frameworkSettings } from "./exchangeAuthCode";
 
 const fetchMock = createFetchMock(vi);
 
@@ -89,7 +90,7 @@ describe("exhangeAuthCode", () => {
     });
   });
 
-  it("should encode a simple string", async () => {
+  it("should exchange tokens, set storage and clear temp values", async () => {
     const store = new MemoryStorage();
     setActiveStorage(store);
 
@@ -133,5 +134,62 @@ describe("exhangeAuthCode", () => {
       StorageKeys.codeVerifier,
     );
     expect(postCodeVerifier).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);  
+    const [url, options] = fetchMock.mock.calls[0];  
+    expect(url).toBe("http://test.kinde.com/oauth2/token");  
+    expect(options).toMatchObject({  
+      method: "POST",  
+      headers: {  
+        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",  
+      },  
+    });
   });
+
+  it("set the framework and version on header", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+
+    const state = "state";
+
+    await store.setItems({
+      [StorageKeys.state]: state,
+    });
+
+    frameworkSettings.framework = "Framework";
+    frameworkSettings.frameworkVersion = "Version";
+
+    const input = "hello";
+
+    const urlParams = new URLSearchParams();
+    urlParams.append("code", input);
+    urlParams.append("state", state);
+    urlParams.append("client_id", "test");
+
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "access_token",
+        refresh_token: "refresh_token",
+        id_token: "id_token",
+      }),
+    );
+
+    await exchangeAuthCode({
+      urlParams,
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);  
+    const [url, options] = fetchMock.mock.calls[0];  
+    expect(url).toBe("http://test.kinde.com/oauth2/token");  
+    expect(options).toMatchObject({  
+      method: "POST",  
+      headers: {  
+        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",  
+        "Kinde-SDK": "Framework/Version",  
+      },  
+    });
+  });
+
 });
