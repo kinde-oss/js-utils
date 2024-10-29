@@ -1,6 +1,9 @@
 import { getActiveStorage, StorageKeys } from "../main";
 
-export const frameworkSettings: { framework: string; frameworkVersion: string } = {
+export const frameworkSettings: {
+  framework: string;
+  frameworkVersion: string;
+} = {
   framework: "",
   frameworkVersion: "",
 };
@@ -62,12 +65,13 @@ export const exchangeAuthCode = async ({
     StorageKeys.codeVerifier,
   )) as string;
 
-  const headers: { 'Content-type': string, "Kinde-SDK"?: string } = {
+  const headers: { "Content-type": string; "Kinde-SDK"?: string } = {
     "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-  }
+  };
 
   if (frameworkSettings.framework) {
-    headers["Kinde-SDK"] = `${frameworkSettings.framework}/${frameworkSettings.frameworkVersion}`
+    headers["Kinde-SDK"] =
+      `${frameworkSettings.framework}/${frameworkSettings.frameworkVersion}`;
   }
 
   const response = await fetch(`${domain}/oauth2/token`, {

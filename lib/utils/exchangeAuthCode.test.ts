@@ -134,14 +134,14 @@ describe("exhangeAuthCode", () => {
       StorageKeys.codeVerifier,
     );
     expect(postCodeVerifier).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(1);  
-    const [url, options] = fetchMock.mock.calls[0];  
-    expect(url).toBe("http://test.kinde.com/oauth2/token");  
-    expect(options).toMatchObject({  
-      method: "POST",  
-      headers: {  
-        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",  
-      },  
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://test.kinde.com/oauth2/token");
+    expect(options).toMatchObject({
+      method: "POST",
+      headers: {
+        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+      },
     });
   });
 
@@ -180,16 +180,15 @@ describe("exhangeAuthCode", () => {
       redirectURL: "http://test.kinde.com",
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);  
-    const [url, options] = fetchMock.mock.calls[0];  
-    expect(url).toBe("http://test.kinde.com/oauth2/token");  
-    expect(options).toMatchObject({  
-      method: "POST",  
-      headers: {  
-        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",  
-        "Kinde-SDK": "Framework/Version",  
-      },  
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://test.kinde.com/oauth2/token");
+    expect(options).toMatchObject({
+      method: "POST",
+      headers: {
+        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Kinde-SDK": "Framework/Version",
+      },
     });
   });
-
 });

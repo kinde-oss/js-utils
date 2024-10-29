@@ -8,7 +8,7 @@ import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
 import { exchangeAuthCode, frameworkSettings } from "./exchangeAuthCode";
 
 export {
-  // config 
+  // config
   frameworkSettings,
 
   // utils
