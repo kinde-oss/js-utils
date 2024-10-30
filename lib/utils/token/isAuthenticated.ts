@@ -3,8 +3,8 @@ import { getDecodedToken, refreshToken } from ".";
 
 export interface IsAuthenticatedPropsWithRefreshToken {
   useRefreshToken?: true;
-  domain?: string;
-  clientId?: string;
+  domain: string;
+  clientId: string;
 }
 
 export interface IsAuthenticatedPropsWithoutRefreshToken {
