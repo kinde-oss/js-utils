@@ -100,7 +100,7 @@ export const exchangeAuthCode = async ({
     [StorageKeys.refreshToken]: data.refresh_token,
   });
 
-  activeStorage.removeItems(StorageKeys.state, StorageKeys.codeVerifier);
+  await activeStorage.removeItems(StorageKeys.state, StorageKeys.codeVerifier);
 
   // Clear all url params
   const url = new URL(window.location.toString());
