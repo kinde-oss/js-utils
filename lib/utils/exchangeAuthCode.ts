@@ -124,12 +124,11 @@ export const exchangeAuthCode = async ({
   // Clear all url params
   const cleanUrl = (url: URL): URL => {
     url.search = "";
-    url.hash = "";
     return url;
   };
   const url = cleanUrl(new URL(window.location.toString()));
   // Replace current state and clear forward history
-  window.history.replaceState(null, "", url);
+  window.history.replaceState(window.history.state, "", url);
 
   return {
     success: true,
