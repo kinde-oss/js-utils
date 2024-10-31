@@ -42,7 +42,11 @@ export const exchangeAuthCode = async ({
 
   const activeStorage = getActiveStorage();
   if (!activeStorage) {
-    throw new Error("No active storage found");
+    console.error("No active storage found");
+    return {
+      success: false,
+      error: `Authentication storage is not initialized`,
+    };
   }
 
   // warn if framework and version has not been set
@@ -65,8 +69,15 @@ export const exchangeAuthCode = async ({
     StorageKeys.codeVerifier,
   )) as string;
 
-  const headers: { "Content-type": string; "Kinde-SDK"?: string } = {
+  const headers: {
+    "Content-type": string;
+    "Cache-Control": string;
+    Pragma: string;
+    "Kinde-SDK"?: string;
+  } = {
     "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+    "Cache-Control": "no-store",
+    Pragma: "no-cache",
   };
 
   if (frameworkSettings.framework) {
@@ -89,7 +100,7 @@ export const exchangeAuthCode = async ({
   });
   if (!response?.ok) {
     const errorText = await response.text();
-    console.error('Token exchange failed:', response.status, errorText);
+    console.error("Token exchange failed:", response.status, errorText);
     return {
       success: false,
       error: `Token exchange failed: ${response.status} - ${errorText}`,
@@ -111,9 +122,14 @@ export const exchangeAuthCode = async ({
   await activeStorage.removeItems(StorageKeys.state, StorageKeys.codeVerifier);
 
   // Clear all url params
-  const url = new URL(window.location.toString());
-  url.search = "";
-  window.history.pushState({}, "", url);
+  const cleanUrl = (url: URL): URL => {
+    url.search = "";
+    url.hash = "";
+    return url;
+  };
+  const url = cleanUrl(new URL(window.location.toString()));
+  // Replace current state and clear forward history
+  window.history.replaceState(null, "", url);
 
   return {
     success: true,

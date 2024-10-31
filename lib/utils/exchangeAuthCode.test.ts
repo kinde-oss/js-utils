@@ -192,7 +192,6 @@ describe("exhangeAuthCode", () => {
     });
   });
 
-
   it("set the framework and version on header", async () => {
     const store = new MemoryStorage();
     setActiveStorage(store);
@@ -226,6 +225,5 @@ describe("exhangeAuthCode", () => {
       success: false,
       error: "Token exchange failed: 500 - error",
     });
-
   });
 });
