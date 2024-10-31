@@ -87,6 +87,14 @@ export const exchangeAuthCode = async ({
       redirect_uri: redirectURL,
     }),
   });
+  if (!response?.ok) {
+    const errorText = await response.text();
+    console.error('Token exchange failed:', response.status, errorText);
+    return {
+      success: false,
+      error: `Token exchange failed: ${response.status} - ${errorText}`,
+    };
+  }
 
   const data: {
     access_token: string;

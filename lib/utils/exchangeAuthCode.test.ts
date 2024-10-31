@@ -191,4 +191,41 @@ describe("exhangeAuthCode", () => {
       },
     });
   });
+
+
+  it("set the framework and version on header", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+
+    const state = "state";
+
+    await store.setItems({
+      [StorageKeys.state]: state,
+    });
+
+    frameworkSettings.framework = "Framework";
+    frameworkSettings.frameworkVersion = "Version";
+
+    const input = "hello";
+
+    const urlParams = new URLSearchParams();
+    urlParams.append("code", input);
+    urlParams.append("state", state);
+    urlParams.append("client_id", "test");
+
+    fetchMock.mockOnce({ status: 500, ok: false, body: "error" });
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+
+    expect(result).toStrictEqual({
+      success: false,
+      error: "Token exchange failed: 500 - error",
+    });
+
+  });
 });
