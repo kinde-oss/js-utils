@@ -71,13 +71,13 @@ export const exchangeAuthCode = async ({
 
   const headers: {
     "Content-type": string;
-    "Cache-Control": string;
-    Pragma: string;
+    // "Cache-Control": string;
+    // Pragma: string;
     "Kinde-SDK"?: string;
   } = {
     "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-    "Cache-Control": "no-store",
-    Pragma: "no-cache",
+    // "Cache-Control": "no-store",
+    // Pragma: "no-cache",
   };
 
   if (frameworkSettings.framework) {
@@ -88,8 +88,8 @@ export const exchangeAuthCode = async ({
   const response = await fetch(`${domain}/oauth2/token`, {
     method: "POST",
     // ...(isUseCookie && {credentials: 'include'}),
-    credentials: "include",
-    headers,
+    // credentials: "include",
+    headers: new Headers(headers),
     body: new URLSearchParams({
       client_id: clientId,
       code,

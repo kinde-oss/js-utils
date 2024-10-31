@@ -91,4 +91,14 @@ describe("isAuthenticated", () => {
       mockError,
     );
   });
+
+  it("should return false if token is missing exp", async () => {
+    vi.spyOn(tokenUtils, "getDecodedToken").mockResolvedValue({
+      // Missing 'exp' field
+    });
+  
+    const result = await isAuthenticated();
+  
+    expect(result).toBe(false);
+  });
 });

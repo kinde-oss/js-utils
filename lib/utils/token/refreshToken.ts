@@ -7,8 +7,8 @@ import { sanatizeURL } from "..";
  * @returns { Promise<boolean> }
  */
 export const refreshToken = async (
-  domain?: string,
-  clientId?: string,
+  domain: string,
+  clientId: string,
 ): Promise<boolean> => {
   try {
     if (!domain) {
@@ -23,9 +23,15 @@ export const refreshToken = async (
 
     const storage = await getActiveStorage();
 
+    if (!storage) {
+      console.error("No active storage found");
+      return false;
+    }
+
     const refreshTokenValue = await storage.getSessionItem(
       StorageKeys.refreshToken,
-    );
+    ) as string;
+
 
     if (!refreshTokenValue) {
       console.error("No refresh token found");

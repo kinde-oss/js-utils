@@ -28,6 +28,11 @@ export const isAuthenticated = async (
     const token = await getDecodedToken<JWTDecoded>("accessToken");
     if (!token) return false;
 
+    if (!token.exp) {
+      console.error("Token does not have an expiry");
+      return false;
+    }
+
     const isExpired = token.exp < Math.floor(Date.now() / 1000);
 
     if (isExpired && props?.useRefreshToken) {
