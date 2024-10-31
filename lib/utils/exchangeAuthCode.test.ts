@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { exchangeAuthCode } from ".";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
-import { getActiveStorage, setActiveStorage } from "./token";
+import { setActiveStorage } from "./token";
 import createFetchMock from "vitest-fetch-mock";
 import { frameworkSettings } from "./exchangeAuthCode";
 
