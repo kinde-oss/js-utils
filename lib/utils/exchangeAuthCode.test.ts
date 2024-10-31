@@ -1,13 +1,13 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { exchangeAuthCode } from ".";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
-import { setActiveStorage } from "./token";
+import { getActiveStorage, setActiveStorage } from "./token";
 import createFetchMock from "vitest-fetch-mock";
 import { frameworkSettings } from "./exchangeAuthCode";
 
 const fetchMock = createFetchMock(vi);
 
-describe("exhangeAuthCode", () => {
+describe("exchangeAuthCode", () => {
   beforeEach(() => {
     fetchMock.enableMocks();
   });
@@ -56,13 +56,16 @@ describe("exhangeAuthCode", () => {
     urlParams.append("code", "test");
 
     expect(
-      exchangeAuthCode({
+      await exchangeAuthCode({
         urlParams,
         domain: "http://test.kinde.com",
         clientId: "test",
-        redirectURL: "http://test.kinde.com",
+        redirectURL: "http://test.kinde.coma",
       }),
-    ).rejects.toThrowError("No active storage found");
+    ).toStrictEqual({
+      error: "Authentication storage is not initialized",
+      success: false,
+    });
   });
 
   it("state mismatch", async () => {
@@ -192,7 +195,7 @@ describe("exhangeAuthCode", () => {
     });
   });
 
-  it("set the framework and version on header", async () => {
+  it("should handle token exchange failure", async () => {
     const store = new MemoryStorage();
     setActiveStorage(store);
 
@@ -201,9 +204,6 @@ describe("exhangeAuthCode", () => {
     await store.setItems({
       [StorageKeys.state]: state,
     });
-
-    frameworkSettings.framework = "Framework";
-    frameworkSettings.frameworkVersion = "Version";
 
     const input = "hello";
 
