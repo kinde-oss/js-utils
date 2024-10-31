@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { refreshToken } from ".";
 import { SessionManager, StorageKeys } from "../../sessionManager";
 import * as tokenUtils from ".";
 
@@ -12,13 +11,15 @@ describe("refreshToken", () => {
     setSessionItem: vi.fn(),
     removeSessionItem: vi.fn(),
     destroySession: vi.fn(),
+    setItems: vi.fn(),
+    removeItems: vi.fn(),
   };
 
   beforeEach(() => {
     vi.resetAllMocks();
     vi.spyOn(tokenUtils, "getDecodedToken").mockResolvedValue(null);
     vi.spyOn(tokenUtils, "getActiveStorage").mockResolvedValue(mockStorage);
-    // vi.spyOn(Utils, 'sanatizeURL').mockImplementation((url) => url);
+    // vi.spyOn(Utils, 'sanitizeUrl').mockImplementation((url) => url);
     global.fetch = vi.fn();
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -28,7 +29,7 @@ describe("refreshToken", () => {
   });
 
   it("should return false if domain is not provided", async () => {
-    const result = await refreshToken(undefined, mockClientId);
+    const result = await tokenUtils.refreshToken("", mockClientId);
     expect(result).toBe(false);
     expect(console.error).toHaveBeenCalledWith(
       "Domain is required for token refresh",
@@ -36,7 +37,7 @@ describe("refreshToken", () => {
   });
 
   it("should return false if clientId is not provided", async () => {
-    const result = await refreshToken(mockDomain, undefined);
+    const result = await tokenUtils.refreshToken(mockDomain, "");
     expect(result).toBe(false);
     expect(console.error).toHaveBeenCalledWith(
       "Client ID is required for token refresh",
@@ -45,7 +46,7 @@ describe("refreshToken", () => {
 
   it("should return false if no refresh token is found", async () => {
     // mockStorage.getSessionItem.mockResolvedValue(null);
-    const result = await refreshToken(mockDomain, mockClientId);
+    const result = await tokenUtils.refreshToken(mockDomain, mockClientId);
     expect(result).toBe(false);
     expect(console.error).toHaveBeenCalledWith("No refresh token found");
   });
@@ -55,7 +56,7 @@ describe("refreshToken", () => {
       .fn()
       .mockResolvedValue(mockRefreshTokenValue);
     vi.mocked(global.fetch).mockRejectedValue(new Error("Network error"));
-    const result = await refreshToken(mockDomain, mockClientId);
+    const result = await tokenUtils.refreshToken(mockDomain, mockClientId);
     expect(result).toBe(false);
     expect(console.error).toHaveBeenCalledWith(
       "Error refreshing token:",
@@ -68,7 +69,7 @@ describe("refreshToken", () => {
       .fn()
       .mockResolvedValue(mockRefreshTokenValue);
     vi.mocked(global.fetch).mockResolvedValue({ ok: false } as Response);
-    const result = await refreshToken(mockDomain, mockClientId);
+    const result = await tokenUtils.refreshToken(mockDomain, mockClientId);
     expect(result).toBe(false);
     expect(console.error).toHaveBeenCalledWith("Failed to refresh token");
   });
@@ -81,7 +82,7 @@ describe("refreshToken", () => {
       ok: true,
       json: () => Promise.resolve({}),
     } as Response);
-    const result = await refreshToken(mockDomain, mockClientId);
+    const result = await tokenUtils.refreshToken(mockDomain, mockClientId);
     expect(result).toBe(false);
   });
 
@@ -99,7 +100,7 @@ describe("refreshToken", () => {
       json: () => Promise.resolve(mockResponse),
     } as Response);
 
-    const result = await refreshToken(mockDomain, mockClientId);
+    const result = await tokenUtils.refreshToken(mockDomain, mockClientId);
 
     expect(result).toBe(true);
     expect(mockStorage.setSessionItem).toHaveBeenCalledWith(
@@ -116,7 +117,7 @@ describe("refreshToken", () => {
     );
   });
 
-  it("should use sanatizeURL for the domain", async () => {
+  it("should use sanitizeUrl for the domain", async () => {
     mockStorage.getSessionItem = vi
       .fn()
       .mockResolvedValue(mockRefreshTokenValue);
@@ -125,7 +126,7 @@ describe("refreshToken", () => {
       json: () => Promise.resolve({ access_token: "new-token" }),
     } as Response);
 
-    await refreshToken("https://example.com/", mockClientId);
+    await tokenUtils.refreshToken("https://example.com/", mockClientId);
 
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining(`https://example.com/oauth2/token`),

@@ -1,5 +1,5 @@
 import { LoginMethodParams } from "../types";
-import { sanatizeURL } from "./sanatizeUrl";
+import { sanitizeUrl } from "./sanitizeUrl";
 
 export const mapLoginMethodParamsForUrl = (
   options: Partial<LoginMethodParams>,
@@ -9,7 +9,7 @@ export const mapLoginMethodParamsForUrl = (
     is_create_org: options.isCreateOrg?.toString(),
     connection_id: options.connectionId,
     redirect_uri: options.redirectURL
-      ? sanatizeURL(options.redirectURL)
+      ? sanitizeUrl(options.redirectURL)
       : undefined,
     audience: options.audience || "",
     scope: options.scope?.join(" ") || "email profile openid offline",

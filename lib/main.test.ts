@@ -38,7 +38,7 @@ describe("index exports", () => {
       "generateAuthUrl",
       "generateRandomString",
       "mapLoginMethodParamsForUrl",
-      "sanatizeURL",
+      "sanitizeUrl",
       "exchangeAuthCode",
       "isAuthenticated",
       "refreshToken",

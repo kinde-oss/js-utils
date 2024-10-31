@@ -1,6 +1,6 @@
 import { getActiveStorage } from ".";
 import { StorageKeys } from "../../sessionManager";
-import { sanatizeURL } from "..";
+import { sanitizeUrl } from "..";
 
 /**
  * refreshes the token
@@ -38,7 +38,7 @@ export const refreshToken = async (
       return false;
     }
 
-    const response = await fetch(`${sanatizeURL(domain)}/oauth2/token`, {
+    const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
       method: "POST",
       headers: {
         "Content-Type": "multipart/form-data",
