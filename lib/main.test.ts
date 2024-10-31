@@ -39,6 +39,7 @@ describe("index exports", () => {
       "generateRandomString",
       "mapLoginMethodParamsForUrl",
       "sanatizeURL",
+      "exchangeAuthCode",
 
       // session manager
       "MemoryStorage",
@@ -49,6 +50,8 @@ describe("index exports", () => {
 
       // token utils
       "getActiveStorage",
+      "hasActiveStorage",
+      "clearActiveStorage",
       "getClaim",
       "getClaims",
       "getCurrentOrganization",
@@ -60,6 +63,9 @@ describe("index exports", () => {
       "getUserOrganizations",
       "getUserProfile",
       "setActiveStorage",
+
+      // config
+      "frameworkSettings",
     ];
 
     expect(actualExports.sort()).toEqual(expectedExports.sort());

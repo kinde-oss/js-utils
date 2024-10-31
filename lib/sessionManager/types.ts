@@ -11,6 +11,7 @@ export enum StorageKeys {
   refreshToken = "refreshToken",
   state = "state",
   nonce = "nonce",
+  codeVerifier = "codeVerifier",
 }
 
 export type StorageSettingsType = {
@@ -38,6 +39,14 @@ export abstract class SessionBase<V extends string = StorageKeys>
           return this.setSessionItem(key, value);
         },
       ),
+    );
+  }
+
+  async removeItems(...items: V[]): Awaitable<void> {
+    await Promise.all(
+      items.map((item) => {
+        return this.removeSessionItem(item);
+      }),
     );
   }
 }
@@ -80,4 +89,10 @@ export interface SessionManager<V extends string = StorageKeys> {
    * @returns {Promise<void>}
    */
   setItems(items: Partial<Record<V, unknown>>): Awaitable<void>;
+
+  /**
+   * Removes multiple items simultaneously.
+   * @param items
+   */
+  removeItems(...items: V[]): Awaitable<void>;
 }
