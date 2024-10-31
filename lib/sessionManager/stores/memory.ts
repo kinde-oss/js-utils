@@ -1,12 +1,15 @@
 import { storageSettings } from "../index.js";
-import { StorageKeys, type SessionManager } from "../types.js";
+import { SessionBase, StorageKeys, type SessionManager } from "../types.js";
 import { splitString } from "../utils.js";
 
 /**
  * Provides a memory based session manager implementation for the browser.
  * @class MemoryStorage
  */
-export class MemoryStorage<V = StorageKeys> implements SessionManager<V> {
+export class MemoryStorage<V extends string = StorageKeys>
+  extends SessionBase<V>
+  implements SessionManager<V>
+{
   private memCache: Record<string, unknown> = {};
 
   /**

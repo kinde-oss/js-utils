@@ -1,4 +1,3 @@
-// utils.test.ts
 import { splitString } from "./utils";
 import { describe, expect, it } from "vitest";
 

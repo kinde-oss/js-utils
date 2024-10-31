@@ -39,17 +39,21 @@ describe("index exports", () => {
       "generateRandomString",
       "mapLoginMethodParamsForUrl",
       "sanatizeURL",
+      "exchangeAuthCode",
       "isAuthenticated",
       "refreshToken",
 
       // session manager
       "MemoryStorage",
       "ChromeStore",
+      "LocalStorage",
       "storageSettings",
       "ExpoSecureStore",
 
       // token utils
       "getActiveStorage",
+      "hasActiveStorage",
+      "clearActiveStorage",
       "getClaim",
       "getClaims",
       "getCurrentOrganization",
@@ -61,6 +65,9 @@ describe("index exports", () => {
       "getUserOrganizations",
       "getUserProfile",
       "setActiveStorage",
+
+      // config
+      "frameworkSettings",
     ];
 
     expect(actualExports.sort()).toEqual(expectedExports.sort());

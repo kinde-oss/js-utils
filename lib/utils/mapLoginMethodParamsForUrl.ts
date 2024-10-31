@@ -11,13 +11,15 @@ export const mapLoginMethodParamsForUrl = (
     redirect_uri: options.redirectURL
       ? sanatizeURL(options.redirectURL)
       : undefined,
-    audience: options.audience,
+    audience: options.audience || "",
     scope: options.scope?.join(" ") || "email profile openid offline",
     prompt: options.prompt,
     lang: options.lang,
     org_code: options.orgCode,
     org_name: options.orgName,
     has_success_page: options.hasSuccessPage?.toString(),
+    workflow_id: options.workflowId,
+    release_id: options.releaseId,
   };
 
   Object.keys(translate).forEach(

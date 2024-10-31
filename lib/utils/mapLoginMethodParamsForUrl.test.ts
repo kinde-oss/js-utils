@@ -46,6 +46,7 @@ describe("mapLoginMethodParamsForUrl", () => {
     const expectedOutput = {
       login_hint: "user@example.com",
       scope: "openid",
+      audience: "",
     };
 
     const result = mapLoginMethodParamsForUrl(options);
@@ -60,6 +61,7 @@ describe("mapLoginMethodParamsForUrl", () => {
     const expectedOutput = {
       login_hint: "user@example.com",
       scope: "email profile openid offline",
+      audience: "",
     };
 
     const result = mapLoginMethodParamsForUrl(options);
@@ -74,6 +76,7 @@ describe("mapLoginMethodParamsForUrl", () => {
     const expectedOutput = {
       redirect_uri: "https://example.com",
       scope: "email profile openid offline",
+      audience: "",
     };
 
     const result = mapLoginMethodParamsForUrl(options);
@@ -90,6 +93,7 @@ describe("mapLoginMethodParamsForUrl", () => {
       is_create_org: "false",
       has_success_page: "false",
       scope: "email profile openid offline",
+      audience: "",
     };
 
     const result = mapLoginMethodParamsForUrl(options);
@@ -113,6 +117,7 @@ describe("mapLoginMethodParamsForUrl", () => {
 
     const expectedOutput = {
       scope: "email profile openid offline",
+      audience: "",
     };
 
     const result = mapLoginMethodParamsForUrl(options);

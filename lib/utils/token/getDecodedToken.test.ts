@@ -5,10 +5,8 @@ import { setActiveStorage } from ".";
 import { createMockAccessToken } from "./testUtils";
 
 describe("getDecodedToken", () => {
-  it("error when no active storage is set", () => {
-    expect(() => getDecodedToken("idToken")).rejects.toThrowError(
-      "Session manager is not initialized",
-    );
+  it("return null when no active storage is defined", async () => {
+    expect(await getDecodedToken("idToken")).toBe(null);
   });
 });
 
