@@ -1,4 +1,4 @@
-import { getActiveStorage, StorageKeys } from "../main";
+import { getActiveStorage, getInsecureStorage, StorageKeys } from "../main";
 
 export const frameworkSettings: {
   framework: string;
@@ -40,7 +40,7 @@ export const exchangeAuthCode = async ({
     };
   }
 
-  const activeStorage = getActiveStorage();
+  const activeStorage = getInsecureStorage();
   if (!activeStorage) {
     console.error("No active storage found");
     return {
@@ -113,13 +113,14 @@ export const exchangeAuthCode = async ({
     refresh_token: string;
   } = await response.json();
 
-  activeStorage.setItems({
+  const secureStore = getActiveStorage();
+  secureStore!.setItems({
     [StorageKeys.accessToken]: data.access_token,
     [StorageKeys.idToken]: data.id_token,
     [StorageKeys.refreshToken]: data.refresh_token,
   });
 
-  await activeStorage.removeItems(StorageKeys.state, StorageKeys.codeVerifier);
+  await activeStorage.removeItems(StorageKeys.state, StorageKeys.nonce, StorageKeys.codeVerifier);
 
   // Clear all url params
   const cleanUrl = (url: URL): URL => {

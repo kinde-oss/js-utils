@@ -12,7 +12,7 @@ export const getDecodedToken = async <
     org_code: string;
   },
 >(
-  tokenType: "accessToken" | "idToken" = "accessToken",
+  tokenType: "accessToken" | "idToken" = StorageKeys.accessToken,
 ): Promise<T | null> => {
   const activeStorage = getActiveStorage();
 
@@ -28,5 +28,11 @@ export const getDecodedToken = async <
     return null;
   }
 
-  return jwtDecoder<T>(token);
+  const decodedToken = jwtDecoder<T>(token);
+
+  if (!decodedToken) {
+    console.log("No decoded token found");
+  }
+
+  return decodedToken;
 };

@@ -14,7 +14,8 @@ import { isAuthenticated } from "./isAuthenticated";
 import { refreshToken } from "./refreshToken";
 
 const storage = {
-  value: null as SessionManager | null,
+  secure: null as SessionManager | null,
+  insecure: null as SessionManager | null,
 };
 
 /**
@@ -22,7 +23,7 @@ const storage = {
  * @param store Session manager instance
  */
 const setActiveStorage = (store: SessionManager) => {
-  storage.value = store;
+  storage.secure = store;
 };
 
 /**
@@ -30,7 +31,7 @@ const setActiveStorage = (store: SessionManager) => {
  * @returns Session manager instance or null
  */
 const getActiveStorage = (): SessionManager | null => {
-  return storage.value || null;
+  return storage.secure || null;
 };
 
 /**
@@ -38,18 +39,61 @@ const getActiveStorage = (): SessionManager | null => {
  * @returns boolean
  */
 const hasActiveStorage = (): boolean => {
-  return storage.value !== null;
+  return storage.secure !== null;
 };
 
+/**
+ * Clears the active storage
+ */
 const clearActiveStorage = (): void => {
-  storage.value = null;
+  storage.secure = null;
+};
+
+/**
+ * Sets the active storage
+ * @param store Session manager instance
+ */
+const setInsecureStorage = (store: SessionManager) => {
+  storage.insecure = store;
+};
+
+/**
+ * Gets the current active storage
+ * @returns Session manager instance or null
+ */
+const getInsecureStorage = (): SessionManager | null => {
+  return storage.insecure || storage.secure || null;
+};
+
+/**
+ * Checks if there is an active storage
+ * @returns boolean
+ */
+const hasInsecureStorage = (): boolean => {
+  return storage.insecure !== null;
+};
+
+/**
+ * Clears the active storage
+ */
+const clearInsecureStorage = (): void => {
+  storage.insecure = null;
 };
 
 export {
+  // main store
   setActiveStorage,
   getActiveStorage,
   hasActiveStorage,
   clearActiveStorage,
+
+  // insecure store
+  setInsecureStorage,
+  getInsecureStorage,
+  hasInsecureStorage,
+  clearInsecureStorage,
+
+  // helpers
   getClaim,
   getClaims,
   getCurrentOrganization,
