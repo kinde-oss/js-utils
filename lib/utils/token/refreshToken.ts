@@ -1,6 +1,7 @@
 import { getActiveStorage } from ".";
 import { StorageKeys } from "../../sessionManager";
 import { sanitizeUrl } from "..";
+import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
 
 /**
  * refreshes the token
@@ -28,23 +29,25 @@ export const refreshToken = async (
       return false;
     }
 
-    const refreshTokenValue = await storage.getSessionItem(
+    const refreshTokenValue = (await storage.getSessionItem(
       StorageKeys.refreshToken,
-    ) as string;
-
+    )) as string;
 
     if (!refreshTokenValue) {
       console.error("No refresh token found");
       return false;
     }
 
+    clearRefreshTimer();
+
     const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
       method: "POST",
       headers: {
-        "Content-Type": "multipart/form-data",
-        "Kinde-SDK": "js-utils",
+        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Cache-Control": "no-store",
+        Pragma: "no-cache",
       },
-      body: JSON.stringify({
+      body:  new URLSearchParams({
         refresh_token: refreshTokenValue,
         grant_type: "refresh_token",
         client_id: clientId,
@@ -59,6 +62,9 @@ export const refreshToken = async (
     const data = await response.json();
 
     if (data.access_token) {
+      setRefreshTimer(data.expires_in * 1000, async () => {
+        refreshToken(domain, clientId);
+      });
       await storage.setSessionItem(StorageKeys.accessToken, data.access_token);
       if (data.id_token) {
         await storage.setSessionItem(StorageKeys.idToken, data.id_token);

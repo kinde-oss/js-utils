@@ -1,4 +1,10 @@
-import { getActiveStorage, getInsecureStorage, StorageKeys } from "../main";
+import {
+  getActiveStorage,
+  getInsecureStorage,
+  refreshToken,
+  StorageKeys,
+} from "../main";
+import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 
 export const frameworkSettings: {
   framework: string;
@@ -13,6 +19,7 @@ interface ExchangeAuthCodeParams {
   domain: string;
   clientId: string;
   redirectURL: string;
+  autoReferesh?: boolean;
 }
 
 interface ExchangeAuthCodeResult {
@@ -28,6 +35,7 @@ export const exchangeAuthCode = async ({
   domain,
   clientId,
   redirectURL,
+  autoReferesh = false,
 }: ExchangeAuthCodeParams): Promise<ExchangeAuthCodeResult> => {
   const state = urlParams.get("state");
   const code = urlParams.get("code");
@@ -69,15 +77,16 @@ export const exchangeAuthCode = async ({
     StorageKeys.codeVerifier,
   )) as string;
 
+
   const headers: {
     "Content-type": string;
-    // "Cache-Control": string;
-    // Pragma: string;
+    "Cache-Control": string;
+    Pragma: string;
     "Kinde-SDK"?: string;
   } = {
     "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-    // "Cache-Control": "no-store",
-    // Pragma: "no-cache",
+    "Cache-Control": "no-store",
+    Pragma: "no-cache",
   };
 
   if (frameworkSettings.framework) {
@@ -106,11 +115,13 @@ export const exchangeAuthCode = async ({
       error: `Token exchange failed: ${response.status} - ${errorText}`,
     };
   }
+  clearRefreshTimer()
 
   const data: {
     access_token: string;
     id_token: string;
     refresh_token: string;
+    expires_in: number;
   } = await response.json();
 
   const secureStore = getActiveStorage();
@@ -120,7 +131,17 @@ export const exchangeAuthCode = async ({
     [StorageKeys.refreshToken]: data.refresh_token,
   });
 
-  await activeStorage.removeItems(StorageKeys.state, StorageKeys.nonce, StorageKeys.codeVerifier);
+  if (autoReferesh) {
+    setRefreshTimer(data.expires_in * 1000, async () => {
+      refreshToken(domain, clientId);
+    });
+  }
+
+  await activeStorage.removeItems(
+    StorageKeys.state,
+    StorageKeys.nonce,
+    StorageKeys.codeVerifier,
+  );
 
   // Clear all url params
   const cleanUrl = (url: URL): URL => {

@@ -13,7 +13,12 @@ export const generateAuthUrl = async (
   domain: string,
   type: IssuerRouteTypes = IssuerRouteTypes.login,
   options: LoginOptions,
-): Promise<{ url: URL; state: string; nonce: string; codeChallenge: string }> => {
+): Promise<{
+  url: URL;
+  state: string;
+  nonce: string;
+  codeChallenge: string;
+}> => {
   const authUrl = new URL(`${domain}/oauth2/auth`);
   const activeStorage = getInsecureStorage();
   const searchParams: Record<string, string> = {
