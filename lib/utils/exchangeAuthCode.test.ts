@@ -271,7 +271,7 @@ describe("exchangeAuthCode", () => {
       domain: "http://test.kinde.com",
       clientId: "test",
       redirectURL: "http://test.kinde.com",
-      autoReferesh: true,
+      autoRefresh: true,
     });
 
     expect(refreshTokenTimer.setRefreshTimer).toHaveBeenCalledOnce();

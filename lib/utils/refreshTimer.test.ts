@@ -24,6 +24,7 @@ describe("refreshTimer", () => {
   it("should throw error when window is undefined", () => {
     const originalWindow = global.window;
     // Temporarily delete the window object
+    //@ts-ignore
     delete global.window;
 
     const callback = vi.fn();
