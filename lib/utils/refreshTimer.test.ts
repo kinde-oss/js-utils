@@ -24,7 +24,8 @@ describe("refreshTimer", () => {
   it("should throw error when window is undefined", () => {
     const originalWindow = global.window;
     // Temporarily delete the window object
-    //@ts-ignore
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     delete global.window;
 
     const callback = vi.fn();
