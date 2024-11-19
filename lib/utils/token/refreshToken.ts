@@ -3,6 +3,14 @@ import { StorageKeys } from "../../sessionManager";
 import { sanitizeUrl } from "..";
 import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
 
+interface RefreshTokenResult {
+  success: boolean;
+  error?: string;
+  [StorageKeys.accessToken]?: string;
+  [StorageKeys.idToken]?: string;
+  [StorageKeys.refreshToken]?: string;
+}
+
 /**
  * refreshes the token
  * @returns { Promise<boolean> }
@@ -10,23 +18,29 @@ import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
 export const refreshToken = async (
   domain: string,
   clientId: string,
-): Promise<boolean> => {
+): Promise<RefreshTokenResult> => {
   try {
     if (!domain) {
-      console.error("Domain is required for token refresh");
-      return false;
+      return {
+        success: false,
+        error: "Domain is required for token refresh",
+      };
     }
 
     if (!clientId) {
-      console.error("Client ID is required for token refresh");
-      return false;
+      return {
+        success: false,
+        error: "Client ID is required for token refresh",
+      };
     }
 
-    const storage = await getActiveStorage();
+    const storage = getActiveStorage();
 
     if (!storage) {
-      console.error("No active storage found");
-      return false;
+      return {
+        success: false,
+        error: "No active storage found",
+      };
     }
 
     const refreshTokenValue = (await storage.getSessionItem(
@@ -34,8 +48,10 @@ export const refreshToken = async (
     )) as string;
 
     if (!refreshTokenValue) {
-      console.error("No refresh token found");
-      return false;
+      return {
+        success: false,
+        error: "No refresh token found",
+      };
     }
 
     clearRefreshTimer();
@@ -47,7 +63,7 @@ export const refreshToken = async (
         "Cache-Control": "no-store",
         Pragma: "no-cache",
       },
-      body:  new URLSearchParams({
+      body: new URLSearchParams({
         refresh_token: refreshTokenValue,
         grant_type: "refresh_token",
         client_id: clientId,
@@ -55,14 +71,16 @@ export const refreshToken = async (
     });
 
     if (!response.ok) {
-      console.error("Failed to refresh token");
-      return false;
+      return {
+        success: false,
+        error: "Failed to refresh token",
+      };
     }
 
     const data = await response.json();
 
     if (data.access_token) {
-      setRefreshTimer(data.expires_in * 1000, async () => {
+      setRefreshTimer(data.expires_in, async () => {
         refreshToken(domain, clientId);
       });
       await storage.setSessionItem(StorageKeys.accessToken, data.access_token);
@@ -75,12 +93,22 @@ export const refreshToken = async (
           data.refresh_token,
         );
       }
-      return true;
+      return {
+        success: true,
+        [StorageKeys.accessToken]: data.access_token,
+        [StorageKeys.idToken]: data.id_token,
+        [StorageKeys.refreshToken]: data.refresh_token,
+      };
     }
 
-    return false;
+    return {
+      success: false,
+      error: `No access token recieved`,
+    };
   } catch (error) {
-    console.error("Error refreshing token:", error);
-    return false;
+    return {
+      success: false,
+      error: `Error refreshing token: ${error}`,
+    };
   }
 };

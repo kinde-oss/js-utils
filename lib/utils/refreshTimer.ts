@@ -1,7 +1,7 @@
 export let refreshTimer: number | undefined;
 
 export function setRefreshTimer(timer: number, callback: () => void) {
-  window.setTimeout(callback, timer);
+  refreshTimer = window.setTimeout(callback, timer * 1000 - 10000);
 }
 
 export function clearRefreshTimer() {

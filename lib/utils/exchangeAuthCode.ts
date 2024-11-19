@@ -77,7 +77,6 @@ export const exchangeAuthCode = async ({
     StorageKeys.codeVerifier,
   )) as string;
 
-
   const headers: {
     "Content-type": string;
     "Cache-Control": string;
@@ -115,7 +114,7 @@ export const exchangeAuthCode = async ({
       error: `Token exchange failed: ${response.status} - ${errorText}`,
     };
   }
-  clearRefreshTimer()
+  clearRefreshTimer();
 
   const data: {
     access_token: string;
@@ -132,7 +131,7 @@ export const exchangeAuthCode = async ({
   });
 
   if (autoReferesh) {
-    setRefreshTimer(data.expires_in * 1000, async () => {
+    setRefreshTimer(data.expires_in, async () => {
       refreshToken(domain, clientId);
     });
   }

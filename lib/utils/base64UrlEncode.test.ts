@@ -36,4 +36,16 @@ describe("base64UrlEncode", () => {
     const result = base64UrlEncode(input);
     expect(result).toBe(expectedOutput);
   });
+
+  it("should encode when passed an ArrayBuffer", () => {
+    const buffer = new ArrayBuffer(8);
+    const view = new Uint8Array(buffer);
+    for (let i = 0; i < view.length; i++) {
+      view[i] = i + 1;
+    }
+
+    const expectedOutput = "AQIDBAUGBwg";
+    const result = base64UrlEncode(buffer);
+    expect(result).toBe(expectedOutput);
+  });
 });

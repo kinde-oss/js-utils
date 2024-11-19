@@ -4,16 +4,22 @@ import { MemoryStorage, StorageKeys } from "../sessionManager";
 import { setActiveStorage } from "./token";
 import createFetchMock from "vitest-fetch-mock";
 import { frameworkSettings } from "./exchangeAuthCode";
+import * as refreshTokenTimer from "./refreshTimer";
+import * as main from "../main";
 
 const fetchMock = createFetchMock(vi);
 
 describe("exchangeAuthCode", () => {
   beforeEach(() => {
     fetchMock.enableMocks();
+    vi.spyOn(refreshTokenTimer, "setRefreshTimer");
+    vi.spyOn(main, "refreshToken");
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
     fetchMock.resetMocks();
+    vi.useRealTimers();
   });
 
   it("missing state param", async () => {
@@ -142,10 +148,14 @@ describe("exchangeAuthCode", () => {
     expect(url).toBe("http://test.kinde.com/oauth2/token");
     expect(options).toMatchObject({
       method: "POST",
-      headers: {
-        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-      },
     });
+    expect((options?.headers as Headers).get("Content-type")).toEqual(
+      "application/x-www-form-urlencoded; charset=UTF-8",
+    );
+    expect((options?.headers as Headers).get("Cache-Control")).toEqual(
+      "no-store",
+    );
+    expect((options?.headers as Headers).get("Pragma")).toEqual("no-cache");
   });
 
   it("set the framework and version on header", async () => {
@@ -173,6 +183,7 @@ describe("exchangeAuthCode", () => {
         access_token: "access_token",
         refresh_token: "refresh_token",
         id_token: "id_token",
+        expires_in: 3600,
       }),
     );
 
@@ -188,11 +199,10 @@ describe("exchangeAuthCode", () => {
     expect(url).toBe("http://test.kinde.com/oauth2/token");
     expect(options).toMatchObject({
       method: "POST",
-      headers: {
-        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "Kinde-SDK": "Framework/Version",
-      },
     });
+    expect((options?.headers as Headers).get("Kinde-SDK")).toEqual(
+      "Framework/Version",
+    );
   });
 
   it("should handle token exchange failure", async () => {
@@ -225,5 +235,51 @@ describe("exchangeAuthCode", () => {
       success: false,
       error: "Token exchange failed: 500 - error",
     });
+  });
+
+  it("should set the refresh timer", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+
+    const state = "state";
+
+    await store.setItems({
+      [StorageKeys.state]: state,
+    });
+
+    frameworkSettings.framework = "Framework";
+    frameworkSettings.frameworkVersion = "Version";
+
+    const input = "hello";
+
+    const urlParams = new URLSearchParams();
+    urlParams.append("code", input);
+    urlParams.append("state", state);
+    urlParams.append("client_id", "test");
+
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "access_token",
+        refresh_token: "refresh_token",
+        id_token: "id_token",
+        expires_in: 3600,
+      }),
+    );
+
+    await exchangeAuthCode({
+      urlParams,
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+      autoReferesh: true,
+    });
+
+    expect(refreshTokenTimer.setRefreshTimer).toHaveBeenCalledOnce();
+    expect(refreshTokenTimer.setRefreshTimer).toHaveBeenCalledWith(
+      3600,
+      expect.any(Function),
+    );
+    vi.advanceTimersByTime(3600 * 1000);
+    expect(main.refreshToken).toHaveBeenCalledTimes(1);
   });
 });

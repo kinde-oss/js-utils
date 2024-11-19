@@ -1,89 +1,104 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { SessionManager, StorageKeys } from "../../sessionManager";
+import { MemoryStorage, StorageKeys } from "../../sessionManager";
 import * as tokenUtils from ".";
 
 describe("refreshToken", () => {
   const mockDomain = "https://example.com";
   const mockClientId = "test-client-id";
   const mockRefreshTokenValue = "mock-refresh-token";
-  const mockStorage: SessionManager = {
-    getSessionItem: vi.fn(),
-    setSessionItem: vi.fn(),
-    removeSessionItem: vi.fn(),
-    destroySession: vi.fn(),
-    setItems: vi.fn(),
-    removeItems: vi.fn(),
-  };
+  const memoryStorage = new MemoryStorage();
+
 
   beforeEach(() => {
     vi.resetAllMocks();
     vi.spyOn(tokenUtils, "getDecodedToken").mockResolvedValue(null);
-    vi.spyOn(tokenUtils, "getActiveStorage").mockResolvedValue(mockStorage);
-    // vi.spyOn(Utils, 'sanitizeUrl').mockImplementation((url) => url);
+    vi.spyOn(memoryStorage, "setSessionItem");
+    tokenUtils.setActiveStorage(memoryStorage);
     global.fetch = vi.fn();
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
+    memoryStorage.destroySession();
     vi.restoreAllMocks();
   });
 
   it("should return false if domain is not provided", async () => {
     const result = await tokenUtils.refreshToken("", mockClientId);
-    expect(result).toBe(false);
-    expect(console.error).toHaveBeenCalledWith(
-      "Domain is required for token refresh",
-    );
+    expect(result).toStrictEqual({
+      error: "Domain is required for token refresh",
+      success: false,
+    });
   });
 
   it("should return false if clientId is not provided", async () => {
     const result = await tokenUtils.refreshToken(mockDomain, "");
-    expect(result).toBe(false);
-    expect(console.error).toHaveBeenCalledWith(
-      "Client ID is required for token refresh",
-    );
+    expect(result).toStrictEqual({
+      error: "Client ID is required for token refresh",
+      success: false,
+    });
+  });
+
+  it("no active storage should error", async () => {
+    tokenUtils.clearActiveStorage();
+    const result = await tokenUtils.refreshToken(mockDomain, mockClientId);
+    expect(result).toStrictEqual({
+      error: "No active storage found",
+      success: false,
+    });
   });
 
   it("should return false if no refresh token is found", async () => {
-    // mockStorage.getSessionItem.mockResolvedValue(null);
     const result = await tokenUtils.refreshToken(mockDomain, mockClientId);
-    expect(result).toBe(false);
-    expect(console.error).toHaveBeenCalledWith("No refresh token found");
+    expect(result).toStrictEqual({
+      error: "No refresh token found",
+      success: false,
+    });
   });
 
   it("should return false if the fetch request fails", async () => {
-    mockStorage.getSessionItem = vi
-      .fn()
-      .mockResolvedValue(mockRefreshTokenValue);
-    vi.mocked(global.fetch).mockRejectedValue(new Error("Network error"));
-    const result = await tokenUtils.refreshToken(mockDomain, mockClientId);
-    expect(result).toBe(false);
-    expect(console.error).toHaveBeenCalledWith(
-      "Error refreshing token:",
-      expect.any(Error),
+    await memoryStorage.setSessionItem(
+      StorageKeys.refreshToken,
+      mockRefreshTokenValue,
     );
+    vi.mocked(global.fetch).mockRejectedValue(new Error("Network error"));
+
+    const result = await tokenUtils.refreshToken(mockDomain, mockClientId);
+    expect(result).toStrictEqual({
+      error: "Error refreshing token: Error: Network error",
+      success: false,
+    });
   });
 
   it("should return false if the response is not ok", async () => {
-    mockStorage.getSessionItem = vi
-      .fn()
-      .mockResolvedValue(mockRefreshTokenValue);
+    await memoryStorage.setSessionItem(
+      StorageKeys.refreshToken,
+      mockRefreshTokenValue,
+    );
     vi.mocked(global.fetch).mockResolvedValue({ ok: false } as Response);
+
     const result = await tokenUtils.refreshToken(mockDomain, mockClientId);
-    expect(result).toBe(false);
-    expect(console.error).toHaveBeenCalledWith("Failed to refresh token");
+    expect(result).toStrictEqual({
+      error: "Failed to refresh token",
+      success: false,
+    });
   });
 
   it("should return false if the response does not contain an access token", async () => {
-    mockStorage.getSessionItem = vi
-      .fn()
-      .mockResolvedValue(mockRefreshTokenValue);
+    await memoryStorage.setSessionItem(
+      StorageKeys.refreshToken,
+      mockRefreshTokenValue,
+    );
     vi.mocked(global.fetch).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({}),
     } as Response);
+
     const result = await tokenUtils.refreshToken(mockDomain, mockClientId);
-    expect(result).toBe(false);
+    expect(result).toStrictEqual({
+      error: "No access token recieved",
+      success: false,
+    });
   });
 
   it("should return true and update tokens if the refresh is successful", async () => {
@@ -92,7 +107,7 @@ describe("refreshToken", () => {
       id_token: "new-id-token",
       refresh_token: "new-refresh-token",
     };
-    mockStorage.getSessionItem = vi
+    memoryStorage.getSessionItem = vi
       .fn()
       .mockResolvedValue(mockRefreshTokenValue);
     vi.mocked(global.fetch).mockResolvedValue({
@@ -102,23 +117,28 @@ describe("refreshToken", () => {
 
     const result = await tokenUtils.refreshToken(mockDomain, mockClientId);
 
-    expect(result).toBe(true);
-    expect(mockStorage.setSessionItem).toHaveBeenCalledWith(
+    expect(result).toStrictEqual({
+      success: true,
+      accessToken: "new-access-token",
+      idToken: "new-id-token",
+      refreshToken: "new-refresh-token",
+    });
+    expect(memoryStorage.setSessionItem).toHaveBeenCalledWith(
       StorageKeys.accessToken,
       "new-access-token",
     );
-    expect(mockStorage.setSessionItem).toHaveBeenCalledWith(
+    expect(memoryStorage.setSessionItem).toHaveBeenCalledWith(
       StorageKeys.idToken,
       "new-id-token",
     );
-    expect(mockStorage.setSessionItem).toHaveBeenCalledWith(
+    expect(memoryStorage.setSessionItem).toHaveBeenCalledWith(
       StorageKeys.refreshToken,
       "new-refresh-token",
     );
   });
 
   it("should use sanitizeUrl for the domain", async () => {
-    mockStorage.getSessionItem = vi
+    memoryStorage.getSessionItem = vi
       .fn()
       .mockResolvedValue(mockRefreshTokenValue);
     vi.mocked(global.fetch).mockResolvedValue({

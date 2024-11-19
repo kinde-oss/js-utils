@@ -31,7 +31,7 @@ export const getDecodedToken = async <
   const decodedToken = jwtDecoder<T>(token);
 
   if (!decodedToken) {
-    console.log("No decoded token found");
+    console.warn("No decoded token found");
   }
 
   return decodedToken;

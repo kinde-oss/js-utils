@@ -51,7 +51,7 @@ describe("isAuthenticated", () => {
     });
     const mockRefreshToken = vi
       .spyOn(tokenUtils, "refreshToken")
-      .mockResolvedValue(true);
+      .mockResolvedValue({ success: true });
 
     const result = await isAuthenticated({
       useRefreshToken: true,
@@ -67,7 +67,7 @@ describe("isAuthenticated", () => {
     vi.spyOn(tokenUtils, "getDecodedToken").mockResolvedValue({
       exp: mockCurrentTime - 3600,
     });
-    vi.spyOn(tokenUtils, "refreshToken").mockResolvedValue(false);
+    vi.spyOn(tokenUtils, "refreshToken").mockResolvedValue({ success: false });
 
     const result = await isAuthenticated({
       useRefreshToken: true,
@@ -96,9 +96,9 @@ describe("isAuthenticated", () => {
     vi.spyOn(tokenUtils, "getDecodedToken").mockResolvedValue({
       // Missing 'exp' field
     });
-  
+
     const result = await isAuthenticated();
-  
+
     expect(result).toBe(false);
   });
 });
