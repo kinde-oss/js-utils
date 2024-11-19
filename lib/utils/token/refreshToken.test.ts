@@ -8,7 +8,6 @@ describe("refreshToken", () => {
   const mockRefreshTokenValue = "mock-refresh-token";
   const memoryStorage = new MemoryStorage();
 
-
   beforeEach(() => {
     vi.resetAllMocks();
     vi.spyOn(tokenUtils, "getDecodedToken").mockResolvedValue(null);
