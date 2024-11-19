@@ -1,4 +1,4 @@
-import { base64UrlEncode, getActiveStorage, StorageKeys } from "../main";
+import { base64UrlEncode, getInsecureStorage, StorageKeys } from "../main";
 import { IssuerRouteTypes, LoginOptions } from "../types";
 import { generateRandomString } from "./generateRandomString";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
@@ -13,9 +13,14 @@ export const generateAuthUrl = async (
   domain: string,
   type: IssuerRouteTypes = IssuerRouteTypes.login,
   options: LoginOptions,
-): Promise<{ url: URL; state: string; nonce: string }> => {
+): Promise<{
+  url: URL;
+  state: string;
+  nonce: string;
+  codeChallenge: string;
+}> => {
   const authUrl = new URL(`${domain}/oauth2/auth`);
-  const activeStorage = getActiveStorage();
+  const activeStorage = getInsecureStorage();
   const searchParams: Record<string, string> = {
     client_id: options.clientId,
     response_type: options.responseType || "code",
@@ -59,18 +64,17 @@ export const generateAuthUrl = async (
     url: authUrl,
     state: searchParams["state"],
     nonce: searchParams["nonce"],
+    codeChallenge: searchParams["code_challenge"],
   };
 };
 
-async function generatePKCEPair(): Promise<{
+export async function generatePKCEPair(): Promise<{
   codeVerifier: string;
   codeChallenge: string;
 }> {
-  const codeVerifier = generateRandomString(43);
+  const codeVerifier = generateRandomString(52);
   const data = new TextEncoder().encode(codeVerifier);
   const hashed = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashed));
-  const hashString = hashArray.map((b) => String.fromCharCode(b)).join("");
-  const codeChallenge = base64UrlEncode(hashString);
+  const codeChallenge = base64UrlEncode(hashed);
   return { codeVerifier, codeChallenge };
 }

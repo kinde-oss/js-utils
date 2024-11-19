@@ -1,4 +1,10 @@
-import { getActiveStorage, StorageKeys } from "../main";
+import {
+  getActiveStorage,
+  getInsecureStorage,
+  refreshToken,
+  StorageKeys,
+} from "../main";
+import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 
 export const frameworkSettings: {
   framework: string;
@@ -13,6 +19,7 @@ interface ExchangeAuthCodeParams {
   domain: string;
   clientId: string;
   redirectURL: string;
+  autoRefresh?: boolean;
 }
 
 interface ExchangeAuthCodeResult {
@@ -28,6 +35,7 @@ export const exchangeAuthCode = async ({
   domain,
   clientId,
   redirectURL,
+  autoRefresh = false,
 }: ExchangeAuthCodeParams): Promise<ExchangeAuthCodeResult> => {
   const state = urlParams.get("state");
   const code = urlParams.get("code");
@@ -40,7 +48,7 @@ export const exchangeAuthCode = async ({
     };
   }
 
-  const activeStorage = getActiveStorage();
+  const activeStorage = getInsecureStorage();
   if (!activeStorage) {
     console.error("No active storage found");
     return {
@@ -88,8 +96,8 @@ export const exchangeAuthCode = async ({
   const response = await fetch(`${domain}/oauth2/token`, {
     method: "POST",
     // ...(isUseCookie && {credentials: 'include'}),
-    credentials: "include",
-    headers,
+    // credentials: "include",
+    headers: new Headers(headers),
     body: new URLSearchParams({
       client_id: clientId,
       code,
@@ -106,20 +114,33 @@ export const exchangeAuthCode = async ({
       error: `Token exchange failed: ${response.status} - ${errorText}`,
     };
   }
+  clearRefreshTimer();
 
   const data: {
     access_token: string;
     id_token: string;
     refresh_token: string;
+    expires_in: number;
   } = await response.json();
 
-  activeStorage.setItems({
+  const secureStore = getActiveStorage();
+  secureStore!.setItems({
     [StorageKeys.accessToken]: data.access_token,
     [StorageKeys.idToken]: data.id_token,
     [StorageKeys.refreshToken]: data.refresh_token,
   });
 
-  await activeStorage.removeItems(StorageKeys.state, StorageKeys.codeVerifier);
+  if (autoRefresh) {
+    setRefreshTimer(data.expires_in, async () => {
+      refreshToken(domain, clientId);
+    });
+  }
+
+  await activeStorage.removeItems(
+    StorageKeys.state,
+    StorageKeys.nonce,
+    StorageKeys.codeVerifier,
+  );
 
   // Clear all url params
   const cleanUrl = (url: URL): URL => {

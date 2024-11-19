@@ -38,8 +38,10 @@ describe("index exports", () => {
       "generateAuthUrl",
       "generateRandomString",
       "mapLoginMethodParamsForUrl",
-      "sanatizeURL",
+      "sanitizeUrl",
       "exchangeAuthCode",
+      "isAuthenticated",
+      "refreshToken",
 
       // session manager
       "MemoryStorage",
@@ -52,6 +54,10 @@ describe("index exports", () => {
       "getActiveStorage",
       "hasActiveStorage",
       "clearActiveStorage",
+      "clearInsecureStorage",
+      "getInsecureStorage",
+      "hasInsecureStorage",
+      "setInsecureStorage",
       "getClaim",
       "getClaims",
       "getCurrentOrganization",

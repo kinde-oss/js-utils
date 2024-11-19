@@ -2,7 +2,7 @@
 import { base64UrlEncode } from "./base64UrlEncode";
 import { generateRandomString } from "./generateRandomString";
 import { extractAuthResults } from "./extractAuthResults";
-import { sanatizeURL } from "./sanatizeUrl";
+import { sanitizeUrl } from "./sanitizeUrl";
 import { generateAuthUrl } from "./generateAuthUrl";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
 import { exchangeAuthCode, frameworkSettings } from "./exchangeAuthCode";
@@ -15,7 +15,7 @@ export {
   base64UrlEncode,
   generateRandomString,
   extractAuthResults,
-  sanatizeURL,
+  sanitizeUrl,
   generateAuthUrl,
   mapLoginMethodParamsForUrl,
   exchangeAuthCode,
