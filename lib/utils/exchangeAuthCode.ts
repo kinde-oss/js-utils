@@ -19,7 +19,7 @@ interface ExchangeAuthCodeParams {
   domain: string;
   clientId: string;
   redirectURL: string;
-  autoReferesh?: boolean;
+  autoRefresh?: boolean;
 }
 
 interface ExchangeAuthCodeResult {
@@ -35,7 +35,7 @@ export const exchangeAuthCode = async ({
   domain,
   clientId,
   redirectURL,
-  autoReferesh = false,
+  autoRefresh = false,
 }: ExchangeAuthCodeParams): Promise<ExchangeAuthCodeResult> => {
   const state = urlParams.get("state");
   const code = urlParams.get("code");
@@ -130,7 +130,7 @@ export const exchangeAuthCode = async ({
     [StorageKeys.refreshToken]: data.refresh_token,
   });
 
-  if (autoReferesh) {
+  if (autoRefresh) {
     setRefreshTimer(data.expires_in, async () => {
       refreshToken(domain, clientId);
     });
