@@ -19,7 +19,7 @@ export default defineConfig({
     outDir: "../dist",
     emptyOutDir: true,
     rollupOptions: {
-      external: ["react", "react-native"],
+      external: ["expo-secure-store"],
     },
   },
   root: "lib",
