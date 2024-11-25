@@ -18,7 +18,7 @@ export const mapLoginMethodParamsForUrl = (
     org_code: options.orgCode,
     org_name: options.orgName,
     has_success_page: options.hasSuccessPage?.toString(),
-    workflow_deployment_id: options.workflowDeploymentId
+    workflow_deployment_id: options.workflowDeploymentId,
   };
 
   Object.keys(translate).forEach(
