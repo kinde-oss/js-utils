@@ -19,7 +19,6 @@ export type LoginMethodParams = Pick<
   | "redirectURL"
   | "hasSuccessPage"
   | "workflowDeploymentId"
-  | "releaseId"
 >;
 
 export type LoginOptions = {
