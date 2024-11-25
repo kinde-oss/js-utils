@@ -1,6 +1,88 @@
 # Changelog
 
 
+## 0.4.1...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.4.1...main)
+
+### 🚀 Enhancements
+
+- Add isAuthenticated and refreshToken functions ([6ae7ec2](https://github.com/kinde-oss/js-utils/commit/6ae7ec2))
+- Add workflowId and ReleaseId query params ([d9d723b](https://github.com/kinde-oss/js-utils/commit/d9d723b))
+- Added localStorage store ([38707bf](https://github.com/kinde-oss/js-utils/commit/38707bf))
+- Add localStorage production warning ([3fb9290](https://github.com/kinde-oss/js-utils/commit/3fb9290))
+- Add setItems to storage ([b085335](https://github.com/kinde-oss/js-utils/commit/b085335))
+- Added hasActiveStorage and JSDocs ([8daa59d](https://github.com/kinde-oss/js-utils/commit/8daa59d))
+- Add clearActiveStorage and tests ([6e2399f](https://github.com/kinde-oss/js-utils/commit/6e2399f))
+- Add remove multiple items support from store ([8c9474c](https://github.com/kinde-oss/js-utils/commit/8c9474c))
+- Add exchangeAuthCode method ([eb514ce](https://github.com/kinde-oss/js-utils/commit/eb514ce))
+- Added framework settings config and expanded tests ([62ebed6](https://github.com/kinde-oss/js-utils/commit/62ebed6))
+- Improve splitString ([c78f029](https://github.com/kinde-oss/js-utils/commit/c78f029))
+- Add handling bad responses from token endpoint ([d033a0d](https://github.com/kinde-oss/js-utils/commit/d033a0d))
+- Updates ([c7b873e](https://github.com/kinde-oss/js-utils/commit/c7b873e))
+- Insecure storage support ([c0abe4e](https://github.com/kinde-oss/js-utils/commit/c0abe4e))
+- Auto refresh token after code exchange ([c2c875f](https://github.com/kinde-oss/js-utils/commit/c2c875f))
+
+### 🩹 Fixes
+
+- Couple of small updates to generateAuthUrl, including auto setting store with nonce and state. ([e0e2422](https://github.com/kinde-oss/js-utils/commit/e0e2422))
+- Remove exception when no state ([3c00453](https://github.com/kinde-oss/js-utils/commit/3c00453))
+- Update LocalStorage and fix types ([f2384a1](https://github.com/kinde-oss/js-utils/commit/f2384a1))
+- Solidify types more ([69e55c1](https://github.com/kinde-oss/js-utils/commit/69e55c1))
+- PR updates ([3658bc4](https://github.com/kinde-oss/js-utils/commit/3658bc4))
+- Add missing StorageKey ([05e7203](https://github.com/kinde-oss/js-utils/commit/05e7203))
+- Extend code verifier ([7c649b4](https://github.com/kinde-oss/js-utils/commit/7c649b4))
+- IsAuthenticatedPropsWithRefreshToken interface ([561489c](https://github.com/kinde-oss/js-utils/commit/561489c))
+- Await removing storage items ([4f0e74b](https://github.com/kinde-oss/js-utils/commit/4f0e74b))
+- Error handling improvements and improved security ([00a554f](https://github.com/kinde-oss/js-utils/commit/00a554f))
+- Preseve browser state ([e0d39fd](https://github.com/kinde-oss/js-utils/commit/e0d39fd))
+- Correct spelling of sanitizeUrl ([742f5a7](https://github.com/kinde-oss/js-utils/commit/742f5a7))
+- Vite exports for builds ([ce4f2ce](https://github.com/kinde-oss/js-utils/commit/ce4f2ce))
+- Done make refreshTimer exported ([014461e](https://github.com/kinde-oss/js-utils/commit/014461e))
+- Correct incorrect spelling ([6012806](https://github.com/kinde-oss/js-utils/commit/6012806))
+- Build error ([8de8eb3](https://github.com/kinde-oss/js-utils/commit/8de8eb3))
+- Incorrect react-native requirement ([ba1f131](https://github.com/kinde-oss/js-utils/commit/ba1f131))
+- Lockfile ([0303c8f](https://github.com/kinde-oss/js-utils/commit/0303c8f))
+- Deployment id url parameter ([82aed0a](https://github.com/kinde-oss/js-utils/commit/82aed0a))
+- Remove releaseId ([8fbb73f](https://github.com/kinde-oss/js-utils/commit/8fbb73f))
+
+### 🏡 Chore
+
+- **deps-dev:** Bump rollup ([f2444ac](https://github.com/kinde-oss/js-utils/commit/f2444ac))
+- Lint ([382559d](https://github.com/kinde-oss/js-utils/commit/382559d))
+- Lint ([6bc8a98](https://github.com/kinde-oss/js-utils/commit/6bc8a98))
+- Remove console log ([cd668a8](https://github.com/kinde-oss/js-utils/commit/cd668a8))
+- Lint ([aa264e8](https://github.com/kinde-oss/js-utils/commit/aa264e8))
+- Lint ([bd82a91](https://github.com/kinde-oss/js-utils/commit/bd82a91))
+- Clean up tests ([f8f605a](https://github.com/kinde-oss/js-utils/commit/f8f605a))
+- Lint and remove only from tests ([912a7cb](https://github.com/kinde-oss/js-utils/commit/912a7cb))
+- Update lock ([b33533e](https://github.com/kinde-oss/js-utils/commit/b33533e))
+- Remove incomplete store. ([5ba4864](https://github.com/kinde-oss/js-utils/commit/5ba4864))
+- Lint ([eff28e6](https://github.com/kinde-oss/js-utils/commit/eff28e6))
+- Update test config ([7c866c1](https://github.com/kinde-oss/js-utils/commit/7c866c1))
+- Remove redundant import ([034021b](https://github.com/kinde-oss/js-utils/commit/034021b))
+- Updae lock and prettierignore ([abf5864](https://github.com/kinde-oss/js-utils/commit/abf5864))
+- Lint ([c89a6ce](https://github.com/kinde-oss/js-utils/commit/c89a6ce))
+- Lint ([e900979](https://github.com/kinde-oss/js-utils/commit/e900979))
+- Allow ts-ignore in test ([4b0efcf](https://github.com/kinde-oss/js-utils/commit/4b0efcf))
+- Lint ([635c044](https://github.com/kinde-oss/js-utils/commit/635c044))
+
+### ✅ Tests
+
+- Add tests for isAuthenticated and refreshToken ([c765e7d](https://github.com/kinde-oss/js-utils/commit/c765e7d))
+- Fix tests ([8f0139b](https://github.com/kinde-oss/js-utils/commit/8f0139b))
+- Add new methods to export test ([721f088](https://github.com/kinde-oss/js-utils/commit/721f088))
+- Fix tests ([d8313d7](https://github.com/kinde-oss/js-utils/commit/d8313d7))
+- Fix tests ([19ccb41](https://github.com/kinde-oss/js-utils/commit/19ccb41))
+- Update tests ([3243c4e](https://github.com/kinde-oss/js-utils/commit/3243c4e))
+- Minor updates ([b6877c0](https://github.com/kinde-oss/js-utils/commit/b6877c0))
+- Fix unit tests ([fe8e4c0](https://github.com/kinde-oss/js-utils/commit/fe8e4c0))
+- Expand refresh token tests ([5c2089f](https://github.com/kinde-oss/js-utils/commit/5c2089f))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
 ## 0.4.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.4.0...main)
