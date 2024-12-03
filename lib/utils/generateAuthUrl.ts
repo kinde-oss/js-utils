@@ -18,6 +18,7 @@ export const generateAuthUrl = async (
   state: string;
   nonce: string;
   codeChallenge: string;
+  codeVerifier: string;
 }> => {
   const authUrl = new URL(`${domain}/oauth2/auth`);
   const activeStorage = getInsecureStorage();
@@ -44,10 +45,12 @@ export const generateAuthUrl = async (
     activeStorage.setSessionItem(StorageKeys.nonce, options.nonce);
   }
 
+  let returnCodeVerifier = "";
   if (options.codeChallenge) {
     searchParams["code_challenge"] = options.codeChallenge;
   } else {
     const { codeVerifier, codeChallenge } = await generatePKCEPair();
+    returnCodeVerifier = codeVerifier;
     if (activeStorage) {
       activeStorage.setSessionItem(StorageKeys.codeVerifier, codeVerifier);
     }
@@ -65,6 +68,7 @@ export const generateAuthUrl = async (
     state: searchParams["state"],
     nonce: searchParams["nonce"],
     codeChallenge: searchParams["code_challenge"],
+    codeVerifier: returnCodeVerifier,
   };
 };
 
