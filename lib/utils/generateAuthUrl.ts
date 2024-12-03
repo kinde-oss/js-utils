@@ -20,7 +20,7 @@ export const generateAuthUrl = async (
   codeChallenge: string;
   codeVerifier: string;
 }> => {
-  const authUrl = new URL(`${domain}/oauth2/auth`);
+  const authPath = `${domain}/oauth2/auth`;
   const activeStorage = getInsecureStorage();
   const searchParams: Record<string, string> = {
     client_id: options.clientId,
@@ -65,9 +65,10 @@ export const generateAuthUrl = async (
     searchParams["prompt"] = PromptTypes.create;
   }
 
-  authUrl.search = new URLSearchParams(searchParams).toString();
+  const queryString = new URLSearchParams(searchParams).toString();
+
   return {
-    url: authUrl,
+    url: new URL(`${authPath}?${queryString}`),
     state: searchParams["state"],
     nonce: searchParams["nonce"],
     codeChallenge: searchParams["code_challenge"],
@@ -81,7 +82,12 @@ export async function generatePKCEPair(): Promise<{
 }> {
   const codeVerifier = generateRandomString(52);
   const data = new TextEncoder().encode(codeVerifier);
-  const hashed = await crypto.subtle.digest("SHA-256", data);
-  const codeChallenge = base64UrlEncode(hashed);
+  let codeChallenge = "";
+  if (!crypto) {
+    codeChallenge = base64UrlEncode(btoa(codeVerifier));
+  } else {
+    const hashed = await crypto.subtle.digest("SHA-256", data);
+    codeChallenge = base64UrlEncode(hashed);
+  }
   return { codeVerifier, codeChallenge };
 }
