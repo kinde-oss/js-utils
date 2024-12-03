@@ -1,5 +1,5 @@
-import { getActiveStorage } from ".";
-import { StorageKeys } from "../../sessionManager";
+import { getActiveStorage, getInsecureStorage } from ".";
+import { StorageKeys, storageSettings } from "../../sessionManager";
 import { sanitizeUrl } from "..";
 import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
 
@@ -35,6 +35,7 @@ export const refreshToken = async (
     }
 
     const storage = getActiveStorage();
+    const insecureStore = getInsecureStorage();
 
     if (!storage) {
       return {
@@ -43,9 +44,18 @@ export const refreshToken = async (
       };
     }
 
-    const refreshTokenValue = (await storage.getSessionItem(
-      StorageKeys.refreshToken,
-    )) as string;
+    if (!insecureStore) {
+      return {
+        success: false,
+        error: "No active insecure found",
+      };
+    }
+
+    const refreshTokenValue = storageSettings.useInsecureForRefreshToken
+      ? ((await insecureStore.getSessionItem(
+          StorageKeys.refreshToken,
+        )) as string)
+      : ((await storage.getSessionItem(StorageKeys.refreshToken)) as string);
 
     if (!refreshTokenValue) {
       return {
@@ -92,6 +102,13 @@ export const refreshToken = async (
           StorageKeys.refreshToken,
           data.refresh_token,
         );
+
+        if (storageSettings.useInsecureForRefreshToken) {
+          insecureStore.setSessionItem(
+            StorageKeys.refreshToken,
+            data.refresh_token,
+          );
+        }
       }
       return {
         success: true,
