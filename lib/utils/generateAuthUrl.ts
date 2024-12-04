@@ -18,8 +18,9 @@ export const generateAuthUrl = async (
   state: string;
   nonce: string;
   codeChallenge: string;
+  codeVerifier: string;
 }> => {
-  const authUrl = new URL(`${domain}/oauth2/auth`);
+  const authPath = `${domain}/oauth2/auth`;
   const activeStorage = getInsecureStorage();
   const searchParams: Record<string, string> = {
     client_id: options.clientId,
@@ -44,10 +45,12 @@ export const generateAuthUrl = async (
     activeStorage.setSessionItem(StorageKeys.nonce, options.nonce);
   }
 
+  let returnCodeVerifier = "";
   if (options.codeChallenge) {
     searchParams["code_challenge"] = options.codeChallenge;
   } else {
     const { codeVerifier, codeChallenge } = await generatePKCEPair();
+    returnCodeVerifier = codeVerifier;
     if (activeStorage) {
       activeStorage.setSessionItem(StorageKeys.codeVerifier, codeVerifier);
     }
@@ -59,12 +62,14 @@ export const generateAuthUrl = async (
     searchParams["code_challenge_method"] = options.codeChallengeMethod;
   }
 
-  authUrl.search = new URLSearchParams(searchParams).toString();
+  const queryString = new URLSearchParams(searchParams).toString();
+
   return {
-    url: authUrl,
+    url: new URL(`${authPath}?${queryString}`),
     state: searchParams["state"],
     nonce: searchParams["nonce"],
     codeChallenge: searchParams["code_challenge"],
+    codeVerifier: returnCodeVerifier,
   };
 };
 
@@ -74,7 +79,12 @@ export async function generatePKCEPair(): Promise<{
 }> {
   const codeVerifier = generateRandomString(52);
   const data = new TextEncoder().encode(codeVerifier);
-  const hashed = await crypto.subtle.digest("SHA-256", data);
-  const codeChallenge = base64UrlEncode(hashed);
+  let codeChallenge = "";
+  if (!crypto) {
+    codeChallenge = base64UrlEncode(btoa(codeVerifier));
+  } else {
+    const hashed = await crypto.subtle.digest("SHA-256", data);
+    codeChallenge = base64UrlEncode(hashed);
+  }
   return { codeVerifier, codeChallenge };
 }
