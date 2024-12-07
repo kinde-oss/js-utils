@@ -11,6 +11,12 @@ export const storageSettings: StorageSettingsType = {
    * If the length is exceeded the items will be split into multiple storage items.
    */
   maxLength: 2000,
+  /**
+   * If to use the insecure store for refresh token.
+   *
+   * Note: This should only be used when there is no other secure storage available.
+   */
+  useInsecureForRefreshToken: false,
 };
 
 export { MemoryStorage } from "./stores/memory.js";

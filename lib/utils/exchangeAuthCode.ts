@@ -3,6 +3,7 @@ import {
   getInsecureStorage,
   refreshToken,
   StorageKeys,
+  storageSettings,
 } from "../main";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 
@@ -129,6 +130,10 @@ export const exchangeAuthCode = async ({
     [StorageKeys.idToken]: data.id_token,
     [StorageKeys.refreshToken]: data.refresh_token,
   });
+
+  if (storageSettings.useInsecureForRefreshToken) {
+    activeStorage.setSessionItem(StorageKeys.refreshToken, data.refresh_token);
+  }
 
   if (autoRefresh) {
     setRefreshTimer(data.expires_in, async () => {
