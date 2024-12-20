@@ -24,7 +24,7 @@ describe("generateAuthUrl", () => {
     const result = await generateAuthUrl(
       domain,
       IssuerRouteTypes.login,
-      options
+      options,
     );
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
@@ -53,7 +53,7 @@ describe("generateAuthUrl", () => {
     const result = await generateAuthUrl(
       domain,
       IssuerRouteTypes.register,
-      options
+      options,
     );
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
@@ -81,7 +81,7 @@ describe("generateAuthUrl", () => {
     const result = await generateAuthUrl(
       domain,
       IssuerRouteTypes.login,
-      options
+      options,
     );
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
@@ -106,7 +106,7 @@ describe("generateAuthUrl", () => {
     const result = await generateAuthUrl(
       domain,
       IssuerRouteTypes.login,
-      options
+      options,
     );
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
@@ -134,7 +134,7 @@ describe("generateAuthUrl", () => {
     const result = await generateAuthUrl(
       domain,
       IssuerRouteTypes.login,
-      options
+      options,
     );
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
