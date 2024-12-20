@@ -12,7 +12,7 @@ import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
 export const generateAuthUrl = async (
   domain: string,
   type: IssuerRouteTypes = IssuerRouteTypes.login,
-  options: LoginOptions
+  options: LoginOptions,
 ): Promise<{
   url: URL;
   state: string;
