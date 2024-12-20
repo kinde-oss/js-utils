@@ -29,6 +29,7 @@ describe("index exports", () => {
     const expectedExports = [
       // types
       "IssuerRouteTypes",
+      "PromptTypes",
       "Scopes",
       "StorageKeys",
 
