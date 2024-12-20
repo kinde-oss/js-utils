@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { IssuerRouteTypes, LoginOptions, Scopes } from "../types";
+import { IssuerRouteTypes, LoginOptions, PromptTypes, Scopes } from "../types";
 import { generateAuthUrl } from "./generateAuthUrl";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import { setActiveStorage } from "./token";
@@ -24,7 +24,7 @@ describe("generateAuthUrl", () => {
     const result = await generateAuthUrl(
       domain,
       IssuerRouteTypes.login,
-      options,
+      options
     );
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
@@ -53,7 +53,7 @@ describe("generateAuthUrl", () => {
     const result = await generateAuthUrl(
       domain,
       IssuerRouteTypes.register,
-      options,
+      options
     );
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
@@ -73,7 +73,7 @@ describe("generateAuthUrl", () => {
       codeChallenge: "challenge123",
       codeChallengeMethod: "S256",
       redirectURL: "https://example2.com",
-      prompt: "login",
+      prompt: PromptTypes.login,
     };
     const expectedUrl =
       "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&redirect_uri=https%3A%2F%2Fexample2.com&audience=&scope=openid+profile&prompt=login&state=state123&code_challenge=challenge123&code_challenge_method=S256";
@@ -81,7 +81,7 @@ describe("generateAuthUrl", () => {
     const result = await generateAuthUrl(
       domain,
       IssuerRouteTypes.login,
-      options,
+      options
     );
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
@@ -97,7 +97,7 @@ describe("generateAuthUrl", () => {
       clientId: "client123",
       scope: [Scopes.openid, Scopes.profile, Scopes.offline_access],
       redirectURL: "https://example2.com",
-      prompt: "create",
+      prompt: PromptTypes.create,
       state: "state123",
     };
     const expectedUrl =
@@ -106,7 +106,7 @@ describe("generateAuthUrl", () => {
     const result = await generateAuthUrl(
       domain,
       IssuerRouteTypes.login,
-      options,
+      options
     );
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
@@ -126,7 +126,7 @@ describe("generateAuthUrl", () => {
       clientId: "client123",
       scope: [Scopes.openid, Scopes.profile, Scopes.offline_access],
       redirectURL: "https://example2.com",
-      prompt: "create",
+      prompt: PromptTypes.create,
     };
     const expectedUrl =
       "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&redirect_uri=https%3A%2F%2Fexample2.com&audience=&scope=openid+profile+offline&prompt=create&code_challenge_method=S256";
@@ -134,7 +134,7 @@ describe("generateAuthUrl", () => {
     const result = await generateAuthUrl(
       domain,
       IssuerRouteTypes.login,
-      options,
+      options
     );
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();
@@ -164,7 +164,7 @@ describe("generateAuthUrl", () => {
       connectionId: "conn123",
       redirectURL: "https://example.com",
       audience: "audience123",
-      prompt: "login",
+      prompt: PromptTypes.login,
     };
 
     await generateAuthUrl(domain, IssuerRouteTypes.login, options);
