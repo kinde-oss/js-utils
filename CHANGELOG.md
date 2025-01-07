@@ -1,6 +1,35 @@
 # Changelog
 
 
+## 0.5.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.5.0...main)
+
+### 🚀 Enhancements
+
+- Update tests ([014734f](https://github.com/kinde-oss/js-utils/commit/014734f))
+- Add isCustomDomain utility method. ([f14cdf6](https://github.com/kinde-oss/js-utils/commit/f14cdf6))
+
+### 🩹 Fixes
+
+- Linting issue ([4fc6367](https://github.com/kinde-oss/js-utils/commit/4fc6367))
+
+### 🏡 Chore
+
+- Linting issues fixed ([04ffbf7](https://github.com/kinde-oss/js-utils/commit/04ffbf7))
+- Update test to use new types ([1bde95b](https://github.com/kinde-oss/js-utils/commit/1bde95b))
+- Lint ([01e1e7d](https://github.com/kinde-oss/js-utils/commit/01e1e7d))
+
+### ✅ Tests
+
+- Update test to use PromptType enum ([fc1d1ad](https://github.com/kinde-oss/js-utils/commit/fc1d1ad))
+- Remove left over only marker. ([aa4ddf3](https://github.com/kinde-oss/js-utils/commit/aa4ddf3))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+- Dave Berner <davidajberner@gmail.com>
+
 ## 0.4.1...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.4.1...main)
