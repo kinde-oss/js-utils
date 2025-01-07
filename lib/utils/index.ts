@@ -6,6 +6,7 @@ import { sanitizeUrl } from "./sanitizeUrl";
 import { generateAuthUrl } from "./generateAuthUrl";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
 import { exchangeAuthCode, frameworkSettings } from "./exchangeAuthCode";
+import { isCustomDomain } from "./isCustomDomain";
 
 export {
   // config
@@ -19,4 +20,5 @@ export {
   generateAuthUrl,
   mapLoginMethodParamsForUrl,
   exchangeAuthCode,
+  isCustomDomain,
 };

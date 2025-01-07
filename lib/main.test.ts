@@ -43,6 +43,7 @@ describe("index exports", () => {
       "exchangeAuthCode",
       "isAuthenticated",
       "refreshToken",
+      "isCustomDomain",
 
       // session manager
       "MemoryStorage",
