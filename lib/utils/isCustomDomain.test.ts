@@ -1,7 +1,7 @@
 import { isCustomDomain } from "./isCustomDomain";
 import { describe, expect, it } from "vitest";
 
-describe.only("isCustomDomain", () => {
+describe("isCustomDomain", () => {
   it("custom domain in use", () => {
     const result = isCustomDomain("www.test.com");
     expect(result).toEqual(true);
