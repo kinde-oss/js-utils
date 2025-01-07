@@ -1,7 +1,7 @@
 // mapLoginMethodParamsForUrl.test.ts
 import { describe, expect, it } from "vitest";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
-import { LoginMethodParams, Scopes } from "../types";
+import { LoginMethodParams, PromptTypes, Scopes } from "../types";
 
 describe("mapLoginMethodParamsForUrl", () => {
   it("should map login method params to URL parameters", () => {
@@ -12,7 +12,7 @@ describe("mapLoginMethodParamsForUrl", () => {
       redirectURL: "https://example.com",
       audience: "audience123",
       scope: [Scopes.openid, Scopes.profile],
-      prompt: "login",
+      prompt: PromptTypes.login,
       lang: "en",
       orgCode: "org123",
       orgName: "Example Org",
