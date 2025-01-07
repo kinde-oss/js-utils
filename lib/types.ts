@@ -5,6 +5,12 @@ export enum Scopes {
   offline_access = "offline",
 }
 
+export enum PromptTypes {
+  none = "none",
+  create = "create",
+  login = "login",
+}
+
 export type LoginMethodParams = Pick<
   LoginOptions,
   | "audience"
@@ -72,12 +78,12 @@ export type LoginOptions = {
    * Prompt to use for the login
    *
    * This can be one of the following:
-   * - login
-   * - create
-   * - none
+   * - login (force user re-authentication)
+   * - create (show registration screen)
+   * - none (silently authenticate user without prompting for action)
    *
    */
-  prompt: string;
+  prompt?: PromptTypes;
   /**
    * Redirect URL to use for the login
    */
@@ -95,7 +101,7 @@ export type LoginOptions = {
    * - email
    * - profile
    * - openid
-   * - offline_access
+   * - offline
    */
   scope?: Scopes[];
   /**

@@ -1,5 +1,5 @@
 import { base64UrlEncode, getInsecureStorage, StorageKeys } from "../main";
-import { IssuerRouteTypes, LoginOptions } from "../types";
+import { IssuerRouteTypes, LoginOptions, PromptTypes } from "../types";
 import { generateRandomString } from "./generateRandomString";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
 
@@ -24,7 +24,6 @@ export const generateAuthUrl = async (
   const searchParams: Record<string, string> = {
     client_id: options.clientId,
     response_type: options.responseType || "code",
-    start_page: type,
     ...mapLoginMethodParamsForUrl(options),
   };
 
@@ -57,6 +56,10 @@ export const generateAuthUrl = async (
 
   if (options.codeChallengeMethod) {
     searchParams["code_challenge_method"] = options.codeChallengeMethod;
+  }
+
+  if (!options.prompt && type === IssuerRouteTypes.register) {
+    searchParams["prompt"] = PromptTypes.create;
   }
 
   authUrl.search = new URLSearchParams(searchParams).toString();
