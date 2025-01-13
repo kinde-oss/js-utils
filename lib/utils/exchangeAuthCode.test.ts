@@ -15,6 +15,7 @@ describe("exchangeAuthCode", () => {
     vi.spyOn(refreshTokenTimer, "setRefreshTimer");
     vi.spyOn(main, "refreshToken");
     vi.useFakeTimers();
+    main.storageSettings.useInsecureForRefreshToken = false;
   });
 
   afterEach(() => {
@@ -156,6 +157,59 @@ describe("exchangeAuthCode", () => {
       "no-store",
     );
     expect((options?.headers as Headers).get("Pragma")).toEqual("no-cache");
+  });
+
+  it("uses insecure storage for code verifier when storage setting applies", async () => {
+    const store = new MemoryStorage();
+    main.setInsecureStorage(store);
+
+    const store2 = new MemoryStorage();
+    const state = "state";
+
+    await store.setItems({
+      [StorageKeys.state]: state,
+    });
+
+    const input = "hello";
+
+    const urlParams = new URLSearchParams();
+    urlParams.append("code", input);
+    urlParams.append("state", state);
+    urlParams.append("client_id", "test");
+
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "access_token",
+        refresh_token: "refresh_token",
+        id_token: "id_token",
+      }),
+    );
+
+    main.storageSettings.useInsecureForRefreshToken = true;
+
+    console.log('here');
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+
+    expect(result).toStrictEqual({
+      accessToken: "access_token",
+      refreshToken: "refresh_token",
+      idToken: "id_token",
+      success: true,
+    });
+
+    const postCodeVerifier = await store.getSessionItem(
+      StorageKeys.codeVerifier,
+    );
+    expect(postCodeVerifier).toBeNull();
+    const insecureRefreshToken = await store2.getSessionItem(
+      StorageKeys.refreshToken,
+    );
+    expect(insecureRefreshToken).toBeNull();
   });
 
   it("set the framework and version on header", async () => {

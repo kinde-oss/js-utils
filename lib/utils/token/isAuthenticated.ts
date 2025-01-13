@@ -36,7 +36,10 @@ export const isAuthenticated = async (
     const isExpired = token.exp < Math.floor(Date.now() / 1000);
 
     if (isExpired && props?.useRefreshToken) {
-      const refreshResult = await refreshToken(props.domain, props.clientId);
+      const refreshResult = await refreshToken({
+        domain: props.domain,
+        clientId: props.clientId,
+      });
       return refreshResult.success;
     }
     return !isExpired;

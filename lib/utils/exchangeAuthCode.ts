@@ -3,6 +3,7 @@ import {
   getInsecureStorage,
   refreshToken,
   StorageKeys,
+  storageSettings,
 } from "../main";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 
@@ -65,6 +66,7 @@ export const exchangeAuthCode = async ({
   }
 
   const storedState = await activeStorage.getSessionItem(StorageKeys.state);
+  console.log('----', state, storedState);
   if (state !== storedState) {
     console.error("Invalid state");
     return {
@@ -124,15 +126,21 @@ export const exchangeAuthCode = async ({
   } = await response.json();
 
   const secureStore = getActiveStorage();
-  secureStore!.setItems({
-    [StorageKeys.accessToken]: data.access_token,
-    [StorageKeys.idToken]: data.id_token,
-    [StorageKeys.refreshToken]: data.refresh_token,
-  });
+  if (secureStore) {
+    secureStore.setItems({
+      [StorageKeys.accessToken]: data.access_token,
+      [StorageKeys.idToken]: data.id_token,
+      [StorageKeys.refreshToken]: data.refresh_token,
+    });
+  }
+
+  if (storageSettings.useInsecureForRefreshToken) {
+    activeStorage.setSessionItem(StorageKeys.refreshToken, data.refresh_token);
+  }
 
   if (autoRefresh) {
     setRefreshTimer(data.expires_in, async () => {
-      refreshToken(domain, clientId);
+      refreshToken({ domain, clientId });
     });
   }
 

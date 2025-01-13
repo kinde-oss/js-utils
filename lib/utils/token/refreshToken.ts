@@ -1,9 +1,13 @@
-import { getActiveStorage } from ".";
-import { StorageKeys } from "../../sessionManager";
+import { getActiveStorage, getInsecureStorage } from ".";
+import {
+  SessionManager,
+  StorageKeys,
+  storageSettings,
+} from "../../sessionManager";
 import { sanitizeUrl } from "..";
 import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
 
-interface RefreshTokenResult {
+export interface RefreshTokenResult {
   success: boolean;
   error?: string;
   [StorageKeys.accessToken]?: string;
@@ -11,14 +15,24 @@ interface RefreshTokenResult {
   [StorageKeys.refreshToken]?: string;
 }
 
+export enum RefreshType {
+  refreshToken,
+  cookie,
+}
+
 /**
  * refreshes the token
  * @returns { Promise<boolean> }
  */
-export const refreshToken = async (
-  domain: string,
-  clientId: string,
-): Promise<RefreshTokenResult> => {
+export const refreshToken = async ({
+  domain,
+  clientId,
+  refreshType = RefreshType.refreshToken,
+}: {
+  domain: string;
+  clientId: string;
+  refreshType?: RefreshType;
+}): Promise<RefreshTokenResult> => {
   try {
     if (!domain) {
       return {
@@ -34,37 +48,49 @@ export const refreshToken = async (
       };
     }
 
-    const storage = getActiveStorage();
+    let refreshTokenValue: string = "";
 
-    if (!storage) {
-      return {
-        success: false,
-        error: "No active storage found",
-      };
+    let storage: SessionManager | null;
+    if (storageSettings.useInsecureForRefreshToken) {
+      storage = getInsecureStorage();
+    } else {
+      storage = getActiveStorage();
     }
 
-    const refreshTokenValue = (await storage.getSessionItem(
-      StorageKeys.refreshToken,
-    )) as string;
+    if (refreshType === RefreshType.refreshToken) {
+      if (!storage) {
+        return {
+          success: false,
+          error: "No active storage found",
+        };
+      }
 
-    if (!refreshTokenValue) {
-      return {
-        success: false,
-        error: "No refresh token found",
-      };
+      refreshTokenValue = (await storage.getSessionItem(
+        StorageKeys.refreshToken,
+      )) as string;
+
+      if (!refreshTokenValue) {
+        return {
+          success: false,
+          error: "No refresh token found",
+        };
+      }
     }
 
     clearRefreshTimer();
 
     const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
       method: "POST",
+      ...(refreshType === RefreshType.cookie && { credentials: "include" }),
       headers: {
         "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
         "Cache-Control": "no-store",
         Pragma: "no-cache",
       },
       body: new URLSearchParams({
-        refresh_token: refreshTokenValue,
+        ...(refreshType === RefreshType.refreshToken && {
+          refresh_token: refreshTokenValue,
+        }),
         grant_type: "refresh_token",
         client_id: clientId,
       }),
@@ -81,17 +107,23 @@ export const refreshToken = async (
 
     if (data.access_token) {
       setRefreshTimer(data.expires_in, async () => {
-        refreshToken(domain, clientId);
+        refreshToken({ domain, clientId });
       });
-      await storage.setSessionItem(StorageKeys.accessToken, data.access_token);
-      if (data.id_token) {
-        await storage.setSessionItem(StorageKeys.idToken, data.id_token);
-      }
-      if (data.refresh_token) {
+
+      if (storage) {
         await storage.setSessionItem(
-          StorageKeys.refreshToken,
-          data.refresh_token,
+          StorageKeys.accessToken,
+          data.access_token,
         );
+        if (data.id_token) {
+          await storage.setSessionItem(StorageKeys.idToken, data.id_token);
+        }
+        if (data.refresh_token) {
+          await storage.setSessionItem(
+            StorageKeys.refreshToken,
+            data.refresh_token,
+          );
+        }
       }
       return {
         success: true,
