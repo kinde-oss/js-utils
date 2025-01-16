@@ -1,7 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { exchangeAuthCode } from ".";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
-import { setActiveStorage, clearActiveStorage, clearInsecureStorage } from "./token";
+import {
+  setActiveStorage,
+  clearActiveStorage,
+  clearInsecureStorage,
+} from "./token";
 import createFetchMock from "vitest-fetch-mock";
 import { frameworkSettings } from "./exchangeAuthCode";
 import * as refreshTokenTimer from "./refreshTimer";
@@ -412,7 +416,6 @@ describe("exchangeAuthCode", () => {
     urlParams.append("state", "test");
     urlParams.append("code", "test");
 
-
     const result = await exchangeAuthCode({
       urlParams,
       domain: "test.com",
@@ -449,7 +452,6 @@ describe("exchangeAuthCode", () => {
         redirectURL: "test.com",
       });
     } catch (error) {
-      
       expect((error as Error).message).toBe("Fetch failed");
     }
   });
