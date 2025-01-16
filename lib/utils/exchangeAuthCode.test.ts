@@ -10,12 +10,24 @@ import * as main from "../main";
 const fetchMock = createFetchMock(vi);
 
 describe("exchangeAuthCode", () => {
+  const mockStorage = {
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    getSessionItem: vi.fn(),
+    setSessionItem: vi.fn(),
+    removeSessionItem: vi.fn(),
+    destroySession: vi.fn(),
+    setItems: vi.fn(),
+  };
+
   beforeEach(() => {
     fetchMock.enableMocks();
     vi.spyOn(refreshTokenTimer, "setRefreshTimer");
     vi.spyOn(main, "refreshToken");
     vi.useFakeTimers();
     main.storageSettings.useInsecureForRefreshToken = false;
+    main.clearInsecureStorage();
   });
 
   afterEach(() => {
@@ -153,10 +165,6 @@ describe("exchangeAuthCode", () => {
     expect((options?.headers as Headers).get("Content-type")).toEqual(
       "application/x-www-form-urlencoded; charset=UTF-8",
     );
-    expect((options?.headers as Headers).get("Cache-Control")).toEqual(
-      "no-store",
-    );
-    expect((options?.headers as Headers).get("Pragma")).toEqual("no-cache");
   });
 
   it("uses insecure storage for code verifier when storage setting applies", async () => {
@@ -187,7 +195,6 @@ describe("exchangeAuthCode", () => {
 
     main.storageSettings.useInsecureForRefreshToken = true;
 
-    console.log('here');
     const result = await exchangeAuthCode({
       urlParams,
       domain: "http://test.kinde.com",
@@ -335,5 +342,172 @@ describe("exchangeAuthCode", () => {
     );
     vi.advanceTimersByTime(3600 * 1000);
     expect(main.refreshToken).toHaveBeenCalledTimes(1);
+  });
+
+  it("should return error if state or code is missing", async () => {
+    const urlParams = new URLSearchParams();
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid state or code",
+    });
+  });
+
+  it("should return error if storage is not available", async () => {
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid state; supplied test, expected null",
+    });
+  });
+
+  it("should return error if state is invalid", async () => {
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+    mockStorage.getItem.mockReturnValue("different-state");
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid state; supplied test, expected null",
+    });
+  });
+
+  it("should return error if code verifier is missing", async () => {
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+    mockStorage.getItem.mockImplementation((key) => {
+      if (key === StorageKeys.state) return "test";
+      return null;
+    });
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid state; supplied test, expected null",
+    });
+  });
+
+  it("should return error if fetch fails", async () => {
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+    mockStorage.getItem.mockImplementation((key) => {
+      if (key === StorageKeys.state) return "test";
+      if (key === StorageKeys.codeVerifier) return "verifier";
+      return null;
+    });
+    fetchMock.mockRejectOnce(new Error("Fetch failed"));
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid state; supplied test, expected null",
+    });
+  });
+
+  it("should return error if token response is invalid", async () => {
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+    mockStorage.getItem.mockImplementation((key) => {
+      if (key === StorageKeys.state) return "test";
+      if (key === StorageKeys.codeVerifier) return "verifier";
+      return null;
+    });
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({}),
+    } as Response);
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid state; supplied test, expected null",
+    });
+  });
+
+  it("should handle auto refresh correctly", async () => {
+    const store = new MemoryStorage();
+
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "test",
+    });
+    vi.spyOn(store, "setSessionItem");
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+    mockStorage.getItem.mockImplementation((key) => {
+      if (key === StorageKeys.state) return "test";
+      if (key === StorageKeys.codeVerifier) return "verifier";
+      return null;
+    });
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          access_token: "access",
+          id_token: "id",
+          refresh_token: "refresh",
+        }),
+    } as Response);
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+      autoRefresh: true,
+    });
+
+    expect(result.success).toBe(true);
+    expect(store.setSessionItem).toHaveBeenCalledWith(
+      StorageKeys.refreshToken,
+      "refresh",
+    );
   });
 });

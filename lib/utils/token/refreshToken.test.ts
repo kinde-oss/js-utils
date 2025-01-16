@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { MemoryStorage, StorageKeys, storageSettings } from "../../sessionManager";
+import {
+  MemoryStorage,
+  StorageKeys,
+  storageSettings,
+} from "../../sessionManager";
 import * as tokenUtils from ".";
 
 describe("refreshToken", () => {
   const mockDomain = "https://example.com";
+  const mockKindeDomain = "https://example.kinde.com";
   const mockClientId = "test-client-id";
   const mockRefreshTokenValue = "mock-refresh-token";
   const memoryStorage = new MemoryStorage();
@@ -136,7 +141,7 @@ describe("refreshToken", () => {
     } as Response);
 
     const result = await tokenUtils.refreshToken({
-      domain: mockDomain,
+      domain: mockKindeDomain,
       clientId: mockClientId,
     });
 
@@ -180,7 +185,7 @@ describe("refreshToken", () => {
     );
   });
 
-  it('should use insecure storage for refresh token if useInsecureForRefreshToken is true', async () => {
+  it("should use insecure storage for refresh token if useInsecureForRefreshToken is true", async () => {
     const mockResponse = {
       access_token: "new-access-token",
       id_token: "new-id-token",

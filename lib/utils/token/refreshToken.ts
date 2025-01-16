@@ -79,57 +79,59 @@ export const refreshToken = async ({
 
     clearRefreshTimer();
 
-    const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
-      method: "POST",
-      ...(refreshType === RefreshType.cookie && { credentials: "include" }),
-      headers: {
-        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "Cache-Control": "no-store",
-        Pragma: "no-cache",
-      },
-      body: new URLSearchParams({
-        ...(refreshType === RefreshType.refreshToken && {
-          refresh_token: refreshTokenValue,
+    try {
+      const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
+        method: "POST",
+        ...(refreshType === RefreshType.cookie && { credentials: "include" }),
+        headers: {
+          "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        },
+        body: new URLSearchParams({
+          ...(refreshType === RefreshType.refreshToken && {
+            refresh_token: refreshTokenValue,
+          }),
+          grant_type: "refresh_token",
+          client_id: clientId,
         }),
-        grant_type: "refresh_token",
-        client_id: clientId,
-      }),
-    });
+      });
+      if (!response.ok) {
+        return {
+          success: false,
+          error: "Failed to refresh token",
+        };
+      }
+      const data = await response.json();
+      if (data.access_token) {
+        setRefreshTimer(data.expires_in, async () => {
+          refreshToken({ domain, clientId });
+        });
 
-    if (!response.ok) {
+        if (storage) {
+          await storage.setSessionItem(
+            StorageKeys.accessToken,
+            data.access_token,
+          );
+          if (data.id_token) {
+            await storage.setSessionItem(StorageKeys.idToken, data.id_token);
+          }
+          if (data.refresh_token) {
+            await storage.setSessionItem(
+              StorageKeys.refreshToken,
+              data.refresh_token,
+            );
+          }
+        }
+        return {
+          success: true,
+          [StorageKeys.accessToken]: data.access_token,
+          [StorageKeys.idToken]: data.id_token,
+          [StorageKeys.refreshToken]: data.refresh_token,
+        };
+      }
+    } catch (error) {
       return {
         success: false,
-        error: "Failed to refresh token",
-      };
-    }
-
-    const data = await response.json();
-
-    if (data.access_token) {
-      setRefreshTimer(data.expires_in, async () => {
-        refreshToken({ domain, clientId });
-      });
-
-      if (storage) {
-        await storage.setSessionItem(
-          StorageKeys.accessToken,
-          data.access_token,
-        );
-        if (data.id_token) {
-          await storage.setSessionItem(StorageKeys.idToken, data.id_token);
-        }
-        if (data.refresh_token) {
-          await storage.setSessionItem(
-            StorageKeys.refreshToken,
-            data.refresh_token,
-          );
-        }
-      }
-      return {
-        success: true,
-        [StorageKeys.accessToken]: data.access_token,
-        [StorageKeys.idToken]: data.id_token,
-        [StorageKeys.refreshToken]: data.refresh_token,
+        error: `No access token recieved: ${error}`,
       };
     }
 

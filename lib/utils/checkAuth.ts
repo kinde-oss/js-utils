@@ -13,13 +13,9 @@ export const checkAuth = async ({
 }): Promise<RefreshTokenResult> => {
   const usingCustomDomain = isCustomDomain(domain);
   const forceLocalStorage = storageSettings.useInsecureForRefreshToken;
-  console.log("usingCustomDomain", usingCustomDomain);
-  console.log("forceLocalStorage", forceLocalStorage);
   let kbrteCookie = null;
   if (usingCustomDomain && !forceLocalStorage) {
-    console.log("getting cookie");
     kbrteCookie = getCookie(kindeCookieName);
-    console.log("kbrteCookie", kbrteCookie);
   }
 
   return await refreshToken({

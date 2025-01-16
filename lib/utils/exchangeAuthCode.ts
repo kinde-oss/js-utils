@@ -5,6 +5,7 @@ import {
   StorageKeys,
   storageSettings,
 } from "../main";
+import { isCustomDomain } from ".";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 
 export const frameworkSettings: {
@@ -66,7 +67,6 @@ export const exchangeAuthCode = async ({
   }
 
   const storedState = await activeStorage.getSessionItem(StorageKeys.state);
-  console.log('----', state, storedState);
   if (state !== storedState) {
     console.error("Invalid state");
     return {
@@ -81,24 +81,18 @@ export const exchangeAuthCode = async ({
 
   const headers: {
     "Content-type": string;
-    "Cache-Control": string;
-    Pragma: string;
     "Kinde-SDK"?: string;
   } = {
     "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-    "Cache-Control": "no-store",
-    Pragma: "no-cache",
   };
 
   if (frameworkSettings.framework) {
     headers["Kinde-SDK"] =
       `${frameworkSettings.framework}/${frameworkSettings.frameworkVersion}`;
   }
-
   const response = await fetch(`${domain}/oauth2/token`, {
     method: "POST",
-    // ...(isUseCookie && {credentials: 'include'}),
-    // credentials: "include",
+    ...(isCustomDomain(domain) && { credentials: "include" }),
     headers: new Headers(headers),
     body: new URLSearchParams({
       client_id: clientId,
