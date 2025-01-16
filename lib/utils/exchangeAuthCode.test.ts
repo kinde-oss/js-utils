@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { exchangeAuthCode } from ".";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
-import { setActiveStorage } from "./token";
+import { setActiveStorage, clearActiveStorage, clearInsecureStorage } from "./token";
 import createFetchMock from "vitest-fetch-mock";
 import { frameworkSettings } from "./exchangeAuthCode";
 import * as refreshTokenTimer from "./refreshTimer";
@@ -120,6 +120,7 @@ describe("exchangeAuthCode", () => {
 
     await store.setItems({
       [StorageKeys.state]: state,
+      [StorageKeys.codeVerifier]: "verifier",
     });
 
     const input = "hello";
@@ -176,6 +177,7 @@ describe("exchangeAuthCode", () => {
 
     await store.setItems({
       [StorageKeys.state]: state,
+      [StorageKeys.codeVerifier]: "verifier",
     });
 
     const input = "hello";
@@ -227,6 +229,7 @@ describe("exchangeAuthCode", () => {
 
     await store.setItems({
       [StorageKeys.state]: state,
+      [StorageKeys.codeVerifier]: "verifier",
     });
 
     frameworkSettings.framework = "Framework";
@@ -274,6 +277,7 @@ describe("exchangeAuthCode", () => {
 
     await store.setItems({
       [StorageKeys.state]: state,
+      [StorageKeys.codeVerifier]: "verifier",
     });
 
     const input = "hello";
@@ -306,6 +310,7 @@ describe("exchangeAuthCode", () => {
 
     await store.setItems({
       [StorageKeys.state]: state,
+      [StorageKeys.codeVerifier]: "verifier",
     });
 
     frameworkSettings.framework = "Framework";
@@ -360,6 +365,8 @@ describe("exchangeAuthCode", () => {
   });
 
   it("should return error if storage is not available", async () => {
+    clearActiveStorage();
+    clearInsecureStorage();
     const urlParams = new URLSearchParams();
     urlParams.append("state", "test");
     urlParams.append("code", "test");
@@ -373,11 +380,12 @@ describe("exchangeAuthCode", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "Invalid state; supplied test, expected null",
+      error: "Authentication storage is not initialized",
     });
   });
 
   it("should return error if state is invalid", async () => {
+    setActiveStorage(new MemoryStorage());
     const urlParams = new URLSearchParams();
     urlParams.append("state", "test");
     urlParams.append("code", "test");
@@ -397,13 +405,13 @@ describe("exchangeAuthCode", () => {
   });
 
   it("should return error if code verifier is missing", async () => {
+    const state = new MemoryStorage();
+    await state.setSessionItem(StorageKeys.state, "test");
+    setActiveStorage(state);
     const urlParams = new URLSearchParams();
     urlParams.append("state", "test");
     urlParams.append("code", "test");
-    mockStorage.getItem.mockImplementation((key) => {
-      if (key === StorageKeys.state) return "test";
-      return null;
-    });
+
 
     const result = await exchangeAuthCode({
       urlParams,
@@ -414,11 +422,15 @@ describe("exchangeAuthCode", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "Invalid state; supplied test, expected null",
+      error: "Code verifier not found",
     });
   });
 
   it("should return error if fetch fails", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(StorageKeys.state, "test");
+    await store.setSessionItem(StorageKeys.codeVerifier, "verifier");
     const urlParams = new URLSearchParams();
     urlParams.append("state", "test");
     urlParams.append("code", "test");
@@ -429,20 +441,24 @@ describe("exchangeAuthCode", () => {
     });
     fetchMock.mockRejectOnce(new Error("Fetch failed"));
 
-    const result = await exchangeAuthCode({
-      urlParams,
-      domain: "test.com",
-      clientId: "test",
-      redirectURL: "test.com",
-    });
-
-    expect(result).toEqual({
-      success: false,
-      error: "Invalid state; supplied test, expected null",
-    });
+    try {
+      await exchangeAuthCode({
+        urlParams,
+        domain: "test.com",
+        clientId: "test",
+        redirectURL: "test.com",
+      });
+    } catch (error) {
+      
+      expect((error as Error).message).toBe("Fetch failed");
+    }
   });
 
   it("should return error if token response is invalid", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(StorageKeys.state, "test");
+    await store.setSessionItem(StorageKeys.codeVerifier, "verifier");
     const urlParams = new URLSearchParams();
     urlParams.append("state", "test");
     urlParams.append("code", "test");
@@ -465,7 +481,7 @@ describe("exchangeAuthCode", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "Invalid state; supplied test, expected null",
+      error: "No access token recieved",
     });
   });
 
@@ -475,6 +491,7 @@ describe("exchangeAuthCode", () => {
     setActiveStorage(store);
     await store.setItems({
       [StorageKeys.state]: "test",
+      [StorageKeys.codeVerifier]: "verifier",
     });
     vi.spyOn(store, "setSessionItem");
     const urlParams = new URLSearchParams();

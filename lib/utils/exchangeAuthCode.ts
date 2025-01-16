@@ -78,6 +78,13 @@ export const exchangeAuthCode = async ({
   const codeVerifier = (await activeStorage.getSessionItem(
     StorageKeys.codeVerifier,
   )) as string;
+  if (codeVerifier === null) {
+    console.error("Code verifier not found");
+    return {
+      success: false,
+      error: "Code verifier not found",
+    };
+  }
 
   const headers: {
     "Content-type": string;
@@ -152,6 +159,13 @@ export const exchangeAuthCode = async ({
   const url = cleanUrl(new URL(window.location.toString()));
   // Replace current state and clear forward history
   window.history.replaceState(window.history.state, "", url);
+
+  if (!data.access_token || !data.id_token || !data.refresh_token) {
+    return {
+      success: false,
+      error: "No access token recieved",
+    };
+  }
 
   return {
     success: true,

@@ -84,7 +84,7 @@ describe("refreshToken", () => {
       clientId: mockClientId,
     });
     expect(result).toStrictEqual({
-      error: "Error refreshing token: Error: Network error",
+      error: "No access token recieved: Error: Network error",
       success: false,
     });
   });
