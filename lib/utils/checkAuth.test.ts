@@ -63,7 +63,7 @@ describe("checkAuth", () => {
 
   it("error when domain supplied", async () => {
     const result = await CheckAuth.checkAuth({ domain: null, clientId });
-     expect (result).toEqual({
+    expect(result).toEqual({
       success: false,
       error: "Domain is required for authentication check",
     });
@@ -71,10 +71,9 @@ describe("checkAuth", () => {
 
   it("error when clientId supplied", async () => {
     const result = await CheckAuth.checkAuth({ domain, clientId: null });
-     expect (result).toEqual({
+    expect(result).toEqual({
       success: false,
       error: "Client ID is required for authentication check",
     });
   });
-
 });

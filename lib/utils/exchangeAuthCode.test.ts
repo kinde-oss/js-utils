@@ -412,7 +412,7 @@ describe("exchangeAuthCode", () => {
     const store = new MemoryStorage();
     await store.setSessionItem(StorageKeys.state, "test");
     setActiveStorage(store);
-    
+
     const urlParams = new URLSearchParams();
     urlParams.append("state", "test");
     urlParams.append("code", "test");
@@ -451,7 +451,7 @@ describe("exchangeAuthCode", () => {
         domain: "test.com",
         clientId: "test",
         redirectURL: "test.com",
-      })
+      }),
     ).rejects.toThrow("Fetch failed");
   });
 
