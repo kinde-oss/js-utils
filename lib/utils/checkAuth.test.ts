@@ -61,7 +61,7 @@ describe("checkAuth", () => {
     });
   });
 
-  it("error when domain supplied", async () => {
+  it("should error when domain is null", async () => {
     // @ts-expect-error Testing error case
     const result = await CheckAuth.checkAuth({ domain: null, clientId });
     expect(result).toEqual({
@@ -70,7 +70,7 @@ describe("checkAuth", () => {
     });
   });
 
-  it("error when clientId supplied", async () => {
+  it("should error when clientId is null", async () => {
     // @ts-expect-error Testing error case
     const result = await CheckAuth.checkAuth({ domain, clientId: null });
     expect(result).toEqual({
