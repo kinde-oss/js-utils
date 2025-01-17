@@ -84,4 +84,10 @@ describe("getCookie", () => {
     const result = getCookie("_kbrte");
     expect(result).toBeNull();
   });
+
+  it("should return null if parts.pop() returns undefined", () => {
+    document.cookie = "_kbrte=%E0%A4%A;path=/";
+    const result = getCookie("_kbrte");
+    expect(result).toBeNull();
+  });
 });

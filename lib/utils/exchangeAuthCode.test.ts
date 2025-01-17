@@ -409,9 +409,10 @@ describe("exchangeAuthCode", () => {
   });
 
   it("should return error if code verifier is missing", async () => {
-    const state = new MemoryStorage();
-    await state.setSessionItem(StorageKeys.state, "test");
-    setActiveStorage(state);
+    const store = new MemoryStorage();
+    await store.setSessionItem(StorageKeys.state, "test");
+    setActiveStorage(store);
+    
     const urlParams = new URLSearchParams();
     urlParams.append("state", "test");
     urlParams.append("code", "test");
@@ -444,16 +445,14 @@ describe("exchangeAuthCode", () => {
     });
     fetchMock.mockRejectOnce(new Error("Fetch failed"));
 
-    try {
-      await exchangeAuthCode({
+    await expect(
+      exchangeAuthCode({
         urlParams,
         domain: "test.com",
         clientId: "test",
         redirectURL: "test.com",
-      });
-    } catch (error) {
-      expect((error as Error).message).toBe("Fetch failed");
-    }
+      })
+    ).rejects.toThrow("Fetch failed");
   });
 
   it("should return error if token response is invalid", async () => {

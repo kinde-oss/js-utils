@@ -61,51 +61,20 @@ describe("checkAuth", () => {
     });
   });
 
-  // it.only('should use cookie refresh type when using custom domain and no _kbrte cookie', async () => {
-  //   vi.spyOn(refreshToken, "refreshToken").mockResolvedValue({
-  //     success: true,
-  //   });
+  it("error when domain supplied", async () => {
+    const result = await CheckAuth.checkAuth({ domain: null, clientId });
+     expect (result).toEqual({
+      success: false,
+      error: "Domain is required for authentication check",
+    });
+  });
 
-  //   const result = await checkAuth({ domain: "test.kinde.com", clientId });
+  it("error when clientId supplied", async () => {
+    const result = await CheckAuth.checkAuth({ domain, clientId: null });
+     expect (result).toEqual({
+      success: false,
+      error: "Client ID is required for authentication check",
+    });
+  });
 
-  //   expect(refreshToken.refreshToken).toHaveBeenCalledWith({
-  //     domain: "test.kinde.com",
-  //     clientId,
-  //     refreshType: refreshToken.RefreshType.refreshToken,
-  //   });
-  //   expect(result).toEqual({});
-  // });
-
-  // it('should use refresh token type when not using custom domain', async () => {
-  //   (refreshToken as vi.Mock).mockResolvedValue({} as RefreshTokenResult);
-
-  //   const result = await checkAuth({ domain: 'test.kinde.com', clientId });
-
-  //   expect(refreshToken).toHaveBeenCalledWith({
-  //     domain: 'not-custom.com',
-  //     clientId,
-  //     refreshType: RefreshType.refreshToken,
-  //   });
-  //   expect(result).toEqual({});
-  // });
-
-  // it('should use refresh token type when forceLocalStorage is true', async () => {
-  //   (refreshToken as vi.Mock).mockResolvedValue({} as RefreshTokenResult);
-
-  //   // Mock storageSettings to force local storage
-  //   const originalStorageSettings = storageSettings;
-  //   storageSettings.useInsecureForRefreshToken = true;
-
-  //   const result = await checkAuth({ domain, clientId });
-
-  //   expect(refreshToken).toHaveBeenCalledWith({
-  //     domain,
-  //     clientId,
-  //     refreshType: RefreshType.refreshToken,
-  //   });
-  //   expect(result).toEqual({});
-
-  //   // Restore original storageSettings
-  //   storageSettings.useInsecureForRefreshToken = originalStorageSettings.useInsecureForRefreshToken;
-  // });
 });
