@@ -60,7 +60,10 @@ describe("isAuthenticated", () => {
     });
 
     expect(result).toBe(true);
-    expect(mockRefreshToken).toHaveBeenCalledWith("test.com", "123");
+    expect(mockRefreshToken).toHaveBeenCalledWith({
+      domain: "test.com",
+      clientId: "123",
+    });
   });
 
   it("should return false if token refresh fails", async () => {

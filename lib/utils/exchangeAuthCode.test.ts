@@ -1,7 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { exchangeAuthCode } from ".";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
-import { setActiveStorage } from "./token";
+import {
+  setActiveStorage,
+  clearActiveStorage,
+  clearInsecureStorage,
+} from "./token";
 import createFetchMock from "vitest-fetch-mock";
 import { frameworkSettings } from "./exchangeAuthCode";
 import * as refreshTokenTimer from "./refreshTimer";
@@ -10,11 +14,24 @@ import * as main from "../main";
 const fetchMock = createFetchMock(vi);
 
 describe("exchangeAuthCode", () => {
+  const mockStorage = {
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    getSessionItem: vi.fn(),
+    setSessionItem: vi.fn(),
+    removeSessionItem: vi.fn(),
+    destroySession: vi.fn(),
+    setItems: vi.fn(),
+  };
+
   beforeEach(() => {
     fetchMock.enableMocks();
     vi.spyOn(refreshTokenTimer, "setRefreshTimer");
     vi.spyOn(main, "refreshToken");
     vi.useFakeTimers();
+    main.storageSettings.useInsecureForRefreshToken = false;
+    main.clearInsecureStorage();
   });
 
   afterEach(() => {
@@ -107,6 +124,7 @@ describe("exchangeAuthCode", () => {
 
     await store.setItems({
       [StorageKeys.state]: state,
+      [StorageKeys.codeVerifier]: "verifier",
     });
 
     const input = "hello";
@@ -152,10 +170,59 @@ describe("exchangeAuthCode", () => {
     expect((options?.headers as Headers).get("Content-type")).toEqual(
       "application/x-www-form-urlencoded; charset=UTF-8",
     );
-    expect((options?.headers as Headers).get("Cache-Control")).toEqual(
-      "no-store",
+  });
+
+  it("uses insecure storage for code verifier when storage setting applies", async () => {
+    const store = new MemoryStorage();
+    main.setInsecureStorage(store);
+
+    const store2 = new MemoryStorage();
+    const state = "state";
+
+    await store.setItems({
+      [StorageKeys.state]: state,
+      [StorageKeys.codeVerifier]: "verifier",
+    });
+
+    const input = "hello";
+
+    const urlParams = new URLSearchParams();
+    urlParams.append("code", input);
+    urlParams.append("state", state);
+    urlParams.append("client_id", "test");
+
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "access_token",
+        refresh_token: "refresh_token",
+        id_token: "id_token",
+      }),
     );
-    expect((options?.headers as Headers).get("Pragma")).toEqual("no-cache");
+
+    main.storageSettings.useInsecureForRefreshToken = true;
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+
+    expect(result).toStrictEqual({
+      accessToken: "access_token",
+      refreshToken: "refresh_token",
+      idToken: "id_token",
+      success: true,
+    });
+
+    const postCodeVerifier = await store.getSessionItem(
+      StorageKeys.codeVerifier,
+    );
+    expect(postCodeVerifier).toBeNull();
+    const insecureRefreshToken = await store2.getSessionItem(
+      StorageKeys.refreshToken,
+    );
+    expect(insecureRefreshToken).toBeNull();
   });
 
   it("set the framework and version on header", async () => {
@@ -166,6 +233,7 @@ describe("exchangeAuthCode", () => {
 
     await store.setItems({
       [StorageKeys.state]: state,
+      [StorageKeys.codeVerifier]: "verifier",
     });
 
     frameworkSettings.framework = "Framework";
@@ -213,6 +281,7 @@ describe("exchangeAuthCode", () => {
 
     await store.setItems({
       [StorageKeys.state]: state,
+      [StorageKeys.codeVerifier]: "verifier",
     });
 
     const input = "hello";
@@ -245,6 +314,7 @@ describe("exchangeAuthCode", () => {
 
     await store.setItems({
       [StorageKeys.state]: state,
+      [StorageKeys.codeVerifier]: "verifier",
     });
 
     frameworkSettings.framework = "Framework";
@@ -281,5 +351,181 @@ describe("exchangeAuthCode", () => {
     );
     vi.advanceTimersByTime(3600 * 1000);
     expect(main.refreshToken).toHaveBeenCalledTimes(1);
+  });
+
+  it("should return error if state or code is missing", async () => {
+    const urlParams = new URLSearchParams();
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid state or code",
+    });
+  });
+
+  it("should return error if storage is not available", async () => {
+    clearActiveStorage();
+    clearInsecureStorage();
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Authentication storage is not initialized",
+    });
+  });
+
+  it("should return error if state is invalid", async () => {
+    setActiveStorage(new MemoryStorage());
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+    mockStorage.getItem.mockReturnValue("different-state");
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid state; supplied test, expected null",
+    });
+  });
+
+  it("should return error if code verifier is missing", async () => {
+    const store = new MemoryStorage();
+    await store.setSessionItem(StorageKeys.state, "test");
+    setActiveStorage(store);
+
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Code verifier not found",
+    });
+  });
+
+  it("should return error if fetch fails", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(StorageKeys.state, "test");
+    await store.setSessionItem(StorageKeys.codeVerifier, "verifier");
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+    mockStorage.getItem.mockImplementation((key) => {
+      if (key === StorageKeys.state) return "test";
+      if (key === StorageKeys.codeVerifier) return "verifier";
+      return null;
+    });
+    fetchMock.mockRejectOnce(new Error("Fetch failed"));
+
+    await expect(
+      exchangeAuthCode({
+        urlParams,
+        domain: "test.com",
+        clientId: "test",
+        redirectURL: "test.com",
+      }),
+    ).rejects.toThrow("Fetch failed");
+  });
+
+  it("should return error if token response is invalid", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(StorageKeys.state, "test");
+    await store.setSessionItem(StorageKeys.codeVerifier, "verifier");
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+    mockStorage.getItem.mockImplementation((key) => {
+      if (key === StorageKeys.state) return "test";
+      if (key === StorageKeys.codeVerifier) return "verifier";
+      return null;
+    });
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({}),
+    } as Response);
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "No access token recieved",
+    });
+  });
+
+  it("should handle auto refresh correctly", async () => {
+    const store = new MemoryStorage();
+
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "test",
+      [StorageKeys.codeVerifier]: "verifier",
+    });
+    vi.spyOn(store, "setSessionItem");
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+    mockStorage.getItem.mockImplementation((key) => {
+      if (key === StorageKeys.state) return "test";
+      if (key === StorageKeys.codeVerifier) return "verifier";
+      return null;
+    });
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          access_token: "access",
+          id_token: "id",
+          refresh_token: "refresh",
+        }),
+    } as Response);
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+      autoRefresh: true,
+    });
+
+    expect(result.success).toBe(true);
+    expect(store.setSessionItem).toHaveBeenCalledWith(
+      StorageKeys.refreshToken,
+      "refresh",
+    );
   });
 });

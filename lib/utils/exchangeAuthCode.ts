@@ -3,7 +3,9 @@ import {
   getInsecureStorage,
   refreshToken,
   StorageKeys,
+  storageSettings,
 } from "../main";
+import { isCustomDomain } from ".";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 
 export const frameworkSettings: {
@@ -76,27 +78,28 @@ export const exchangeAuthCode = async ({
   const codeVerifier = (await activeStorage.getSessionItem(
     StorageKeys.codeVerifier,
   )) as string;
+  if (codeVerifier === null) {
+    console.error("Code verifier not found");
+    return {
+      success: false,
+      error: "Code verifier not found",
+    };
+  }
 
   const headers: {
     "Content-type": string;
-    "Cache-Control": string;
-    Pragma: string;
     "Kinde-SDK"?: string;
   } = {
     "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-    "Cache-Control": "no-store",
-    Pragma: "no-cache",
   };
 
   if (frameworkSettings.framework) {
     headers["Kinde-SDK"] =
       `${frameworkSettings.framework}/${frameworkSettings.frameworkVersion}`;
   }
-
   const response = await fetch(`${domain}/oauth2/token`, {
     method: "POST",
-    // ...(isUseCookie && {credentials: 'include'}),
-    // credentials: "include",
+    ...(isCustomDomain(domain) && { credentials: "include" }),
     headers: new Headers(headers),
     body: new URLSearchParams({
       client_id: clientId,
@@ -124,15 +127,21 @@ export const exchangeAuthCode = async ({
   } = await response.json();
 
   const secureStore = getActiveStorage();
-  secureStore!.setItems({
-    [StorageKeys.accessToken]: data.access_token,
-    [StorageKeys.idToken]: data.id_token,
-    [StorageKeys.refreshToken]: data.refresh_token,
-  });
+  if (secureStore) {
+    secureStore.setItems({
+      [StorageKeys.accessToken]: data.access_token,
+      [StorageKeys.idToken]: data.id_token,
+      [StorageKeys.refreshToken]: data.refresh_token,
+    });
+  }
+
+  if (storageSettings.useInsecureForRefreshToken) {
+    activeStorage.setSessionItem(StorageKeys.refreshToken, data.refresh_token);
+  }
 
   if (autoRefresh) {
     setRefreshTimer(data.expires_in, async () => {
-      refreshToken(domain, clientId);
+      refreshToken({ domain, clientId });
     });
   }
 
@@ -150,6 +159,13 @@ export const exchangeAuthCode = async ({
   const url = cleanUrl(new URL(window.location.toString()));
   // Replace current state and clear forward history
   window.history.replaceState(window.history.state, "", url);
+
+  if (!data.access_token || !data.id_token || !data.refresh_token) {
+    return {
+      success: false,
+      error: "No access token recieved",
+    };
+  }
 
   return {
     success: true,

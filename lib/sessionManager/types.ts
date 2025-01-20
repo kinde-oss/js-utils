@@ -17,6 +17,7 @@ export enum StorageKeys {
 export type StorageSettingsType = {
   keyPrefix: string;
   maxLength: number;
+  useInsecureForRefreshToken: boolean;
 };
 
 export abstract class SessionBase<V extends string = StorageKeys>
