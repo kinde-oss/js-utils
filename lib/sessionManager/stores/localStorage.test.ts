@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { LocalStorage } from "./localStorage";
 import { StorageKeys } from "../types";
+import { storageSettings } from "..";
 
 enum ExtraKeys {
   testKey = "testKey2",
@@ -31,6 +32,22 @@ describe("LocalStorage standard keys", () => {
 
   beforeEach(() => {
     sessionManager = new LocalStorage();
+  });
+
+  it("should show warning when using local storage access token explicity", async () => {
+    storageSettings.useInsecureForRefreshToken = true;
+    const consoleSpy = vi.spyOn(console, "warn");
+    new LocalStorage();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "LocalStorage store should not be used in production",
+    );
+    storageSettings.useInsecureForRefreshToken = false;
+  });
+
+  it("should not show warning when using secure refresh tokens", async () => {
+    const consoleSpy = vi.spyOn(console, "warn");
+    new LocalStorage();
+    expect(consoleSpy).not.toHaveBeenCalled();
   });
 
   it("should set and get an item in session storage", async () => {
