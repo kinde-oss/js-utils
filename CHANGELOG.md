@@ -1,6 +1,38 @@
 # Changelog
 
 
+## 0.6.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.6.0...main)
+
+### 🚀 Enhancements
+
+- Add code verifier to generateAuthUrl reponse ([2d2eff4](https://github.com/kinde-oss/js-utils/commit/2d2eff4))
+- Refresh fixes ([ea43219](https://github.com/kinde-oss/js-utils/commit/ea43219))
+- Support cookie based refresh tokens ([9b67701](https://github.com/kinde-oss/js-utils/commit/9b67701))
+
+### 🩹 Fixes
+
+- Support generation authentication URLs in react native ([a366af2](https://github.com/kinde-oss/js-utils/commit/a366af2))
+- Ignore expired cookies ([87cbd4f](https://github.com/kinde-oss/js-utils/commit/87cbd4f))
+- Tests and error checking ([8c7dbf7](https://github.com/kinde-oss/js-utils/commit/8c7dbf7))
+
+### 🏡 Chore
+
+- Lint ([0368e77](https://github.com/kinde-oss/js-utils/commit/0368e77))
+- Lint ([02280fc](https://github.com/kinde-oss/js-utils/commit/02280fc))
+
+### ✅ Tests
+
+- Improvement to tests ([8ec3f7b](https://github.com/kinde-oss/js-utils/commit/8ec3f7b))
+- Tsignore ([c8c06df](https://github.com/kinde-oss/js-utils/commit/c8c06df))
+- Change test names ([583b983](https://github.com/kinde-oss/js-utils/commit/583b983))
+- Extend test suite ([319d8fa](https://github.com/kinde-oss/js-utils/commit/319d8fa))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
 ## 0.5.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.5.0...main)
