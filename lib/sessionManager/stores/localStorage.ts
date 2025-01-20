@@ -12,7 +12,9 @@ export class LocalStorage<V extends string = StorageKeys>
 {
   constructor() {
     super();
-    console.warn("LocalStorage store should not be used in production");
+    if (storageSettings.useInsecureForRefreshToken) {
+      console.warn("LocalStorage store should not be used in production");
+    }
   }
 
   private internalItems: Set<V | StorageKeys> = new Set<V>();
