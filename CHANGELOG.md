@@ -1,6 +1,18 @@
 # Changelog
 
 
+## 0.7.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.7.0...main)
+
+### 🩹 Fixes
+
+- Custom domain with http prefix ([17c9007](https://github.com/kinde-oss/js-utils/commit/17c9007))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
 ## 0.6.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.6.0...main)
