@@ -1,6 +1,60 @@
 # Changelog
 
 
+## 0.7.1...fix/refresh_insecure_token_storage
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.7.1...fix/refresh_insecure_token_storage)
+
+### 🩹 Fixes
+
+- Insecure token storage when using no non custom domain ([7338321](https://github.com/kinde-oss/js-utils/commit/7338321))
+- Only show production warning when explicity setting the 'useInsecureForRefreshToken' ([958f4ed](https://github.com/kinde-oss/js-utils/commit/958f4ed))
+- Non prod kinde domains ([24be712](https://github.com/kinde-oss/js-utils/commit/24be712))
+
+### ✅ Tests
+
+- Add tests ([979974d](https://github.com/kinde-oss/js-utils/commit/979974d))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
+## 0.7.1...fix/refresh_insecure_token_storage
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.7.1...fix/refresh_insecure_token_storage)
+
+### 🩹 Fixes
+
+- Insecure token storage when using no non custom domain ([7338321](https://github.com/kinde-oss/js-utils/commit/7338321))
+- Only show production warning when explicity setting the 'useInsecureForRefreshToken' ([958f4ed](https://github.com/kinde-oss/js-utils/commit/958f4ed))
+- Non prod kinde domains ([24be712](https://github.com/kinde-oss/js-utils/commit/24be712))
+
+### ✅ Tests
+
+- Add tests ([979974d](https://github.com/kinde-oss/js-utils/commit/979974d))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
+## 0.7.1...fix/refresh_insecure_token_storage
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.7.1...fix/refresh_insecure_token_storage)
+
+### 🩹 Fixes
+
+- Insecure token storage when using no non custom domain ([7338321](https://github.com/kinde-oss/js-utils/commit/7338321))
+- Only show production warning when explicity setting the 'useInsecureForRefreshToken' ([958f4ed](https://github.com/kinde-oss/js-utils/commit/958f4ed))
+- Non prod kinde domains ([24be712](https://github.com/kinde-oss/js-utils/commit/24be712))
+
+### ✅ Tests
+
+- Add tests ([979974d](https://github.com/kinde-oss/js-utils/commit/979974d))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
 ## 0.7.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.7.0...main)

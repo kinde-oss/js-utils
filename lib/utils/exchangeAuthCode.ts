@@ -97,7 +97,7 @@ export const exchangeAuthCode = async ({
     headers["Kinde-SDK"] =
       `${frameworkSettings.framework}/${frameworkSettings.frameworkVersion}`;
   }
-  const response = await fetch(`${domain}/oauth2/token`, {
+  const fetchOptions: RequestInit = {
     method: "POST",
     ...(isCustomDomain(domain) && { credentials: "include" }),
     headers: new Headers(headers),
@@ -108,7 +108,9 @@ export const exchangeAuthCode = async ({
       grant_type: "authorization_code",
       redirect_uri: redirectURL,
     }),
-  });
+  };
+  console.log("fetchOptions", fetchOptions);
+  const response = await fetch(`${domain}/oauth2/token`, fetchOptions);
   if (!response?.ok) {
     const errorText = await response.text();
     console.error("Token exchange failed:", response.status, errorText);
@@ -135,7 +137,7 @@ export const exchangeAuthCode = async ({
     });
   }
 
-  if (storageSettings.useInsecureForRefreshToken) {
+  if (storageSettings.useInsecureForRefreshToken || !isCustomDomain(domain)) {
     activeStorage.setSessionItem(StorageKeys.refreshToken, data.refresh_token);
   }
 

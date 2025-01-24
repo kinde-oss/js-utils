@@ -15,7 +15,7 @@ describe("isCustomDomain", () => {
     expect(result).toEqual(false);
   });
   it("works on no prod kinde domains", () => {
-    const result = isCustomDomain("https://stakesocial-dave.au.kinde.com");
+    const result = isCustomDomain("https://test-test.au.kinde.com");
     expect(result).toEqual(false);
   });
 });
