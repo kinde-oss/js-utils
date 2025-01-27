@@ -30,9 +30,9 @@ export const generateAuthUrl = async (
 
   if (!options.state) {
     options.state = generateRandomString(32);
-    if (activeStorage) {
-      activeStorage.setSessionItem(StorageKeys.state, options.state);
-    }
+  }
+  if (activeStorage) {
+    activeStorage.setSessionItem(StorageKeys.state, options.state);
   }
   searchParams["state"] = options.state;
 

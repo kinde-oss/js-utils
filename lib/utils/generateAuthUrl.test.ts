@@ -177,4 +177,24 @@ describe("generateAuthUrl", () => {
     expect(nonce).toBeDefined();
     expect(codeVerifier).toBeDefined();
   });
+
+  it("if state is defined, ensure its stored in correctly", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+
+    const testState = "testState:123";
+    const domain = "https://auth.example.com";
+    const options: LoginOptions = {
+      clientId: "client123",
+      redirectURL: "https://example.com",
+      prompt: PromptTypes.login,
+      state: testState
+    };
+
+    await generateAuthUrl(domain, IssuerRouteTypes.login, options);
+
+    const state = await store.getSessionItem(StorageKeys.state);
+
+    expect(state).toEqual(testState);
+  });
 });
