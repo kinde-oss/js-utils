@@ -8,6 +8,7 @@ import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
 import { exchangeAuthCode, frameworkSettings } from "./exchangeAuthCode";
 import { checkAuth } from "./checkAuth";
 import { isCustomDomain } from "./isCustomDomain";
+import { setRefreshTimer, clearRefreshTimer } from "./refreshTimer";
 
 export {
   // config
@@ -23,4 +24,6 @@ export {
   exchangeAuthCode,
   checkAuth,
   isCustomDomain,
+  setRefreshTimer,
+  clearRefreshTimer,
 };
