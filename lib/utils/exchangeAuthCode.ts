@@ -24,13 +24,23 @@ interface ExchangeAuthCodeParams {
   autoRefresh?: boolean;
 }
 
-interface ExchangeAuthCodeResult {
-  success: boolean;
-  error?: string;
+type ExchangeAuthCodeResultSuccess = {
+  success: true;
+  error?: never;
   [StorageKeys.accessToken]?: string;
   [StorageKeys.idToken]?: string;
   [StorageKeys.refreshToken]?: string;
 }
+
+type ExchangeAuthCodeResultError = {
+  success: false;
+  error: string;
+  [StorageKeys.accessToken]?: never;
+  [StorageKeys.idToken]?: never;
+  [StorageKeys.refreshToken]?: never;
+}
+
+type ExchangeAuthCodeResult = ExchangeAuthCodeResultSuccess | ExchangeAuthCodeResultError
 
 export const exchangeAuthCode = async ({
   urlParams,
