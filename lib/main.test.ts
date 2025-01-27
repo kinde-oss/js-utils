@@ -45,6 +45,8 @@ describe("index exports", () => {
       "refreshToken",
       "checkAuth",
       "isCustomDomain",
+      "setRefreshTimer",
+      "clearRefreshTimer",
 
       // session manager
       "MemoryStorage",
