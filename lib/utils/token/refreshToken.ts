@@ -110,7 +110,7 @@ export const refreshToken = async ({
           };
         }
         setRefreshTimer(data.expires_in, async () => {
-          refreshToken({ domain, clientId });
+          refreshToken({ domain, clientId, refreshType });
         });
 
         if (storage) {
