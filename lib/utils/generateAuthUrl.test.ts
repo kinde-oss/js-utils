@@ -188,7 +188,7 @@ describe("generateAuthUrl", () => {
       clientId: "client123",
       redirectURL: "https://example.com",
       prompt: PromptTypes.login,
-      state: testState
+      state: testState,
     };
 
     await generateAuthUrl(domain, IssuerRouteTypes.login, options);
