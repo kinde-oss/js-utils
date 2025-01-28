@@ -26,13 +26,25 @@ interface ExchangeAuthCodeParams {
   autoRefresh?: boolean;
 }
 
-interface ExchangeAuthCodeResult {
-  success: boolean;
-  error?: string;
+type ExchangeAuthCodeResultSuccess = {
+  success: true;
+  error?: never;
   [StorageKeys.accessToken]?: string;
   [StorageKeys.idToken]?: string;
   [StorageKeys.refreshToken]?: string;
-}
+};
+
+type ExchangeAuthCodeResultError = {
+  success: false;
+  error: string;
+  [StorageKeys.accessToken]?: never;
+  [StorageKeys.idToken]?: never;
+  [StorageKeys.refreshToken]?: never;
+};
+
+type ExchangeAuthCodeResult =
+  | ExchangeAuthCodeResultSuccess
+  | ExchangeAuthCodeResultError;
 
 export const exchangeAuthCode = async ({
   urlParams,
@@ -99,7 +111,7 @@ export const exchangeAuthCode = async ({
     headers["Kinde-SDK"] =
       `${frameworkSettings.framework}/${frameworkSettings.sdkVersion}/${frameworkSettings.frameworkVersion}/Javascript`;
   }
-  const response = await fetch(`${domain}/oauth2/token`, {
+  const fetchOptions: RequestInit = {
     method: "POST",
     ...(isCustomDomain(domain) && { credentials: "include" }),
     headers: new Headers(headers),
@@ -110,7 +122,9 @@ export const exchangeAuthCode = async ({
       grant_type: "authorization_code",
       redirect_uri: redirectURL,
     }),
-  });
+  };
+
+  const response = await fetch(`${domain}/oauth2/token`, fetchOptions);
   if (!response?.ok) {
     const errorText = await response.text();
     console.error("Token exchange failed:", response.status, errorText);
@@ -137,7 +151,7 @@ export const exchangeAuthCode = async ({
     });
   }
 
-  if (storageSettings.useInsecureForRefreshToken) {
+  if (storageSettings.useInsecureForRefreshToken || !isCustomDomain(domain)) {
     activeStorage.setSessionItem(StorageKeys.refreshToken, data.refresh_token);
   }
 

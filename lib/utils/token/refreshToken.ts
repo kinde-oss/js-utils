@@ -4,7 +4,7 @@ import {
   StorageKeys,
   storageSettings,
 } from "../../sessionManager";
-import { sanitizeUrl } from "..";
+import { isCustomDomain, sanitizeUrl } from "..";
 import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
 
 export interface RefreshTokenResult {
@@ -51,7 +51,7 @@ export const refreshToken = async ({
     let refreshTokenValue: string = "";
 
     let storage: SessionManager | null;
-    if (storageSettings.useInsecureForRefreshToken) {
+    if (storageSettings.useInsecureForRefreshToken || !isCustomDomain(domain)) {
       storage = getInsecureStorage();
     } else {
       storage = getActiveStorage();
@@ -102,17 +102,27 @@ export const refreshToken = async ({
       }
       const data = await response.json();
       if (data.access_token) {
+        const secureStore = getActiveStorage();
+        if (!secureStore) {
+          return {
+            success: false,
+            error: "No active storage found",
+          };
+        }
         setRefreshTimer(data.expires_in, async () => {
-          refreshToken({ domain, clientId });
+          refreshToken({ domain, clientId, refreshType });
         });
 
         if (storage) {
-          await storage.setSessionItem(
+          await secureStore.setSessionItem(
             StorageKeys.accessToken,
             data.access_token,
           );
           if (data.id_token) {
-            await storage.setSessionItem(StorageKeys.idToken, data.id_token);
+            await secureStore.setSessionItem(
+              StorageKeys.idToken,
+              data.id_token,
+            );
           }
           if (data.refresh_token) {
             await storage.setSessionItem(
@@ -142,7 +152,7 @@ export const refreshToken = async ({
   } catch (error) {
     return {
       success: false,
-      error: `Error refreshing token: ${error}`,
+      error: `Error refreshing token: ${(error as Error).message}`,
     };
   }
 };
