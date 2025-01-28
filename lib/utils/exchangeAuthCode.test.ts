@@ -238,6 +238,7 @@ describe("exchangeAuthCode", () => {
 
     frameworkSettings.framework = "Framework";
     frameworkSettings.frameworkVersion = "Version";
+    frameworkSettings.sdkVersion = "SDKVersion";
 
     const input = "hello";
 
@@ -269,7 +270,7 @@ describe("exchangeAuthCode", () => {
       method: "POST",
     });
     expect((options?.headers as Headers).get("Kinde-SDK")).toEqual(
-      "Framework/Version",
+      "Framework/SDKVersion/Version/Javascript",
     );
   });
 
