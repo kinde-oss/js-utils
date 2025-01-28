@@ -11,9 +11,11 @@ import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 export const frameworkSettings: {
   framework: string;
   frameworkVersion: string;
+  sdkVersion: string;
 } = {
   framework: "",
   frameworkVersion: "",
+  sdkVersion: "",
 };
 
 interface ExchangeAuthCodeParams {
@@ -95,7 +97,7 @@ export const exchangeAuthCode = async ({
 
   if (frameworkSettings.framework) {
     headers["Kinde-SDK"] =
-      `${frameworkSettings.framework}/${frameworkSettings.frameworkVersion}`;
+      `${frameworkSettings.framework}/${frameworkSettings.sdkVersion}/${frameworkSettings.frameworkVersion}/Javascript`;
   }
   const response = await fetch(`${domain}/oauth2/token`, {
     method: "POST",
