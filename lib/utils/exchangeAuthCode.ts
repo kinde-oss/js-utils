@@ -121,7 +121,7 @@ export const exchangeAuthCode = async ({
       redirect_uri: redirectURL,
     }),
   };
-  console.log("fetchOptions", fetchOptions);
+
   const response = await fetch(`${domain}/oauth2/token`, fetchOptions);
   if (!response?.ok) {
     const errorText = await response.text();
