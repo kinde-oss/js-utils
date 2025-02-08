@@ -29,7 +29,7 @@
   "types": "dist/main.d.ts",
   "devDependencies": {
     "@eslint/js": "^9.9.1",
-    "@types/chrome": "^0.0.290",
+    "@types/chrome": "^0.0.303",
     "@types/node": "^22.5.1",
     "@vitejs/plugin-react": "^4.3.1",
     "@vitest/coverage-v8": "^2.0.5",
@@ -47,7 +47,7 @@
   "optionalDependencies": {
     "expo-secure-store": "*"
   },
-  "packageManager": "pnpm@9.14.2+sha512.6e2baf77d06b9362294152c851c4f278ede37ab1eba3a55fda317a4a17b209f4dbb973fb250a77abc463a341fcb1f17f17cfa24091c4eb319cda0d9b84278387",
+  "packageManager": "pnpm@9.15.5+sha512.845196026aab1cc3f098a0474b64dfbab2afe7a1b4e91dd86895d8e4aa32a7a6d03049e2d0ad770bbe4de023a7122fb68c1a1d6e0d033c7076085f9d5d4800d4",
   "dependencies": {
     "@kinde/jwt-decoder": "^0.2.0"
   }
