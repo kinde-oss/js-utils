@@ -8,11 +8,12 @@ import { getClaims } from "./getClaims";
  */
 export const getClaim = async <T = JWTDecoded, V = string | number | string[]>(
   keyName: keyof T,
+  tokenType: "accessToken" | "idToken" = "accessToken",
 ): Promise<{
   name: keyof T;
   value: V;
 } | null> => {
-  const claims = await getClaims<T>();
+  const claims = await getClaims<T>(tokenType);
   if (!claims) {
     return null;
   }
