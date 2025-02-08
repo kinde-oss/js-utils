@@ -1,6 +1,43 @@
 # Changelog
 
 
+## 0.7.1...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.7.1...main)
+
+### 🚀 Enhancements
+
+- Migrate to use js-utils and refresh token support ([ad2f6d6](https://github.com/kinde-oss/js-utils/commit/ad2f6d6))
+- Export refresh timer methods ([490fdb0](https://github.com/kinde-oss/js-utils/commit/490fdb0))
+- Update SDK usage matrics ([e688e22](https://github.com/kinde-oss/js-utils/commit/e688e22))
+- Get claims from either token ([e84085b](https://github.com/kinde-oss/js-utils/commit/e84085b))
+
+### 🩹 Fixes
+
+- Insecure token storage when using no non custom domain ([7338321](https://github.com/kinde-oss/js-utils/commit/7338321))
+- Only show production warning when explicity setting the 'useInsecureForRefreshToken' ([958f4ed](https://github.com/kinde-oss/js-utils/commit/958f4ed))
+- Non prod kinde domains ([24be712](https://github.com/kinde-oss/js-utils/commit/24be712))
+- Stronger typing on exchange code return type ([17a6770](https://github.com/kinde-oss/js-utils/commit/17a6770))
+- State passed to generateAuthUrl not stored in state ([02e34ae](https://github.com/kinde-oss/js-utils/commit/02e34ae))
+- Custom domain auto refresh ([4738ed4](https://github.com/kinde-oss/js-utils/commit/4738ed4))
+
+### 📖 Documentation
+
+- Update JSDocs ([45f7590](https://github.com/kinde-oss/js-utils/commit/45f7590))
+
+### 🏡 Chore
+
+- Lint ([08f7232](https://github.com/kinde-oss/js-utils/commit/08f7232))
+- Remove debug console log ([c889b9c](https://github.com/kinde-oss/js-utils/commit/c889b9c))
+
+### ✅ Tests
+
+- Add tests ([979974d](https://github.com/kinde-oss/js-utils/commit/979974d))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
 ## 0.7.1...fix/refresh_insecure_token_storage
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.7.1...fix/refresh_insecure_token_storage)
