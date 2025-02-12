@@ -17,7 +17,7 @@ export const getFlag = async <T = string | boolean | number>(
 
   if (name && flags) {
     const value = flags[name];
-    return value?.v || null;
+    return value ? value?.v : null;
   }
   return null;
 };

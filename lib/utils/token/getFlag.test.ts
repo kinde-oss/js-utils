@@ -17,7 +17,7 @@ describe("getFlag", () => {
     expect(idToken).toStrictEqual(null);
   });
 
-  it("boolean", async () => {
+  it("boolean true", async () => {
     await storage.setSessionItem(
       StorageKeys.accessToken,
       createMockAccessToken({
@@ -32,6 +32,23 @@ describe("getFlag", () => {
     const idToken = await getFlag<boolean>("test");
 
     expect(idToken).toStrictEqual(true);
+  });
+
+  it("boolean false", async () => {
+    await storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        feature_flags: {
+          test: {
+            v: false,
+            t: "b",
+          },
+        },
+      }),
+    );
+    const idToken = await getFlag<boolean>("test");
+
+    expect(idToken).toStrictEqual(false);
   });
 
   it("string", async () => {
