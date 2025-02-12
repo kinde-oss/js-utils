@@ -1,6 +1,22 @@
 # Changelog
 
 
+## 0.7.2...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.7.2...main)
+
+### 🩹 Fixes
+
+- False boolean flag returning null ([b106a45](https://github.com/kinde-oss/js-utils/commit/b106a45))
+
+### ✅ Tests
+
+- Test to cover false boolean feature flags ([eb27de5](https://github.com/kinde-oss/js-utils/commit/eb27de5))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
 ## 0.7.1...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.7.1...main)
