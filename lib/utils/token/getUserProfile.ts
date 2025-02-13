@@ -1,4 +1,4 @@
-import { getDecodedToken } from ".";
+import { getClaims, getDecodedToken } from ".";
 
 export type UserProfile = {
   id: string;
@@ -11,7 +11,7 @@ export type UserProfile = {
 export const getUserProfile = async <T>(): Promise<
   (UserProfile & T) | null
 > => {
-  const idToken = await getDecodedToken<{
+  const idToken = await getClaims<{
     sub: string;
     given_name: string;
     family_name: string;

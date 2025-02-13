@@ -11,7 +11,7 @@ export enum PromptTypes {
   login = "login",
 }
 
-export type LoginMethodParams = Pick<
+export type LoginMethodParams = Partial<Pick<
   LoginOptions,
   | "audience"
   | "scope"
@@ -25,7 +25,7 @@ export type LoginMethodParams = Pick<
   | "redirectURL"
   | "hasSuccessPage"
   | "workflowDeploymentId"
->;
+>>;
 
 export type LoginOptions = {
   /** Audience to include in the token */
