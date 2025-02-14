@@ -1,4 +1,4 @@
-import { getClaims, getDecodedToken } from ".";
+import { getClaims } from ".";
 
 export type UserProfile = {
   id: string;
