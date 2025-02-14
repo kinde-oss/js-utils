@@ -11,20 +11,22 @@ export enum PromptTypes {
   login = "login",
 }
 
-export type LoginMethodParams = Pick<
-  LoginOptions,
-  | "audience"
-  | "scope"
-  | "isCreateOrg"
-  | "prompt"
-  | "lang"
-  | "loginHint"
-  | "orgCode"
-  | "orgName"
-  | "connectionId"
-  | "redirectURL"
-  | "hasSuccessPage"
-  | "workflowDeploymentId"
+export type LoginMethodParams = Partial<
+  Pick<
+    LoginOptions,
+    | "audience"
+    | "scope"
+    | "isCreateOrg"
+    | "prompt"
+    | "lang"
+    | "loginHint"
+    | "orgCode"
+    | "orgName"
+    | "connectionId"
+    | "redirectURL"
+    | "hasSuccessPage"
+    | "workflowDeploymentId"
+  >
 >;
 
 export type LoginOptions = {
