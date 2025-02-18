@@ -1,6 +1,28 @@
 # Changelog
 
 
+## 0.7.3...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.7.3...main)
+
+### 🚀 Enhancements
+
+- Add option to disable url sanitation ([be656bf](https://github.com/kinde-oss/js-utils/commit/be656bf))
+
+### 🩹 Fixes
+
+- LoginMethodParams now a Partial ([eb48810](https://github.com/kinde-oss/js-utils/commit/eb48810))
+
+### 🏡 Chore
+
+- Remove unused import ([c550d84](https://github.com/kinde-oss/js-utils/commit/c550d84))
+- Lint ([2f889bf](https://github.com/kinde-oss/js-utils/commit/2f889bf))
+- Lint ([818eac2](https://github.com/kinde-oss/js-utils/commit/818eac2))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
 ## 0.7.2...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.7.2...main)
