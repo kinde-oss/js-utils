@@ -3,6 +3,10 @@ import { IssuerRouteTypes, LoginOptions, PromptTypes } from "../types";
 import { generateRandomString } from "./generateRandomString";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
 
+interface generateAuthUrlConfig {
+  disableUrlSanitization: boolean;
+}
+
 /**
  *
  * @param options
@@ -12,7 +16,8 @@ import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
 export const generateAuthUrl = async (
   domain: string,
   type: IssuerRouteTypes = IssuerRouteTypes.login,
-  options: LoginOptions,
+  loginOptions: LoginOptions,
+  config?: generateAuthUrlConfig,
 ): Promise<{
   url: URL;
   state: string;
@@ -23,30 +28,30 @@ export const generateAuthUrl = async (
   const authPath = `${domain}/oauth2/auth`;
   const activeStorage = getInsecureStorage();
   const searchParams: Record<string, string> = {
-    client_id: options.clientId,
-    response_type: options.responseType || "code",
-    ...mapLoginMethodParamsForUrl(options),
+    client_id: loginOptions.clientId,
+    response_type: loginOptions.responseType || "code",
+    ...mapLoginMethodParamsForUrl(loginOptions, config?.disableUrlSanitization),
   };
 
-  if (!options.state) {
-    options.state = generateRandomString(32);
+  if (!loginOptions.state) {
+    loginOptions.state = generateRandomString(32);
   }
   if (activeStorage) {
-    activeStorage.setSessionItem(StorageKeys.state, options.state);
+    activeStorage.setSessionItem(StorageKeys.state, loginOptions.state);
   }
-  searchParams["state"] = options.state;
+  searchParams["state"] = loginOptions.state;
 
-  if (!options.nonce) {
-    options.nonce = generateRandomString(16);
+  if (!loginOptions.nonce) {
+    loginOptions.nonce = generateRandomString(16);
   }
-  searchParams["nonce"] = options.nonce;
+  searchParams["nonce"] = loginOptions.nonce;
   if (activeStorage) {
-    activeStorage.setSessionItem(StorageKeys.nonce, options.nonce);
+    activeStorage.setSessionItem(StorageKeys.nonce, loginOptions.nonce);
   }
 
   let returnCodeVerifier = "";
-  if (options.codeChallenge) {
-    searchParams["code_challenge"] = options.codeChallenge;
+  if (loginOptions.codeChallenge) {
+    searchParams["code_challenge"] = loginOptions.codeChallenge;
   } else {
     const { codeVerifier, codeChallenge } = await generatePKCEPair();
     returnCodeVerifier = codeVerifier;
@@ -57,11 +62,11 @@ export const generateAuthUrl = async (
   }
   searchParams["code_challenge_method"] = "S256";
 
-  if (options.codeChallengeMethod) {
-    searchParams["code_challenge_method"] = options.codeChallengeMethod;
+  if (loginOptions.codeChallengeMethod) {
+    searchParams["code_challenge_method"] = loginOptions.codeChallengeMethod;
   }
 
-  if (!options.prompt && type === IssuerRouteTypes.register) {
+  if (!loginOptions.prompt && type === IssuerRouteTypes.register) {
     searchParams["prompt"] = PromptTypes.create;
   }
 

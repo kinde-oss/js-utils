@@ -3,13 +3,16 @@ import { sanitizeUrl } from "./sanitizeUrl";
 
 export const mapLoginMethodParamsForUrl = (
   options: Partial<LoginMethodParams>,
+  disableUrlSanitization: boolean = false,
 ): Record<string, string> => {
   const translate: Record<string, string | undefined> = {
     login_hint: options.loginHint,
     is_create_org: options.isCreateOrg?.toString(),
     connection_id: options.connectionId,
     redirect_uri: options.redirectURL
-      ? sanitizeUrl(options.redirectURL)
+      ? disableUrlSanitization
+        ? options.redirectURL
+        : sanitizeUrl(options.redirectURL)
       : undefined,
     audience: options.audience || "",
     scope: options.scope?.join(" ") || "email profile openid offline",
