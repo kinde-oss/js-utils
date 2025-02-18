@@ -14,7 +14,7 @@ importers:
     optionalDependencies:
       expo-secure-store:
         specifier: '*'
-        version: 13.0.2(expo@51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7)))
+        version: 14.0.1(expo@51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7)))
     devDependencies:
       '@eslint/js':
         specifier: ^9.9.1
@@ -2195,8 +2195,8 @@ packages:
   expo-modules-core@1.12.26:
     resolution: {integrity: sha512-y8yDWjOi+rQRdO+HY+LnUlz8qzHerUaw/LUjKPU/mX8PRXP4UUPEEp5fjAwBU44xjNmYSHWZDwet4IBBE+yQUA==}
 
-  expo-secure-store@13.0.2:
-    resolution: {integrity: sha512-3QYgoneo8p8yeeBPBiAfokNNc2xq6+n8+Ob4fAlErEcf4H7Y72LH+K/dx0nQyWau2ZKZUXBxyyfuHFyVKrEVLg==}
+  expo-secure-store@14.0.1:
+    resolution: {integrity: sha512-QUS+j4+UG4jRQalgnpmTvvrFnMVLqPiUZRzYPnG3+JrZ5kwVW2w6YS3WWerPoR7C6g3y/a2htRxRSylsDs+TaQ==}
     peerDependencies:
       expo: '*'
 
@@ -3686,8 +3686,8 @@ packages:
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
 
-  stacktrace-parser@0.1.10:
-    resolution: {integrity: sha512-KJP1OCML99+8fhOHxwwzyWrlUuVX5GQ0ZpJTd1DFXhdkrvg1szxfHhawXUZ3g9TkXORQd4/WG68jMlQZ2p8wlg==}
+  stacktrace-parser@0.1.11:
+    resolution: {integrity: sha512-WjlahMgHmCJpqzU8bIBy4qtsZdU9lRlcZE3Lvyej6t4tuOuv1vk57OW3MBrj6hXBFx/nNoC9MPMTcr5YA7NQbg==}
     engines: {node: '>=6'}
 
   statuses@1.5.0:
@@ -5709,7 +5709,7 @@ snapshots:
       send: 0.18.0
       slugify: 1.6.6
       source-map-support: 0.5.21
-      stacktrace-parser: 0.1.10
+      stacktrace-parser: 0.1.11
       structured-headers: 0.4.1
       tar: 6.2.1
       temp-dir: 2.0.0
@@ -7469,7 +7469,7 @@ snapshots:
       invariant: 2.2.4
     optional: true
 
-  expo-secure-store@13.0.2(expo@51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7))):
+  expo-secure-store@14.0.1(expo@51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7))):
     dependencies:
       expo: 51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7))
     optional: true
@@ -9280,7 +9280,7 @@ snapshots:
 
   stackback@0.0.2: {}
 
-  stacktrace-parser@0.1.10:
+  stacktrace-parser@0.1.11:
     dependencies:
       type-fest: 0.7.1
     optional: true
