@@ -29,14 +29,16 @@ vi.stubGlobal("localStorage", localStorageMock);
 
 describe("LocalStorage standard keys", () => {
   let sessionManager: LocalStorage;
+  const consoleSpy = vi.spyOn(console, "warn");
 
   beforeEach(() => {
     sessionManager = new LocalStorage();
   });
 
-  it("should show warning when using local storage access token explicity", async () => {
+  it("should show warning when using local storage access token explicity", () => {
+    consoleSpy.mockReset();
+
     storageSettings.useInsecureForRefreshToken = true;
-    const consoleSpy = vi.spyOn(console, "warn");
     new LocalStorage();
     expect(consoleSpy).toHaveBeenCalledWith(
       "LocalStorage store should not be used in production",
@@ -44,8 +46,9 @@ describe("LocalStorage standard keys", () => {
     storageSettings.useInsecureForRefreshToken = false;
   });
 
-  it("should not show warning when using secure refresh tokens", async () => {
-    const consoleSpy = vi.spyOn(console, "warn");
+  it("should not show warning when using secure refresh tokens", () => {
+    consoleSpy.mockReset();
+    storageSettings.useInsecureForRefreshToken = false;
     new LocalStorage();
     expect(consoleSpy).not.toHaveBeenCalled();
   });
