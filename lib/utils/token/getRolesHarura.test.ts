@@ -21,7 +21,7 @@ describe("getRoles - Hasura", () => {
   it("with token no roles", async () => {
     await storage.setSessionItem(
       StorageKeys.accessToken,
-      createMockAccessToken({ roles: undefined }),
+      createMockAccessToken({ "x-hasura-roles": undefined }),
     );
     const idToken = await getRoles();
     expect(idToken).toStrictEqual([]);
@@ -45,7 +45,7 @@ describe("getRoles - Hasura", () => {
   it("with value and typed permissions", async () => {
     await storage.setSessionItem(
       StorageKeys.accessToken,
-      createMockAccessToken({ "x-hasura-roles": ["admin"] }),
+      createMockAccessToken({ roles: null, "x-hasura-roles": ["admin"] }),
     );
     const idToken = await getRoles();
 

@@ -19,5 +19,5 @@ export const getRoles = async (): Promise<string[]> => {
     return [];
   }
 
-  return token.roles || token["x-hasura-roles"] || [];
+  return token.roles || token["x-hasura-roles"];
 };

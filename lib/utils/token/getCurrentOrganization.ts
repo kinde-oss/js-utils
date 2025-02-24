@@ -1,4 +1,4 @@
-import { getClaim } from "./getClaim";
+import { getDecodedToken } from "./getDecodedToken";
 
 /**
  *
@@ -6,7 +6,11 @@ import { getClaim } from "./getClaim";
  * @returns { Promise<string | number | string[] | null> }
  **/
 export const getCurrentOrganization = async (): Promise<string | null> => {
-  return (
-    (await getClaim<{ org_code: string }, string>("org_code"))?.value || null
-  );
+  const decodedToken = await getDecodedToken();
+
+  if (!decodedToken) {
+    return null;
+  }
+
+  return decodedToken.org_code || decodedToken["x-hasura-org-code"];
 };

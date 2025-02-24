@@ -13,6 +13,34 @@ describe("getFlag", () => {
   it("when no token", async () => {
     await storage.setSessionItem(StorageKeys.idToken, null);
     const idToken = await getFlag("test");
+    expect(idToken).toStrictEqual(null);
+  });
+
+  it("when no flags", async () => {
+    await storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        feature_flags: null,
+      }),
+    );
+    const idToken = await getFlag("test");
+
+    expect(idToken).toStrictEqual(null);
+  });
+
+  it("when name missing", async () => {
+    await storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        feature_flags: {
+          test: {
+            v: true,
+            t: "b",
+          },
+        },
+      }),
+    );
+    const idToken = await getFlag();
 
     expect(idToken).toStrictEqual(null);
   });

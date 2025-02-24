@@ -15,11 +15,12 @@ export const getFlag = async <T = string | boolean | number | object>(
   }
 
   const flags = claims.feature_flags || claims["x-hasura-feature-flags"];
+  console.log("flags", flags);
   if (!flags) {
     return null;
   }
 
-  if (name && flags) {
+  if (name) {
     const value = flags[name];
     return value ? (value?.v as T) : null;
   }

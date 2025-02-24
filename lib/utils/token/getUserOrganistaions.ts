@@ -13,5 +13,12 @@ export const getUserOrganizations = async (): Promise<string[] | null> => {
     return null;
   }
 
-  return token.org_codes || token["x-hasura-org-codes"] || null;
+  if (!token.org_codes && !token["x-hasura-org-codes"]) {
+    console.warn(
+      "Org codes not found in token, ensure org codes have been included in the token customisation within the application settings",
+    );
+    return null;
+  }
+
+  return token.org_codes || token["x-hasura-org-codes"];
 };
