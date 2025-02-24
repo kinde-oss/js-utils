@@ -9,6 +9,14 @@ describe("getUserOrganizations", () => {
   beforeEach(() => {
     setActiveStorage(storage);
   });
+
+  it("when token is null", async () => {
+    await storage.setSessionItem(StorageKeys.idToken, null);
+    const idToken = await getUserOrganizations();
+
+    expect(idToken).toStrictEqual(null);
+  });
+
   it("When single org", async () => {
     await storage.setSessionItem(
       StorageKeys.idToken,

@@ -5,42 +5,14 @@ import { createMockAccessToken } from "./testUtils";
 
 const storage = new MemoryStorage();
 
-describe("getFlag", () => {
+describe("getFlag - Hasura", () => {
   beforeEach(() => {
     setActiveStorage(storage);
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.setSessionItem(StorageKeys.accessToken, null);
     const idToken = await getFlag("test");
-    expect(idToken).toStrictEqual(null);
-  });
-
-  it("when no flags", async () => {
-    await storage.setSessionItem(
-      StorageKeys.accessToken,
-      createMockAccessToken({
-        feature_flags: null,
-      }),
-    );
-    const idToken = await getFlag("test");
-
-    expect(idToken).toStrictEqual(null);
-  });
-
-  it("when name missing", async () => {
-    await storage.setSessionItem(
-      StorageKeys.accessToken,
-      createMockAccessToken({
-        feature_flags: {
-          test: {
-            v: true,
-            t: "b",
-          },
-        },
-      }),
-    );
-    const idToken = await getFlag();
 
     expect(idToken).toStrictEqual(null);
   });
@@ -49,7 +21,7 @@ describe("getFlag", () => {
     await storage.setSessionItem(
       StorageKeys.accessToken,
       createMockAccessToken({
-        feature_flags: {
+        ["x-hasura-feature-flags"]: {
           test: {
             v: true,
             t: "b",
@@ -66,7 +38,7 @@ describe("getFlag", () => {
     await storage.setSessionItem(
       StorageKeys.accessToken,
       createMockAccessToken({
-        feature_flags: {
+        ["x-hasura-feature-flags"]: {
           test: {
             v: false,
             t: "b",
@@ -83,7 +55,7 @@ describe("getFlag", () => {
     await storage.setSessionItem(
       StorageKeys.accessToken,
       createMockAccessToken({
-        feature_flags: {
+        ["x-hasura-feature-flags"]: {
           test: {
             v: "hello",
             t: "s",
@@ -117,7 +89,7 @@ describe("getFlag", () => {
     await storage.setSessionItem(
       StorageKeys.accessToken,
       createMockAccessToken({
-        feature_flags: {
+        ["x-hasura-feature-flags"]: {
           test: {
             v: 5,
             t: "i",
