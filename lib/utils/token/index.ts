@@ -8,7 +8,7 @@ import { getFlag } from "./getFlag";
 import { getUserProfile, UserProfile } from "./getUserProfile";
 import { getPermission, PermissionAccess } from "./getPermission";
 import { getPermissions, Permissions } from "./getPermissions";
-import { getUserOrganizations } from "./getUserOrganistaions";
+import { getUserOrganizations } from "./getUserOrganizations";
 import { getRoles } from "./getRoles";
 import { isAuthenticated } from "./isAuthenticated";
 import { refreshToken } from "./refreshToken";

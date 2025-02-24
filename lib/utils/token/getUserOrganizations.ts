@@ -5,9 +5,7 @@ import { getDecodedToken } from ".";
  * @returns { Promise<string[] | null> }
  */
 export const getUserOrganizations = async (): Promise<string[] | null> => {
-  const token = await getDecodedToken<{
-    org_codes: string[];
-  }>("idToken");
+  const token = await getDecodedToken("idToken");
 
   if (!token) {
     return null;

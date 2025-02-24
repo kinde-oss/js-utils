@@ -10,7 +10,7 @@ describe("getUserOrganizations", () => {
     setActiveStorage(storage);
   });
 
-  it("When single org", async () => {
+  it("when token is null", async () => {
     await storage.setSessionItem(StorageKeys.idToken, null);
     const idToken = await getUserOrganizations();
 

@@ -16,7 +16,7 @@ describe("getPermissions - Hasura", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.setSessionItem(StorageKeys.accessToken, null);
     const idToken = await getPermissions();
 
     expect(idToken).toStrictEqual({
