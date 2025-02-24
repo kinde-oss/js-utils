@@ -1,6 +1,27 @@
 # Changelog
 
 
+## 0.8.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.8.0...main)
+
+### 🚀 Enhancements
+
+- Hasura mapping support ([9cecfa2](https://github.com/kinde-oss/js-utils/commit/9cecfa2))
+- GetCurrentOrganisation hasura support and extended test coverage ([8612e14](https://github.com/kinde-oss/js-utils/commit/8612e14))
+
+### 🩹 Fixes
+
+- Test regression ([d0ffd7d](https://github.com/kinde-oss/js-utils/commit/d0ffd7d))
+
+### 🏡 Chore
+
+- PR feedback tweaks ([3ea032c](https://github.com/kinde-oss/js-utils/commit/3ea032c))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](http://github.com/DanielRivers))
+
 ## 0.7.3...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.7.3...main)
