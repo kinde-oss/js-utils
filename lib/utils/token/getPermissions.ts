@@ -14,10 +14,11 @@ export const getPermissions = async <T = string>(): Promise<Permissions<T>> => {
       permissions: [],
     };
   }
+  const permissions = token.permissions || token["x-hasura-permissions"] || [];
+  const orgCode = token.org_code || token["x-hasura-org-code"];
 
-  const permissions = token.permissions || [];
   return {
-    orgCode: token.org_code,
+    orgCode,
     permissions: permissions as T[],
   };
 };

@@ -5,11 +5,13 @@ import { getDecodedToken } from ".";
  * @returns { Promise<string[] | null> }
  */
 export const getUserOrganizations = async (): Promise<string[] | null> => {
-  return (
-    (
-      await getDecodedToken<{
-        org_codes: string[];
-      }>("idToken")
-    )?.org_codes || null
-  );
+  const token = await getDecodedToken<{
+    org_codes: string[];
+  }>("idToken");
+
+  if (!token) {
+    return null;
+  }
+
+  return token.org_codes || token["x-hasura-org-codes"] || null;
 };
