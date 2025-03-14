@@ -46,6 +46,16 @@ type ExchangeAuthCodeResult =
   | ExchangeAuthCodeResultSuccess
   | ExchangeAuthCodeResultError;
 
+const clearTempStore = async () => {
+  const activeStorage = getInsecureStorage();
+
+  await activeStorage?.removeItems(
+    StorageKeys.state,
+    StorageKeys.nonce,
+    StorageKeys.codeVerifier,
+  );
+};
+
 export const exchangeAuthCode = async ({
   urlParams,
   domain,
@@ -111,9 +121,17 @@ export const exchangeAuthCode = async ({
     headers["Kinde-SDK"] =
       `${frameworkSettings.framework}/${frameworkSettings.sdkVersion}/${frameworkSettings.frameworkVersion}/Javascript`;
   }
+
+  const credentialsHeader: Partial<RequestInit> =
+    !storageSettings.useInsecureForRefreshToken && isCustomDomain(domain)
+      ? {
+          credentials: "include",
+        }
+      : {};
+
   const fetchOptions: RequestInit = {
     method: "POST",
-    ...(isCustomDomain(domain) && { credentials: "include" }),
+    ...credentialsHeader,
     headers: new Headers(headers),
     body: new URLSearchParams({
       client_id: clientId,
@@ -124,16 +142,26 @@ export const exchangeAuthCode = async ({
     }),
   };
 
-  const response = await fetch(`${domain}/oauth2/token`, fetchOptions);
-  if (!response?.ok) {
-    const errorText = await response.text();
-    console.error("Token exchange failed:", response.status, errorText);
+  let response;
+  clearRefreshTimer();
+  try {
+    response = await fetch(`${domain}/oauth2/token`, fetchOptions);
+    if (!response?.ok) {
+      const errorText = await response.text();
+      console.error("Token exchange failed:", response.status, errorText);
+      return {
+        success: false,
+        error: `Token exchange failed: ${response.status} - ${errorText}`,
+      };
+    }
+  } catch (error) {
+    clearTempStore();
+    console.error("Token exchange failed:", error);
     return {
       success: false,
-      error: `Token exchange failed: ${response.status} - ${errorText}`,
+      error: `Token exchange failed: ${error}`,
     };
   }
-  clearRefreshTimer();
 
   const data: {
     access_token: string;
@@ -161,11 +189,7 @@ export const exchangeAuthCode = async ({
     });
   }
 
-  await activeStorage.removeItems(
-    StorageKeys.state,
-    StorageKeys.nonce,
-    StorageKeys.codeVerifier,
-  );
+  clearTempStore();
 
   // Clear all url params
   const cleanUrl = (url: URL): URL => {
