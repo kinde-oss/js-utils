@@ -92,7 +92,7 @@ export const refreshToken = async ({
           }),
           grant_type: "refresh_token",
           client_id: clientId,
-        }),
+        }).toString(),
       });
       if (!response.ok) {
         return {
