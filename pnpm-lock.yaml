@@ -60,7 +60,7 @@ importers:
     optionalDependencies:
       expo-secure-store:
         specifier: '*'
-        version: 13.0.2(expo@51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7)))
+        version: 14.0.1(expo@51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7)))
 
 packages:
 
@@ -2258,8 +2258,8 @@ packages:
   expo-modules-core@1.12.26:
     resolution: {integrity: sha512-y8yDWjOi+rQRdO+HY+LnUlz8qzHerUaw/LUjKPU/mX8PRXP4UUPEEp5fjAwBU44xjNmYSHWZDwet4IBBE+yQUA==}
 
-  expo-secure-store@13.0.2:
-    resolution: {integrity: sha512-3QYgoneo8p8yeeBPBiAfokNNc2xq6+n8+Ob4fAlErEcf4H7Y72LH+K/dx0nQyWau2ZKZUXBxyyfuHFyVKrEVLg==}
+  expo-secure-store@14.0.1:
+    resolution: {integrity: sha512-QUS+j4+UG4jRQalgnpmTvvrFnMVLqPiUZRzYPnG3+JrZ5kwVW2w6YS3WWerPoR7C6g3y/a2htRxRSylsDs+TaQ==}
     peerDependencies:
       expo: '*'
 
@@ -2329,8 +2329,8 @@ packages:
   flatted@3.3.3:
     resolution: {integrity: sha512-GX+ysw4PBCz0PzosHDepZGANEuFCMLrnRTiEy9McGjmkCQYwRq4A/X786G/fjM/+OjsWSU1ZrY5qyARZmO/uwg==}
 
-  flow-parser@0.265.0:
-    resolution: {integrity: sha512-C+bg/TZsDVlLMF14+q9P9FB2pjQSgWwYs0pkIMPE1FsZWS4A0kk1M28V6YphpxAPr3AISVRZ6VgpDepvCk6dGw==}
+  flow-parser@0.265.2:
+    resolution: {integrity: sha512-DX2mp5u3lNJHl5dH8R1KrcrDsiJC02zFcG95p4b0YcDCzZZW+v9za2Csv5bQ0cq4jNzGx0gFU9jFZyM7FOyNFw==}
     engines: {node: '>=0.4.0'}
 
   fontfaceobserver@2.3.0:
@@ -3123,6 +3123,11 @@ packages:
 
   mz@2.7.0:
     resolution: {integrity: sha512-z81GNO7nnYMEhrGh9LeymoE4+Yr0Wn5McHIZMK5cfQCl+NDX08sCZgUc9/6MHni9IWuFLm1Z3HTCXu2z9fN62Q==}
+
+  nanoid@3.3.10:
+    resolution: {integrity: sha512-vSJJTG+t/dIKAUhUDw/dLdZ9s//5OxcHqLaDWWrW4Cdq7o6tdLIczUkMXt2MBNmk6sJRZBZRXVixs7URY1CmIg==}
+    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
+    hasBin: true
 
   nanoid@3.3.9:
     resolution: {integrity: sha512-SppoicMGpZvbF1l3z4x7No3OlIjP7QJvC9XR7AhZr1kL133KHnKPztkKDc+Ir4aJ/1VhTySrtKhrsycmrMQfvg==}
@@ -7559,7 +7564,7 @@ snapshots:
       invariant: 2.2.4
     optional: true
 
-  expo-secure-store@13.0.2(expo@51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7))):
+  expo-secure-store@14.0.1(expo@51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7))):
     dependencies:
       expo: 51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7))
     optional: true
@@ -7684,7 +7689,7 @@ snapshots:
 
   flatted@3.3.3: {}
 
-  flow-parser@0.265.0:
+  flow-parser@0.265.2:
     optional: true
 
   fontfaceobserver@2.3.0:
@@ -8286,7 +8291,7 @@ snapshots:
       '@babel/register': 7.25.9(@babel/core@7.26.10)
       babel-core: 7.0.0-bridge.0(@babel/core@7.26.10)
       chalk: 4.1.2
-      flow-parser: 0.265.0
+      flow-parser: 0.265.2
       graceful-fs: 4.2.11
       micromatch: 4.0.8
       neo-async: 2.6.2
@@ -8623,6 +8628,9 @@ snapshots:
       thenify-all: 1.6.0
     optional: true
 
+  nanoid@3.3.10:
+    optional: true
+
   nanoid@3.3.9: {}
 
   natural-compare@1.4.0: {}
@@ -8893,7 +8901,7 @@ snapshots:
 
   postcss@8.4.49:
     dependencies:
-      nanoid: 3.3.9
+      nanoid: 3.3.10
       picocolors: 1.1.1
       source-map-js: 1.2.1
     optional: true
