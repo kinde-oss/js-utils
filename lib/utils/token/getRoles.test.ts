@@ -45,10 +45,24 @@ describe("getRoles", () => {
   it("with value and typed permissions", async () => {
     await storage.setSessionItem(
       StorageKeys.accessToken,
-      createMockAccessToken({ roles: ["admin"] }),
+      createMockAccessToken({
+        roles: [
+          {
+            id: "01932730-c828-c01c-9f5d-c8f15be13e24",
+            key: "admin",
+            name: "admin",
+          },
+        ],
+      }),
     );
     const idToken = await getRoles();
 
-    expect(idToken).toStrictEqual(["admin"]);
+    expect(idToken).toStrictEqual([
+      {
+        id: "01932730-c828-c01c-9f5d-c8f15be13e24",
+        key: "admin",
+        name: "admin",
+      },
+    ]);
   });
 });
