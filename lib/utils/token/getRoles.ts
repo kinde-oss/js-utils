@@ -1,9 +1,10 @@
 import { getDecodedToken } from ".";
-import { Role } from "./getDecodedToken";
+
+export type Role = { id: string; name: string; key: string };
 
 /**
  * Get all permissions
- * @returns { Promise<Permissions> }
+ * @returns { Promise<Role[]> }
  */
 export const getRoles = async (): Promise<Role[]> => {
   const token = await getDecodedToken();

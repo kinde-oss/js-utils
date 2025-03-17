@@ -9,7 +9,7 @@ import { getUserProfile, UserProfile } from "./getUserProfile";
 import { getPermission, PermissionAccess } from "./getPermission";
 import { getPermissions, Permissions } from "./getPermissions";
 import { getUserOrganizations } from "./getUserOrganizations";
-import { getRoles } from "./getRoles";
+import { getRoles, Role } from "./getRoles";
 import { isAuthenticated } from "./isAuthenticated";
 import { refreshToken } from "./refreshToken";
 
@@ -108,4 +108,4 @@ export {
   refreshToken,
 };
 
-export type { UserProfile, Permissions, PermissionAccess };
+export type { UserProfile, Permissions, Role, PermissionAccess };
