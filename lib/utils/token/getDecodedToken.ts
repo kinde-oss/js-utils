@@ -1,13 +1,12 @@
 import { jwtDecoder, JWTDecoded as JWTBase } from "@kinde/jwt-decoder";
 import { getActiveStorage } from ".";
 import { StorageKeys } from "../../sessionManager";
+import { Role } from "./getRoles";
 /**
  *
  * @param tokenType Type of token to decode
  * @returns { Promise<JWTDecoded | null> }
  */
-
-export type Role = { id: string; name: string; key: string };
 
 type JWTExtra = {
   "x-hasura-permissions": never;
