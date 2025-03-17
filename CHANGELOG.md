@@ -1,6 +1,22 @@
 # Changelog
 
 
+## 0.9.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.9.0...main)
+
+### 🚀 Enhancements
+
+- Enhancements to codeExchange ([5e893c4](https://github.com/kinde-oss/js-utils/commit/5e893c4))
+
+### 🩹 Fixes
+
+- Roles return type ([6c2345f](https://github.com/kinde-oss/js-utils/commit/6c2345f))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.8.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.8.0...main)
