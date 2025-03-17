@@ -453,7 +453,10 @@ describe("exchangeAuthCode", () => {
         clientId: "test",
         redirectURL: "test.com",
       }),
-    ).rejects.toThrow("Fetch failed");
+    ).resolves.toEqual({
+      error: "Token exchange failed: Error: Fetch failed",
+      success: false,
+    });
   });
 
   it("should return error if token response is invalid", async () => {
