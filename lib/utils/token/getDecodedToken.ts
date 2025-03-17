@@ -7,6 +7,8 @@ import { StorageKeys } from "../../sessionManager";
  * @returns { Promise<JWTDecoded | null> }
  */
 
+export type Role = { id: string; name: string; key: string };
+
 type JWTExtra = {
   "x-hasura-permissions": never;
   "x-hasura-org-code": never;
@@ -21,14 +23,14 @@ type JWTExtra = {
   permissions: string[];
   org_code: string;
   org_codes: string[];
-  roles: string[];
+  roles: Role[];
 };
 
 type JWTExtraHasura = {
   "x-hasura-permissions": string[];
   "x-hasura-org-code": string;
   "x-hasura-org-codes": string[];
-  "x-hasura-roles": string[];
+  "x-hasura-roles": Role[];
   "x-hasura-feature-flags": Record<
     string,
     { t: "b" | "i" | "s"; v: string | boolean | number | object }
