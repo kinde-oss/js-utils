@@ -14,6 +14,14 @@ describe("refreshTimer", () => {
     expect(callback).not.toHaveBeenCalled();
   });
 
+  it("max refresh timer of 1 day", () => {
+    const callback = vi.fn();
+    const setTimeout = vi.spyOn(window, "setTimeout");
+    RefreshTimer.setRefreshTimer(10000000000, callback);
+    expect(setTimeout).toBeCalledWith(callback, 86400000);
+    expect(callback).not.toHaveBeenCalled();
+  });
+
   it("error when timeout is negative", () => {
     const callback = vi.fn();
     expect(() => RefreshTimer.setRefreshTimer(-10, callback)).toThrowError(
