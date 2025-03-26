@@ -8,7 +8,10 @@ export function setRefreshTimer(timer: number, callback: () => void) {
   if (timer <= 0) {
     throw new Error("Timer duration must be positive");
   }
-  refreshTimer = window.setTimeout(callback, timer * 1000 - 10000);
+  refreshTimer = window.setTimeout(
+    callback,
+    Math.min(timer * 1000 - 10000, 86400000),
+  );
 }
 
 export function clearRefreshTimer() {
