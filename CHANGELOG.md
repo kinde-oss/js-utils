@@ -1,6 +1,30 @@
 # Changelog
 
 
+## 0.10.1...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.10.1...main)
+
+### 🚀 Enhancements
+
+- Add callback to refresh token method. ([14d83e8](https://github.com/kinde-oss/js-utils/commit/14d83e8))
+
+### 🩹 Fixes
+
+- Long token expiry with refresh ([f74bbd4](https://github.com/kinde-oss/js-utils/commit/f74bbd4))
+
+### 🏡 Chore
+
+- Eslint ignore updates ([638f9c3](https://github.com/kinde-oss/js-utils/commit/638f9c3))
+
+### ✅ Tests
+
+- Add text for onRefresh ([58f9e36](https://github.com/kinde-oss/js-utils/commit/58f9e36))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.10.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.10.0...main)
