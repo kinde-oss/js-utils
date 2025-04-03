@@ -130,6 +130,8 @@ describe("refreshToken", () => {
   });
 
   it("should return true and update tokens if the refresh is successful", async () => {
+    const callback = vi.fn();
+
     const mockResponse = {
       access_token: "new-access-token",
       id_token: "new-id-token",
@@ -146,6 +148,7 @@ describe("refreshToken", () => {
     const result = await tokenUtils.refreshToken({
       domain: mockKindeDomain,
       clientId: mockClientId,
+      onRefresh: callback,
     });
 
     expect(result).toStrictEqual({
@@ -166,6 +169,9 @@ describe("refreshToken", () => {
       StorageKeys.refreshToken,
       "new-refresh-token",
     );
+
+    // callback was called
+    expect(callback).toHaveBeenCalled();
   });
 
   it("should use sanitizeUrl for the domain", async () => {
