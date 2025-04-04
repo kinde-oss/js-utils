@@ -7,6 +7,7 @@ import {
 } from "../main";
 import { isCustomDomain } from ".";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
+import { RefreshTokenResult } from "./token/refreshToken";
 
 export const frameworkSettings: {
   framework: string;
@@ -24,6 +25,7 @@ interface ExchangeAuthCodeParams {
   clientId: string;
   redirectURL: string;
   autoRefresh?: boolean;
+  onRefresh?: (data: RefreshTokenResult) => void;
 }
 
 type ExchangeAuthCodeResultSuccess = {
@@ -62,6 +64,7 @@ export const exchangeAuthCode = async ({
   clientId,
   redirectURL,
   autoRefresh = false,
+  onRefresh,
 }: ExchangeAuthCodeParams): Promise<ExchangeAuthCodeResult> => {
   const state = urlParams.get("state");
   const code = urlParams.get("code");
@@ -185,7 +188,7 @@ export const exchangeAuthCode = async ({
 
   if (autoRefresh) {
     setRefreshTimer(data.expires_in, async () => {
-      refreshToken({ domain, clientId });
+      refreshToken({ domain, clientId, onRefresh });
     });
   }
 
