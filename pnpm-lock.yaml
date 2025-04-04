@@ -60,7 +60,7 @@ importers:
     optionalDependencies:
       expo-secure-store:
         specifier: '*'
-        version: 13.0.2(expo@51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7)))
+        version: 14.0.1(expo@51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7)))
 
 packages:
 
@@ -2271,8 +2271,8 @@ packages:
   expo-modules-core@1.12.26:
     resolution: {integrity: sha512-y8yDWjOi+rQRdO+HY+LnUlz8qzHerUaw/LUjKPU/mX8PRXP4UUPEEp5fjAwBU44xjNmYSHWZDwet4IBBE+yQUA==}
 
-  expo-secure-store@13.0.2:
-    resolution: {integrity: sha512-3QYgoneo8p8yeeBPBiAfokNNc2xq6+n8+Ob4fAlErEcf4H7Y72LH+K/dx0nQyWau2ZKZUXBxyyfuHFyVKrEVLg==}
+  expo-secure-store@14.0.1:
+    resolution: {integrity: sha512-QUS+j4+UG4jRQalgnpmTvvrFnMVLqPiUZRzYPnG3+JrZ5kwVW2w6YS3WWerPoR7C6g3y/a2htRxRSylsDs+TaQ==}
     peerDependencies:
       expo: '*'
 
@@ -7588,7 +7588,7 @@ snapshots:
       invariant: 2.2.4
     optional: true
 
-  expo-secure-store@13.0.2(expo@51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7))):
+  expo-secure-store@14.0.1(expo@51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7))):
     dependencies:
       expo: 51.0.38(@babel/core@7.26.7)(@babel/preset-env@7.25.9(@babel/core@7.26.7))
     optional: true
