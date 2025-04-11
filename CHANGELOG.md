@@ -1,6 +1,22 @@
 # Changelog
 
 
+## 0.11.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.11.0...main)
+
+### 🚀 Enhancements
+
+- Notify on token refresh after code exchange ([378c734](https://github.com/kinde-oss/js-utils/commit/378c734))
+
+### 🏡 Chore
+
+- Lockfile maintainance ([4c8a28c](https://github.com/kinde-oss/js-utils/commit/4c8a28c))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.10.1...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.10.1...main)
