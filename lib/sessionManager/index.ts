@@ -20,8 +20,12 @@ export const storageSettings: StorageSettingsType = {
   useInsecureForRefreshToken: false,
 };
 
+// Export session manager related items directly
 export { MemoryStorage } from "./stores/memory.js";
 export { ChromeStore } from "./stores/chromeStore.js";
 export { ExpoSecureStore } from "./stores/expoSecureStore.js";
 export { LocalStorage } from "./stores/localStorage.ts";
-export { type SessionManager, StorageKeys } from "./types.ts";
+
+// Export types directly
+export { StorageKeys } from "./types.ts";
+export type { SessionManager } from "./types.ts";
