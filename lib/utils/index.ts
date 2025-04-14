@@ -1,29 +1,10 @@
-// import all utils and export them as object
-import { base64UrlEncode } from "./base64UrlEncode";
-import { generateRandomString } from "./generateRandomString";
-import { extractAuthResults } from "./extractAuthResults";
-import { sanitizeUrl } from "./sanitizeUrl";
-import { generateAuthUrl } from "./generateAuthUrl";
-import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
-import { exchangeAuthCode, frameworkSettings } from "./exchangeAuthCode";
-import { checkAuth } from "./checkAuth";
-import { isCustomDomain } from "./isCustomDomain";
-import { setRefreshTimer, clearRefreshTimer } from "./refreshTimer";
-
-export {
-  // config
-  frameworkSettings,
-
-  // utils
-  base64UrlEncode,
-  generateRandomString,
-  extractAuthResults,
-  sanitizeUrl,
-  generateAuthUrl,
-  mapLoginMethodParamsForUrl,
-  exchangeAuthCode,
-  checkAuth,
-  isCustomDomain,
-  setRefreshTimer,
-  clearRefreshTimer,
-};
+export { base64UrlEncode } from "./base64UrlEncode";
+export { generateRandomString } from "./generateRandomString";
+export { extractAuthResults } from "./extractAuthResults";
+export { sanitizeUrl } from "./sanitizeUrl";
+export { generateAuthUrl } from "./generateAuthUrl";
+export { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
+export { exchangeAuthCode, frameworkSettings } from "./exchangeAuthCode";
+export { checkAuth } from "./checkAuth";
+export { isCustomDomain } from "./isCustomDomain";
+export { setRefreshTimer, clearRefreshTimer } from "./refreshTimer";

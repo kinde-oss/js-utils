@@ -27,6 +27,15 @@
   "module": "dist/js-utils.js",
   "main": "dist/js-utils.cjs",
   "types": "dist/main.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/js-utils.js",
+      "require": "./dist/js-utils.cjs",
+      "default": "./dist/js-utils.js"
+    }
+  },
+  "sideEffects": false,
   "devDependencies": {
     "@eslint/js": "^9.9.1",
     "@types/chrome": "^0.0.313",
@@ -44,8 +53,13 @@
     "vitest": "^3.0.0",
     "vitest-fetch-mock": "^0.4.1"
   },
-  "optionalDependencies": {
-    "expo-secure-store": "*"
+  "peerDependencies": {
+    "expo-secure-store": ">=11.0.0"
+  },
+  "peerDependenciesMeta": {
+    "expo-secure-store": {
+      "optional": true
+    }
   },
   "packageManager": "pnpm@10.8.0+sha512.0e82714d1b5b43c74610193cb20734897c1d00de89d0e18420aebc5977fa13d780a9cb05734624e81ebd81cc876cd464794850641c48b9544326b5622ca29971",
   "dependencies": {

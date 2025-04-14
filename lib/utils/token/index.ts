@@ -1,17 +1,21 @@
 import { SessionManager } from "../../sessionManager";
 
-import { getClaim } from "./getClaim";
-import { getClaims } from "./getClaims";
-import { getCurrentOrganization } from "./getCurrentOrganization";
-import { getDecodedToken } from "./getDecodedToken";
-import { getFlag } from "./getFlag";
-import { getUserProfile, UserProfile } from "./getUserProfile";
-import { getPermission, PermissionAccess } from "./getPermission";
-import { getPermissions, Permissions } from "./getPermissions";
-import { getUserOrganizations } from "./getUserOrganizations";
-import { getRoles, Role } from "./getRoles";
-import { isAuthenticated } from "./isAuthenticated";
-import { refreshToken } from "./refreshToken";
+export { getClaim } from "./getClaim";
+export { getClaims } from "./getClaims";
+export { getCurrentOrganization } from "./getCurrentOrganization";
+export { getDecodedToken } from "./getDecodedToken";
+export { getFlag } from "./getFlag";
+export { getUserProfile } from "./getUserProfile";
+export type { UserProfile } from "./getUserProfile";
+export { getPermission } from "./getPermission";
+export type { PermissionAccess } from "./getPermission";
+export { getPermissions } from "./getPermissions";
+export type { Permissions } from "./getPermissions";
+export { getUserOrganizations } from "./getUserOrganizations";
+export { getRoles } from "./getRoles";
+export type { Role } from "./getRoles";
+export { isAuthenticated } from "./isAuthenticated";
+export { refreshToken } from "./refreshToken";
 
 const storage = {
   secure: null as SessionManager | null,
@@ -22,7 +26,7 @@ const storage = {
  * Sets the active storage
  * @param store Session manager instance
  */
-const setActiveStorage = (store: SessionManager) => {
+export const setActiveStorage = (store: SessionManager) => {
   storage.secure = store;
 };
 
@@ -30,7 +34,7 @@ const setActiveStorage = (store: SessionManager) => {
  * Gets the current active storage
  * @returns Session manager instance or null
  */
-const getActiveStorage = (): SessionManager | null => {
+export const getActiveStorage = (): SessionManager | null => {
   return storage.secure || null;
 };
 
@@ -38,14 +42,14 @@ const getActiveStorage = (): SessionManager | null => {
  * Checks if there is an active storage
  * @returns boolean
  */
-const hasActiveStorage = (): boolean => {
+export const hasActiveStorage = (): boolean => {
   return storage.secure !== null;
 };
 
 /**
  * Clears the active storage
  */
-const clearActiveStorage = (): void => {
+export const clearActiveStorage = (): void => {
   storage.secure = null;
 };
 
@@ -53,7 +57,7 @@ const clearActiveStorage = (): void => {
  * Sets the active storage
  * @param store Session manager instance
  */
-const setInsecureStorage = (store: SessionManager) => {
+export const setInsecureStorage = (store: SessionManager) => {
   storage.insecure = store;
 };
 
@@ -61,7 +65,7 @@ const setInsecureStorage = (store: SessionManager) => {
  * Gets the current active storage
  * @returns Session manager instance or null
  */
-const getInsecureStorage = (): SessionManager | null => {
+export const getInsecureStorage = (): SessionManager | null => {
   return storage.insecure || storage.secure || null;
 };
 
@@ -69,43 +73,13 @@ const getInsecureStorage = (): SessionManager | null => {
  * Checks if there is an active storage
  * @returns boolean
  */
-const hasInsecureStorage = (): boolean => {
+export const hasInsecureStorage = (): boolean => {
   return storage.insecure !== null;
 };
 
 /**
  * Clears the active storage
  */
-const clearInsecureStorage = (): void => {
+export const clearInsecureStorage = (): void => {
   storage.insecure = null;
 };
-
-export {
-  // main store
-  setActiveStorage,
-  getActiveStorage,
-  hasActiveStorage,
-  clearActiveStorage,
-
-  // insecure store
-  setInsecureStorage,
-  getInsecureStorage,
-  hasInsecureStorage,
-  clearInsecureStorage,
-
-  // helpers
-  getClaim,
-  getClaims,
-  getCurrentOrganization,
-  getDecodedToken,
-  getFlag,
-  getUserProfile,
-  getPermission,
-  getPermissions,
-  getUserOrganizations,
-  getRoles,
-  isAuthenticated,
-  refreshToken,
-};
-
-export type { UserProfile, Permissions, Role, PermissionAccess };
