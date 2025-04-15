@@ -1,6 +1,18 @@
 # Changelog
 
 
+## 0.12.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.12.0...main)
+
+### 🚀 Enhancements
+
+- Improve treeshaking and lazy loading of expo-secure-store ([92ccd75](https://github.com/kinde-oss/js-utils/commit/92ccd75))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.11.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.11.0...main)
