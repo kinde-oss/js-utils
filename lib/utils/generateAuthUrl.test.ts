@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { IssuerRouteTypes, LoginOptions, PromptTypes, Scopes } from "../types";
 import { generateAuthUrl } from "./generateAuthUrl";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
@@ -227,5 +227,91 @@ describe("generateAuthUrl", () => {
     result.url.searchParams.delete("nonce");
     result.url.searchParams.delete("state");
     expect(result.url.toString()).toBe(expectedUrl);
+  });
+
+  it("Properties are added when defined", async () => {
+    const domain = "https://auth.example.com";
+    const options: LoginOptions = {
+      clientId: "client123",
+      scope: [Scopes.openid, Scopes.profile, Scopes.offline_access],
+      redirectURL: "https://example2.com",
+      prompt: PromptTypes.create,
+      properties: {
+        utm_campaign: "test",
+      },
+    };
+    const expectedUrl =
+      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&redirect_uri=https%3A%2F%2Fexample2.com&audience=&scope=openid+profile+offline&prompt=create&code_challenge_method=S256&utm_campaign=test";
+
+    const result = await generateAuthUrl(
+      domain,
+      IssuerRouteTypes.login,
+      options,
+    );
+    const nonce = result.url.searchParams.get("nonce");
+    expect(nonce).not.toBeNull();
+    expect(nonce!.length).toBe(16);
+    const state = result.url.searchParams.get("state");
+    expect(state).not.toBeNull();
+    expect(state!.length).toBe(32);
+    const codeChallenge = result.url.searchParams.get("code_challenge");
+    expect(codeChallenge!.length).toBeGreaterThanOrEqual(27);
+    result.url.searchParams.delete("code_challenge");
+    result.url.searchParams.delete("nonce");
+    result.url.searchParams.delete("state");
+    expect(result.url.toString()).toBe(expectedUrl);
+  });
+
+  it("When non whitelisted properties are added when defined, warn for each one do not add to the url", async () => {
+    const consoleWarnSpy = vi.spyOn(console, "warn");
+
+    const domain = "https://auth.example.com";
+    const options: LoginOptions<{
+      testProperty1: string;
+      testProperty2: string;
+    }> = {
+      clientId: "client123",
+      scope: [Scopes.openid, Scopes.profile, Scopes.offline_access],
+      redirectURL: "https://example2.com",
+      prompt: PromptTypes.create,
+      properties: {
+        utm_campaign: "test",
+        testProperty1: "testValue1",
+        testProperty2: "testValue2",
+      },
+    };
+    const expectedUrl =
+      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&redirect_uri=https%3A%2F%2Fexample2.com&audience=&scope=openid+profile+offline&prompt=create&code_challenge_method=S256&utm_campaign=test";
+
+    const result = await generateAuthUrl(
+      domain,
+      IssuerRouteTypes.login,
+      options,
+    );
+    const nonce = result.url.searchParams.get("nonce");
+    expect(nonce).not.toBeNull();
+    expect(nonce!.length).toBe(16);
+    const state = result.url.searchParams.get("state");
+    expect(state).not.toBeNull();
+    expect(state!.length).toBe(32);
+    const codeChallenge = result.url.searchParams.get("code_challenge");
+    expect(codeChallenge!.length).toBeGreaterThanOrEqual(27);
+    result.url.searchParams.delete("code_challenge");
+    result.url.searchParams.delete("nonce");
+    result.url.searchParams.delete("state");
+    expect(result.url.toString()).toBe(expectedUrl);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "Unsupported Property: ",
+      "testProperty1",
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "Unsupported Property: ",
+      "testProperty2",
+    );
+    expect(consoleWarnSpy).not.toHaveBeenCalledWith(
+      "Unsupported Property: ",
+      "utm_campaign",
+    );
   });
 });
