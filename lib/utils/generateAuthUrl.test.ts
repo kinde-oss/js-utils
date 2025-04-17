@@ -302,15 +302,15 @@ describe("generateAuthUrl", () => {
     expect(result.url.toString()).toBe(expectedUrl);
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "Unsupported Property: ",
+      "Unsupported Property for url generation: ",
       "testProperty1",
     );
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "Unsupported Property: ",
+      "Unsupported Property for url generation: ",
       "testProperty2",
     );
     expect(consoleWarnSpy).not.toHaveBeenCalledWith(
-      "Unsupported Property: ",
+      "Unsupported Property for url generation: ",
       "utm_campaign",
     );
   });

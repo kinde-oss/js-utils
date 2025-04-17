@@ -3,7 +3,7 @@ import { IssuerRouteTypes, LoginOptions, PromptTypes } from "../types";
 import { generateRandomString } from "./generateRandomString";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
 
-const whiteListedPropertes = [
+const whiteListedProperties = [
   // UTM tags
   "utm_source",
   "utm_medium",
@@ -23,7 +23,7 @@ const whiteListedPropertes = [
   "hsa_kw",
   "hsa_mt",
   "hsa_net",
-  "hsa_ver:",
+  "hsa_ver",
 
   // Marketing category
   "match_type",
@@ -110,8 +110,8 @@ export const generateAuthUrl = async (
 
   if (loginOptions.properties) {
     Object.keys(loginOptions.properties).forEach((key) => {
-      if (!whiteListedPropertes.includes(key)) {
-        console.warn("Unsupported Property: ", key);
+      if (!whiteListedProperties.includes(key)) {
+        console.warn("Unsupported Property for url generation: ", key);
         return;
       }
       const value = loginOptions.properties?.[key];
