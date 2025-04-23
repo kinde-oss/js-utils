@@ -3,6 +3,44 @@ import { IssuerRouteTypes, LoginOptions, PromptTypes } from "../types";
 import { generateRandomString } from "./generateRandomString";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
 
+const whiteListedProperties = [
+  // UTM tags
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+
+  // Google Ads smart campaign tracking
+  "gclid",
+  "click_id",
+  "hsa_acc",
+  "hsa_cam",
+  "hsa_grp",
+  "hsa_ad",
+  "hsa_src",
+  "hsa_tgt",
+  "hsa_kw",
+  "hsa_mt",
+  "hsa_net",
+  "hsa_ver",
+
+  // Marketing category
+  "match_type",
+  "keyword",
+  "device",
+  "ad_group_id",
+  "campaign_id",
+  "creative",
+  "network",
+  "ad_position",
+  "fbclid",
+  "li_fat_id",
+  "msclkid",
+  "twclid",
+  "ttclid",
+];
+
 interface generateAuthUrlConfig {
   disableUrlSanitization: boolean;
 }
@@ -68,6 +106,19 @@ export const generateAuthUrl = async (
 
   if (!loginOptions.prompt && type === IssuerRouteTypes.register) {
     searchParams["prompt"] = PromptTypes.create;
+  }
+
+  if (loginOptions.properties) {
+    Object.keys(loginOptions.properties).forEach((key) => {
+      if (!whiteListedProperties.includes(key)) {
+        console.warn("Unsupported Property for url generation: ", key);
+        return;
+      }
+      const value = loginOptions.properties?.[key];
+      if (value !== undefined) {
+        searchParams[key] = value;
+      }
+    });
   }
 
   const queryString = new URLSearchParams(searchParams).toString();

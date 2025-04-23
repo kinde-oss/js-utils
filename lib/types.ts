@@ -11,9 +11,9 @@ export enum PromptTypes {
   login = "login",
 }
 
-export type LoginMethodParams = Partial<
+export type LoginMethodParams<T = Record<string, string>> = Partial<
   Pick<
-    LoginOptions,
+    LoginOptions<T>,
     | "audience"
     | "scope"
     | "isCreateOrg"
@@ -26,10 +26,49 @@ export type LoginMethodParams = Partial<
     | "redirectURL"
     | "hasSuccessPage"
     | "workflowDeploymentId"
+    | "properties"
   >
 >;
 
-export type LoginOptions = {
+export type KindeProperties = Partial<{
+  // UTM tags
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+  utm_content: string;
+  utm_term: string;
+
+  // Google Ads smart campaign tracking
+  gclid: string;
+  click_id: string;
+  hsa_acc: string;
+  hsa_cam: string;
+  hsa_grp: string;
+  hsa_ad: string;
+  hsa_src: string;
+  hsa_tgt: string;
+  hsa_kw: string;
+  hsa_mt: string;
+  hsa_net: string;
+  hsa_ver: string;
+
+  // Marketing category
+  match_type: string;
+  keyword: string;
+  device: string;
+  ad_group_id: string;
+  campaign_id: string;
+  creative: string;
+  network: string;
+  ad_position: string;
+  fbclid: string;
+  li_fat_id: string;
+  msclkid: string;
+  twclid: string;
+  ttclid: string;
+}>;
+
+export type LoginOptions<T = Record<string, string>> = {
   /** Audience to include in the token */
   audience?: string;
   /** Client ID of the application
@@ -122,6 +161,10 @@ export type LoginOptions = {
    * Workflow Deployment ID to trigger on authentication
    */
   workflowDeploymentId?: string;
+  /**
+   * Properties to be passed
+   */
+  properties?: T & KindeProperties;
 };
 
 export enum IssuerRouteTypes {
