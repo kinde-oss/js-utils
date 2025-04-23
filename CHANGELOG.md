@@ -1,6 +1,27 @@
 # Changelog
 
 
+## 0.13.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.13.0...main)
+
+### 🚀 Enhancements
+
+- Marketing tag properties ([a272b64](https://github.com/kinde-oss/js-utils/commit/a272b64))
+
+### 🏡 Chore
+
+- Correct typos ([5f88778](https://github.com/kinde-oss/js-utils/commit/5f88778))
+- Lockfile maintainence ([5637114](https://github.com/kinde-oss/js-utils/commit/5637114))
+
+### 🤖 CI
+
+- Update setup action version ([2e20eeb](https://github.com/kinde-oss/js-utils/commit/2e20eeb))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.12.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.12.0...main)
