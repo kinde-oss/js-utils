@@ -1,6 +1,6 @@
+import { splitString } from "../../utils/splitString.js";
 import { storageSettings } from "../index.js";
 import { SessionBase, StorageKeys, type SessionManager } from "../types.js";
-import { splitString } from "../utils.js";
 
 function getStorageValue(key: string): unknown | undefined {
   return new Promise((resolve, reject) => {

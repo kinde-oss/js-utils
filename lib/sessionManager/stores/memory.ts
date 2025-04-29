@@ -1,6 +1,6 @@
 import { storageSettings } from "../index.js";
 import { SessionBase, StorageKeys, type SessionManager } from "../types.js";
-import { splitString } from "../utils.js";
+import { splitString } from "../../utils/splitString.js";
 
 /**
  * Provides a memory based session manager implementation for the browser.

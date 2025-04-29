@@ -8,3 +8,4 @@ export { exchangeAuthCode, frameworkSettings } from "./exchangeAuthCode";
 export { checkAuth } from "./checkAuth";
 export { isCustomDomain } from "./isCustomDomain";
 export { setRefreshTimer, clearRefreshTimer } from "./refreshTimer";
+export { splitString } from "./splitString";
