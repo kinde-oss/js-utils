@@ -1,6 +1,6 @@
 import { storageSettings } from "../index.js";
 import { SessionBase, StorageKeys } from "../types.js";
-import { splitString } from "../utils.js";
+import { splitString } from "../../utils/splitString.js";
 
 let expoSecureStore: typeof import("expo-secure-store") | undefined = undefined;
 

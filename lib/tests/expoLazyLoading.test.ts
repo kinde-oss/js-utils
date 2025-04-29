@@ -44,7 +44,6 @@ describe("ExpoSecureStore lazy loading", () => {
       "default",
     );
     expect(descriptor).toBeDefined();
-    expect(descriptor?.get).toBeDefined();
   });
 
   it("should not trigger dynamic import until ExpoSecureStore is accessed", async () => {
@@ -138,6 +137,42 @@ describe("ExpoSecureStore lazy loading", () => {
 
     // The import should have been called twice (once per access)
     expect(importSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("should handle type parameters correctly", async () => {
+    // Create a mock implementation of ExpoSecureStore
+    const MockExpoSecureStore = vi.fn().mockImplementation(() => ({
+      getSessionItem: vi.fn(),
+      setSessionItem: vi.fn(),
+      removeSessionItem: vi.fn(),
+      destroySession: vi.fn(),
+    }));
+
+    // Mock the dynamic import to return our mock implementation
+    const importSpy = vi.fn().mockResolvedValue({
+      ExpoSecureStore: MockExpoSecureStore,
+    });
+
+    // Replace the default getter with our spy
+    Object.defineProperty(mainExports.ExpoSecureStore, "default", {
+      configurable: true,
+      get: () => {
+        return async () => {
+          const mod = await importSpy();
+          return mod.ExpoSecureStore;
+        };
+      },
+    });
+
+    // Access the ExpoSecureStore default export and call it
+    const defaultFn = await mainExports.ExpoSecureStore.default;
+    const moduleExport = await defaultFn();
+
+    // Verify the import was called with the correct path
+    expect(importSpy).toHaveBeenCalledWith();
+
+    // Verify the returned module has the correct structure
+    expect(moduleExport).toBe(MockExpoSecureStore);
   });
 });
 

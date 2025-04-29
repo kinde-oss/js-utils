@@ -1,4 +1,4 @@
-import { splitString } from "./utils";
+import { splitString } from "./splitString";
 import { describe, expect, it } from "vitest";
 
 describe("splitString", () => {

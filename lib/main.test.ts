@@ -47,6 +47,7 @@ describe("index exports", () => {
       "isCustomDomain",
       "setRefreshTimer",
       "clearRefreshTimer",
+      "splitString",
 
       // session manager
       "MemoryStorage",

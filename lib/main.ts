@@ -1,3 +1,5 @@
+import { StorageKeys } from "./sessionManager";
+
 export * from "./types";
 
 export {
@@ -13,6 +15,7 @@ export {
   setRefreshTimer,
   clearRefreshTimer,
   frameworkSettings,
+  splitString,
 } from "./utils";
 
 export {
@@ -53,12 +56,17 @@ export {
   StorageKeys,
 } from "./sessionManager";
 
-export const ExpoSecureStore = {
+// This export provides an implementation of SessionManager<V>
+export const ExpoSecureStore: {
+  __esModule: true;
+  default: <V extends string = StorageKeys>() => Promise<
+    typeof import("./sessionManager/stores/expoSecureStore.js").ExpoSecureStore<V>
+  >;
+} = {
   __esModule: true,
-  get default() {
-    return import("./sessionManager/stores/expoSecureStore.js").then(
-      (mod) => mod.ExpoSecureStore,
-    );
+  default: async <V extends string = StorageKeys>() => {
+    const mod = await import("./sessionManager/stores/expoSecureStore.js");
+    return mod.ExpoSecureStore as typeof mod.ExpoSecureStore<V>;
   },
 };
 
