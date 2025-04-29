@@ -1,6 +1,22 @@
 # Changelog
 
 
+## 0.14.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.14.0...main)
+
+### 💅 Refactors
+
+- Move splitstring util ([7ff41d1](https://github.com/kinde-oss/js-utils/commit/7ff41d1))
+
+### 🏡 Chore
+
+- Lint ([dd34e70](https://github.com/kinde-oss/js-utils/commit/dd34e70))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.13.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.13.0...main)
