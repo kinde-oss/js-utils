@@ -2,12 +2,12 @@ import {
   getActiveStorage,
   getInsecureStorage,
   refreshToken,
+  RefreshTokenResult,
   StorageKeys,
   storageSettings,
 } from "../main";
 import { isCustomDomain } from ".";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
-import { RefreshTokenResult } from "./token/refreshToken";
 
 export const frameworkSettings: {
   framework: string;

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as CheckAuth from "./checkAuth";
 import * as RefreshToken from "./token/refreshToken";
 import * as GetCookie from "./getCookie";
+import { RefreshType } from "../types";
 
 describe("checkAuth", () => {
   const domain = "auth.test.com";
@@ -23,7 +24,7 @@ describe("checkAuth", () => {
     expect(RefreshToken.refreshToken).toHaveBeenCalledWith({
       domain: "test.kinde.com",
       clientId,
-      refreshType: RefreshToken.RefreshType.refreshToken,
+      refreshType: RefreshType.refreshToken,
     });
   });
 
@@ -40,7 +41,7 @@ describe("checkAuth", () => {
     expect(RefreshToken.refreshToken).toHaveBeenCalledWith({
       domain,
       clientId,
-      refreshType: RefreshToken.RefreshType.cookie,
+      refreshType: RefreshType.cookie,
     });
   });
 
@@ -57,7 +58,7 @@ describe("checkAuth", () => {
     expect(RefreshToken.refreshToken).toHaveBeenCalledWith({
       domain,
       clientId,
-      refreshType: RefreshToken.RefreshType.refreshToken,
+      refreshType: RefreshType.refreshToken,
     });
   });
 

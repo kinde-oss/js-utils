@@ -1,6 +1,11 @@
-import { isCustomDomain, refreshToken, storageSettings } from "../main";
+import {
+  isCustomDomain,
+  refreshToken,
+  RefreshTokenResult,
+  RefreshType,
+  storageSettings,
+} from "../main";
 import { getCookie } from "./getCookie";
-import { RefreshType, RefreshTokenResult } from "./token/refreshToken";
 
 const kindeCookieName = "_kbrte";
 

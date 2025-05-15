@@ -6,19 +6,8 @@ import {
 } from "../../sessionManager";
 import { isCustomDomain, sanitizeUrl } from "..";
 import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
-
-export interface RefreshTokenResult {
-  success: boolean;
-  error?: string;
-  [StorageKeys.accessToken]?: string;
-  [StorageKeys.idToken]?: string;
-  [StorageKeys.refreshToken]?: string;
-}
-
-export enum RefreshType {
-  refreshToken,
-  cookie,
-}
+import type { RefreshTokenResult } from "../../main";
+import { RefreshType } from "../../main";
 
 /**
  * refreshes the token
