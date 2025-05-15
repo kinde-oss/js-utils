@@ -6,7 +6,8 @@ import {
 } from "../../sessionManager";
 import { isCustomDomain, sanitizeUrl } from "..";
 import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
-import { RefreshTokenResult, RefreshType } from "../../main";
+import type { RefreshTokenResult } from "../../main";
+import { RefreshType } from "../../main";
 
 /**
  * refreshes the token
