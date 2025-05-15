@@ -4,6 +4,7 @@ export { getClaim } from "./getClaim";
 export { getClaims } from "./getClaims";
 export { getCurrentOrganization } from "./getCurrentOrganization";
 export { getDecodedToken } from "./getDecodedToken";
+export { getRawToken } from "./getRawToken";
 export { getFlag } from "./getFlag";
 export { getUserProfile } from "./getUserProfile";
 export type { UserProfile } from "./getUserProfile";
