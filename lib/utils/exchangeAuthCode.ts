@@ -206,7 +206,7 @@ export const exchangeAuthCode = async ({
   if (!data.access_token || !data.id_token || !data.refresh_token) {
     return {
       success: false,
-      error: "No access token recieved",
+      error: "No access token received",
     };
   }
 

@@ -87,7 +87,7 @@ describe("refreshToken", () => {
       clientId: mockClientId,
     });
     expect(result).toStrictEqual({
-      error: "No access token recieved: Error: Network error",
+      error: "No access token received: Error: Network error",
       success: false,
     });
   });
@@ -124,7 +124,7 @@ describe("refreshToken", () => {
       clientId: mockClientId,
     });
     expect(result).toStrictEqual({
-      error: "No access token recieved",
+      error: "No access token received",
       success: false,
     });
   });

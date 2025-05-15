@@ -135,12 +135,12 @@ export const refreshToken = async ({
   } catch (error) {
     return handleResult({
       success: false,
-      error: `No access token recieved: ${error}`,
+      error: `No access token received: ${error}`,
     });
   }
 
   return handleResult({
     success: false,
-    error: `No access token recieved`,
+    error: `No access token received`,
   });
 };
