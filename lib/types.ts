@@ -1,3 +1,5 @@
+import { StorageKeys } from "./sessionManager/types";
+
 export enum Scopes {
   email = "email",
   profile = "profile",
@@ -183,3 +185,16 @@ export type PKCEChallenge = {
 export type PKCEChallengeState = PKCEChallenge & {
   state: string;
 };
+
+export interface RefreshTokenResult {
+  success: boolean;
+  error?: string;
+  [StorageKeys.accessToken]?: string;
+  [StorageKeys.idToken]?: string;
+  [StorageKeys.refreshToken]?: string;
+}
+
+export enum RefreshType {
+  refreshToken,
+  cookie,
+}

@@ -32,6 +32,7 @@ describe("index exports", () => {
       "PromptTypes",
       "Scopes",
       "StorageKeys",
+      "RefreshType",
 
       // utils
       "base64UrlEncode",
