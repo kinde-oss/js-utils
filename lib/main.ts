@@ -22,6 +22,7 @@ export {
   getClaim,
   getClaims,
   getCurrentOrganization,
+  getRawToken,
   getDecodedToken,
   getFlag,
   getUserProfile,
