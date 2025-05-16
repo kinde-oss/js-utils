@@ -72,7 +72,7 @@ export type KindeProperties = Partial<{
 
 export type LoginOptions<T = Record<string, string>> = {
   /** Audience to include in the token */
-  audience?: string;
+  audience?: string | string[];
   /** Client ID of the application
    *
    * This can be found in the application settings in the Kinde dashboard
