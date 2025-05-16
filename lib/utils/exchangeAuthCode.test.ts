@@ -486,7 +486,7 @@ describe("exchangeAuthCode", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "No access token recieved",
+      error: "No access token received",
     });
   });
 
