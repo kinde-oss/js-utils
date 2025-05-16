@@ -5,6 +5,10 @@ export const mapLoginMethodParamsForUrl = (
   options: Partial<LoginMethodParams>,
   disableUrlSanitization: boolean = false,
 ): Record<string, string> => {
+  const parsedAudience = Array.isArray(options.audience)
+    ? options.audience.join(" ")
+    : options.audience || "";
+
   const translate: Record<string, string | undefined> = {
     login_hint: options.loginHint,
     is_create_org: options.isCreateOrg?.toString(),
@@ -14,7 +18,7 @@ export const mapLoginMethodParamsForUrl = (
         ? options.redirectURL
         : sanitizeUrl(options.redirectURL)
       : undefined,
-    audience: options.audience || "",
+    audience: parsedAudience,
     scope: options.scope?.join(" ") || "email profile openid offline",
     prompt: options.prompt,
     lang: options.lang,
