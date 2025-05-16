@@ -68,6 +68,22 @@ describe("mapLoginMethodParamsForUrl", () => {
     expect(result).toEqual(expectedOutput);
   });
 
+  it("should map with supports_reauth", () => {
+    const options: Partial<LoginMethodParams> = {
+      supportsReauth: true,
+    };
+
+    const expectedOutput = {
+      scope: "email profile openid offline",
+      audience: "",
+      supports_reauth: "true",
+    };
+
+    const result = mapLoginMethodParamsForUrl(options);
+    console.log(result);
+    expect(result).toEqual(expectedOutput);
+  });
+
   it("should sanitize the redirect URL", () => {
     const options: Partial<LoginMethodParams> = {
       redirectURL: "https://example.com/",

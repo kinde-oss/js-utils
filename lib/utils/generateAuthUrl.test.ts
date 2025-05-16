@@ -382,4 +382,60 @@ describe("generateAuthUrl", () => {
     result.url.searchParams.delete("state");
     expect(result.url.toString()).toBe(expectedUrl);
   });
+
+  it("missing clientId", async () => {
+    const options: LoginOptions = {
+      scope: [Scopes.openid, Scopes.profile, Scopes.offline_access],
+      redirectURL: "https://example2.com",
+    };
+    const domain = "https://auth.example.com";
+    expect(() =>
+      generateAuthUrl(domain, IssuerRouteTypes.login, options),
+    ).rejects.toThrow(`Error generating auth URL: Client ID missing`);
+  });
+
+  it("invalid reauthState", async () => {
+    const options: LoginOptions = {
+      scope: [Scopes.openid, Scopes.profile, Scopes.offline_access],
+      redirectURL: "https://example2.com",
+      reauthState: "e3Rlc3Q6MTIz",
+    };
+    const domain = "https://auth.example.com";
+    expect(() =>
+      generateAuthUrl(domain, IssuerRouteTypes.login, options),
+    ).rejects.toThrow(
+      /Error handing reauth state: Expected property name or '}' in JSON/,
+    );
+  });
+
+  it("support reauth state", async () => {
+    const domain = "https://auth.example.com";
+    const options: LoginOptions = {
+      scope: [Scopes.openid, Scopes.profile, Scopes.offline_access],
+      redirectURL: "https://example2.com",
+      reauthState:
+        "eyJjbGllbnRfaWQiOiJjbGllbnRyZWF1dGgiLCJvcmdfY29kZSI6Im9yZ2NvZGVyZWF1dGgifQ==",
+    };
+
+    const expectedUrl =
+      "https://auth.example.com/oauth2/auth?client_id=clientreauth&response_type=code&redirect_uri=https%3A%2F%2Fexample2.com&audience=&scope=openid+profile+offline&org_code=orgcodereauth&code_challenge_method=S256";
+
+    const result = await generateAuthUrl(
+      domain,
+      IssuerRouteTypes.login,
+      options,
+    );
+    const nonce = result.url.searchParams.get("nonce");
+    expect(nonce).not.toBeNull();
+    expect(nonce!.length).toBe(16);
+    const state = result.url.searchParams.get("state");
+    expect(state).not.toBeNull();
+    expect(state!.length).toBe(32);
+    const codeChallenge = result.url.searchParams.get("code_challenge");
+    expect(codeChallenge!.length).toBeGreaterThanOrEqual(27);
+    result.url.searchParams.delete("code_challenge");
+    result.url.searchParams.delete("nonce");
+    result.url.searchParams.delete("state");
+    expect(result.url.toString()).toBe(expectedUrl);
+  });
 });
