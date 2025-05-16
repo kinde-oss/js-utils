@@ -29,6 +29,8 @@ export type LoginMethodParams<T = Record<string, string>> = Partial<
     | "hasSuccessPage"
     | "workflowDeploymentId"
     | "properties"
+    | "supportsReauth"
+    | "reauthState"
   >
 >;
 
@@ -77,7 +79,7 @@ export type LoginOptions<T = Record<string, string>> = {
    *
    * This can be found in the application settings in the Kinde dashboard
    */
-  clientId: string;
+  clientId?: string;
   /**
    * Code challenge for PKCE
    */
@@ -167,6 +169,14 @@ export type LoginOptions<T = Record<string, string>> = {
    * Properties to be passed
    */
   properties?: T & KindeProperties;
+  /**
+   * Define if the auth instigator support reauth on expired flows
+   */
+  supportsReauth?: boolean;
+  /**
+   * Base64 encoded auth parameters
+   */
+  reauthState?: string;
 };
 
 export enum IssuerRouteTypes {

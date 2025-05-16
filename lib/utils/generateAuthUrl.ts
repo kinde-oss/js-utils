@@ -2,6 +2,7 @@ import { base64UrlEncode, getInsecureStorage, StorageKeys } from "../main";
 import { IssuerRouteTypes, LoginOptions, PromptTypes } from "../types";
 import { generateRandomString } from "./generateRandomString";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
+import { snakeToCamelCase } from "./snakeToCamelCase";
 
 const whiteListedProperties = [
   // UTM tags
@@ -65,6 +66,28 @@ export const generateAuthUrl = async (
 }> => {
   const authPath = `${domain}/oauth2/auth`;
   const activeStorage = getInsecureStorage();
+
+  if (loginOptions.reauthState) {
+    try {
+      const decodedReauthParams: LoginOptions = snakeToCamelCase<LoginOptions>(
+        JSON.parse(atob(loginOptions.reauthState)),
+      );
+      loginOptions = {
+        ...loginOptions,
+        ...decodedReauthParams,
+      };
+      delete loginOptions.reauthState;
+    } catch (ex: unknown) {
+      const errorDescription =
+        ex instanceof Error ? ex.message : "Unknown error";
+      throw new Error(`Error handing reauth state: ${errorDescription}`);
+    }
+  }
+
+  if (!loginOptions.clientId) {
+    throw new Error(`Error generating auth URL: Client ID missing`);
+  }
+
   const searchParams: Record<string, string> = {
     client_id: loginOptions.clientId,
     response_type: loginOptions.responseType || "code",
