@@ -26,6 +26,7 @@ export const mapLoginMethodParamsForUrl = (
     org_name: options.orgName,
     has_success_page: options.hasSuccessPage?.toString(),
     workflow_deployment_id: options.workflowDeploymentId,
+    supports_reauth: options.supportsReauth?.toString(),
     plan_interest: options.planInterest,
   };
 
