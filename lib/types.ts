@@ -29,6 +29,7 @@ export type LoginMethodParams<T = Record<string, string>> = Partial<
     | "hasSuccessPage"
     | "workflowDeploymentId"
     | "properties"
+    | "planInterest"
   >
 >;
 
@@ -167,6 +168,10 @@ export type LoginOptions<T = Record<string, string>> = {
    * Properties to be passed
    */
   properties?: T & KindeProperties;
+  /**
+   * Plan the user has indicated interest in
+   */
+  planInterest?: string;
 };
 
 export enum IssuerRouteTypes {
