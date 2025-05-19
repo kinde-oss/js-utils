@@ -394,6 +394,19 @@ describe("generateAuthUrl", () => {
     ).rejects.toThrow(`Error generating auth URL: Client ID missing`);
   });
 
+  it("throws on non-Base64 reauthState", async () => {
+    const options: LoginOptions = {
+      scope: [Scopes.openid],
+      redirectURL: "https://example.com",
+      reauthState: "!!!", // invalid Base64
+    };
+    const domain = "https://auth.example.com";
+
+    await expect(
+      generateAuthUrl(domain, IssuerRouteTypes.login, options),
+    ).rejects.toThrow(/Error handing reauth state:/);
+  });
+
   it("invalid reauthState", async () => {
     const options: LoginOptions = {
       scope: [Scopes.openid, Scopes.profile, Scopes.offline_access],
