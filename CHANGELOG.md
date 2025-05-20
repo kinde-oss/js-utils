@@ -1,6 +1,34 @@
 # Changelog
 
 
+## 0.15.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.15.0...main)
+
+### 🚀 Enhancements
+
+- GetRawToken ([5a11e5a](https://github.com/kinde-oss/js-utils/commit/5a11e5a))
+- **types:** Export RefreshType ([598a446](https://github.com/kinde-oss/js-utils/commit/598a446))
+- Support supplying audience as array ([ee3595b](https://github.com/kinde-oss/js-utils/commit/ee3595b))
+- Plan interest ([812a1b7](https://github.com/kinde-oss/js-utils/commit/812a1b7))
+- Support reauth functionality ([cf5329a](https://github.com/kinde-oss/js-utils/commit/cf5329a))
+
+### 🩹 Fixes
+
+- Correct typo in error message ([09b8508](https://github.com/kinde-oss/js-utils/commit/09b8508))
+
+### 🏡 Chore
+
+- **types:** Add type to import ([62e6a60](https://github.com/kinde-oss/js-utils/commit/62e6a60))
+
+### ✅ Tests
+
+- Added additional test for invalid base64 ([f946b11](https://github.com/kinde-oss/js-utils/commit/f946b11))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.14.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.14.0...main)
