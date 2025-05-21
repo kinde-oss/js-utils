@@ -1,5 +1,7 @@
 import { StorageKeys } from "./sessionManager/types";
 
+export type OrgCode = `org_${string}`;
+
 export enum Scopes {
   email = "email",
   profile = "profile",
