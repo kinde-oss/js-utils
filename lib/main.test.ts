@@ -38,6 +38,7 @@ describe("index exports", () => {
       "base64UrlEncode",
       "extractAuthResults",
       "generateAuthUrl",
+      "generateProfileUrl",
       "generateRandomString",
       "mapLoginMethodParamsForUrl",
       "sanitizeUrl",
