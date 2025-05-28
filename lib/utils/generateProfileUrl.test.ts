@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
 import { generateProfileUrl } from "./generateProfileUrl";
-import { OrgCode } from "../types";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import { clearActiveStorage, setActiveStorage } from "./token";
 const fetchMock = createFetchMock(vi);
@@ -15,13 +14,11 @@ describe("generateProfileUrl", () => {
   it("throws error when storage is not set", () => {
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const orgCode: OrgCode = "org_test";
     const subNav: string = "subnavvalue";
 
     expect(() =>
       generateProfileUrl({
         domain,
-        orgCode,
         returnUrl,
         subNav,
       }),
@@ -31,7 +28,6 @@ describe("generateProfileUrl", () => {
   it("throws error when Access Token is not set", () => {
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const orgCode: OrgCode = "org_test";
     const subNav: string = "subnavvalue";
 
     const storage = new MemoryStorage();
@@ -40,7 +36,6 @@ describe("generateProfileUrl", () => {
     expect(() =>
       generateProfileUrl({
         domain,
-        orgCode,
         returnUrl,
         subNav,
       }),
@@ -61,18 +56,16 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const orgCode: OrgCode = "org_test";
     const subNav: string = "subnavvalue";
 
     const result = await generateProfileUrl({
       domain,
-      orgCode,
       returnUrl,
       subNav,
     });
 
     expect(fetchSpy).toBeCalledWith(
-      `https://mykindedomain.com/frontend_api/get_portal_link?return_url=http%3A%2F%2Fsomereturnurl.com&org_code=${orgCode}&sub_nav=${subNav}`,
+      `https://mykindedomain.com/account_api/v1/portal_link?return_url=http%3A%2F%2Fsomereturnurl.com&sub_nav=${subNav}`,
       {
         headers: {
           Authorization: "Bearer storedAccessToken",
@@ -93,7 +86,6 @@ describe("generateProfileUrl", () => {
       }),
     );
 
-    const orgCode: OrgCode = "org_test2";
     const subNav: string = "subnavvalue2";
 
     const fetchSpy = vi.spyOn(global, "fetch");
@@ -102,13 +94,12 @@ describe("generateProfileUrl", () => {
 
     const result = await generateProfileUrl({
       domain,
-      orgCode,
       returnUrl,
       subNav,
     });
 
     expect(fetchSpy).toBeCalledWith(
-      `https://mykindedomain.kinde.com/frontend_api/get_portal_link?return_url=http%3A%2F%2Fanotherredirect.com&org_code=${orgCode}&sub_nav=${subNav}`,
+      `https://mykindedomain.kinde.com/account_api/v1/portal_link?return_url=http%3A%2F%2Fanotherredirect.com&sub_nav=${subNav}`,
       {
         headers: {
           Authorization: "Bearer storedAccessToken",
@@ -133,22 +124,16 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com?param=value with spaces";
-    const orgCode: OrgCode = "org_test&special";
     const subNav: string = "subnav/value+special";
 
     await generateProfileUrl({
       domain,
-      orgCode,
       returnUrl,
       subNav,
     });
 
     expect(fetchSpy).toBeCalledWith(
       expect.stringContaining(`return_url=${encodeURIComponent(returnUrl)}`),
-      expect.any(Object),
-    );
-    expect(fetchSpy).toBeCalledWith(
-      expect.stringContaining(`org_code=${orgCode}`),
       expect.any(Object),
     );
     expect(fetchSpy).toBeCalledWith(
@@ -170,13 +155,11 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const orgCode: OrgCode = "org_test";
     const subNav: string = "subnavvalue";
 
     await expect(
       generateProfileUrl({
         domain,
-        orgCode,
         returnUrl,
         subNav,
       }),
@@ -196,13 +179,11 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const orgCode: OrgCode = "org_test";
     const subNav: string = "subnavvalue";
 
     await expect(
       generateProfileUrl({
         domain,
-        orgCode,
         returnUrl,
         subNav,
       }),
@@ -218,13 +199,11 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const orgCode: OrgCode = "org_test";
     const subNav: string = "subnavvalue";
 
     await expect(
       generateProfileUrl({
         domain,
-        orgCode,
         returnUrl,
         subNav,
       }),
