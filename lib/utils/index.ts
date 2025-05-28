@@ -9,4 +9,4 @@ export { checkAuth } from "./checkAuth";
 export { isCustomDomain } from "./isCustomDomain";
 export { setRefreshTimer, clearRefreshTimer } from "./refreshTimer";
 export { splitString } from "./splitString";
-export { generateProfileUrl } from "./generateProfileUrl";
+export { generateProfileUrl, ProfilePage } from "./generateProfileUrl";

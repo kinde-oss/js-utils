@@ -2,13 +2,22 @@ import { StorageKeys } from "../sessionManager";
 import { sanitizeUrl } from "./sanitizeUrl";
 import { getActiveStorage } from "./token";
 
+export enum ProfilePage {
+  organizationDetails = "organization_details",
+  organizationMembers = "organization_members",
+  organizationPlanDetails = "organization_plan_details",
+  organizationPaymentDetails = "organization_payment_details",
+  organizationPlanSelection = "organization_plan_selection",
+  profile = "profile",
+}
+
 /**
  * Generates a URL to the user profile portal
  *
  * @param {Object} options - Configuration options
  * @param {string} options.domain - The domain of the Kinde instance
  * @param {string} options.returnUrl - URL to redirect to after completing the profile flow
- * @param {string} options.subNav - Sub-navigation section to display
+ * @param {ProfilePage} options.subNav - Sub-navigation section to display
  * @returns {Promise<{url: URL}>} Object containing the URL to redirect to
  */
 export const generateProfileUrl = async ({
@@ -18,7 +27,7 @@ export const generateProfileUrl = async ({
 }: {
   domain: string;
   returnUrl: string;
-  subNav: string;
+  subNav: ProfilePage;
 }): Promise<{
   url: URL;
 }> => {
