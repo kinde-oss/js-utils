@@ -27,7 +27,7 @@ export const generateProfileUrl = async ({
 }: {
   domain: string;
   returnUrl: string;
-  subNav: ProfilePage;
+  subNav?: ProfilePage;
 }): Promise<{
   url: URL;
 }> => {
@@ -43,8 +43,13 @@ export const generateProfileUrl = async ({
     throw new Error("generateProfileUrl: Access Token not found");
   }
 
+  const params = new URLSearchParams({
+    sub_nav: subNav || ProfilePage.profile,
+    return_url: returnUrl,
+  });
+
   const fetchResponse = await fetch(
-    `${sanitizeUrl(domain)}/account_api/v1/portal_link?return_url=${encodeURIComponent(returnUrl)}&sub_nav=${subNav}`,
+    `${sanitizeUrl(domain)}/account_api/v1/portal_link?${params.toString()}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,

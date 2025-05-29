@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
-import { generateProfileUrl } from "./generateProfileUrl";
+import { generateProfileUrl, ProfilePage } from "./generateProfileUrl";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import { clearActiveStorage, setActiveStorage } from "./token";
 const fetchMock = createFetchMock(vi);
@@ -14,13 +14,11 @@ describe("generateProfileUrl", () => {
   it("throws error when storage is not set", () => {
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const subNav: string = "subnavvalue";
 
     expect(() =>
       generateProfileUrl({
         domain,
         returnUrl,
-        subNav,
       }),
     ).rejects.toThrowError("generateProfileUrl: Active storage not found");
   });
@@ -28,7 +26,6 @@ describe("generateProfileUrl", () => {
   it("throws error when Access Token is not set", () => {
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const subNav: string = "subnavvalue";
 
     const storage = new MemoryStorage();
     setActiveStorage(storage);
@@ -37,7 +34,6 @@ describe("generateProfileUrl", () => {
       generateProfileUrl({
         domain,
         returnUrl,
-        subNav,
       }),
     ).rejects.toThrowError("generateProfileUrl: Access Token not found");
   });
@@ -56,7 +52,7 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const subNav: string = "subnavvalue";
+    const subNav: ProfilePage = ProfilePage.organizationMembers;
 
     const result = await generateProfileUrl({
       domain,
@@ -65,7 +61,38 @@ describe("generateProfileUrl", () => {
     });
 
     expect(fetchSpy).toBeCalledWith(
-      `https://mykindedomain.com/account_api/v1/portal_link?return_url=http%3A%2F%2Fsomereturnurl.com&sub_nav=${subNav}`,
+      `https://mykindedomain.com/account_api/v1/portal_link?sub_nav=organization_members&return_url=http%3A%2F%2Fsomereturnurl.com`,
+      {
+        headers: {
+          Authorization: "Bearer storedAccessToken",
+        },
+      },
+    );
+    expect(result.url.toString()).toBe("http://responseurl/");
+  });
+
+  it("requests the URL correctly - missing subnav", async () => {
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    await storage.setSessionItem(StorageKeys.accessToken, "storedAccessToken");
+
+    fetchMock.mockOnce(
+      JSON.stringify({
+        url: "http://responseurl",
+      }),
+    );
+    const fetchSpy = vi.spyOn(global, "fetch");
+
+    const domain = "https://mykindedomain.com";
+    const returnUrl = "http://somereturnurl.com";
+
+    const result = await generateProfileUrl({
+      domain,
+      returnUrl,
+    });
+
+    expect(fetchSpy).toBeCalledWith(
+      `https://mykindedomain.com/account_api/v1/portal_link?sub_nav=profile&return_url=http%3A%2F%2Fsomereturnurl.com`,
       {
         headers: {
           Authorization: "Bearer storedAccessToken",
@@ -86,7 +113,7 @@ describe("generateProfileUrl", () => {
       }),
     );
 
-    const subNav: string = "subnavvalue2";
+    const subNav: ProfilePage = ProfilePage.organizationPaymentDetails;
 
     const fetchSpy = vi.spyOn(global, "fetch");
     const domain = "https://mykindedomain.kinde.com/";
@@ -99,7 +126,7 @@ describe("generateProfileUrl", () => {
     });
 
     expect(fetchSpy).toBeCalledWith(
-      `https://mykindedomain.kinde.com/account_api/v1/portal_link?return_url=http%3A%2F%2Fanotherredirect.com&sub_nav=${subNav}`,
+      `https://mykindedomain.kinde.com/account_api/v1/portal_link?sub_nav=organization_payment_details&return_url=http%3A%2F%2Fanotherredirect.com`,
       {
         headers: {
           Authorization: "Bearer storedAccessToken",
@@ -124,7 +151,7 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com?param=value with spaces";
-    const subNav: string = "subnav/value+special";
+    const subNav: ProfilePage = ProfilePage.organizationPlanSelection;
 
     await generateProfileUrl({
       domain,
@@ -133,7 +160,9 @@ describe("generateProfileUrl", () => {
     });
 
     expect(fetchSpy).toBeCalledWith(
-      expect.stringContaining(`return_url=${encodeURIComponent(returnUrl)}`),
+      expect.stringContaining(
+        `return_url=http%3A%2F%2Fsomereturnurl.com%3Fparam%3Dvalue+with+spaces`,
+      ),
       expect.any(Object),
     );
     expect(fetchSpy).toBeCalledWith(
@@ -155,7 +184,7 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const subNav: string = "subnavvalue";
+    const subNav: ProfilePage = ProfilePage.organizationPlanDetails;
 
     await expect(
       generateProfileUrl({
@@ -179,7 +208,7 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const subNav: string = "subnavvalue";
+    const subNav: ProfilePage = ProfilePage.profile;
 
     await expect(
       generateProfileUrl({
@@ -199,7 +228,7 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const subNav: string = "subnavvalue";
+    const subNav: ProfilePage = ProfilePage.profile;
 
     await expect(
       generateProfileUrl({
