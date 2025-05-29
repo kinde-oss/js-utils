@@ -1,5 +1,7 @@
 import { StorageKeys } from "./sessionManager/types";
 
+export type OrgCode = `org_${string}`;
+
 export enum Scopes {
   email = "email",
   profile = "profile",
@@ -34,6 +36,21 @@ export type LoginMethodParams<T = Record<string, string>> = Partial<
     | "planInterest"
   >
 >;
+
+export enum ProfilePage {
+  organizationDetails = "organization_details",
+  organizationMembers = "organization_members",
+  organizationPlanDetails = "organization_plan_details",
+  organizationPaymentDetails = "organization_payment_details",
+  organizationPlanSelection = "organization_plan_selection",
+  profile = "profile",
+}
+
+export type GenerateProfileUrlParams = {
+  domain: string;
+  returnUrl: string;
+  subNav?: ProfilePage;
+};
 
 export type KindeProperties = Partial<{
   // UTM tags
