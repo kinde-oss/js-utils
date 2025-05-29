@@ -1,15 +1,7 @@
 import { StorageKeys } from "../sessionManager";
+import { GenerateProfileUrlParams, ProfilePage } from "../types";
 import { sanitizeUrl } from "./sanitizeUrl";
 import { getActiveStorage } from "./token";
-
-export enum ProfilePage {
-  organizationDetails = "organization_details",
-  organizationMembers = "organization_members",
-  organizationPlanDetails = "organization_plan_details",
-  organizationPaymentDetails = "organization_payment_details",
-  organizationPlanSelection = "organization_plan_selection",
-  profile = "profile",
-}
 
 /**
  * Generates a URL to the user profile portal
@@ -24,11 +16,7 @@ export const generateProfileUrl = async ({
   domain,
   returnUrl,
   subNav,
-}: {
-  domain: string;
-  returnUrl: string;
-  subNav?: ProfilePage;
-}): Promise<{
+}: GenerateProfileUrlParams): Promise<{
   url: URL;
 }> => {
   const activeStorage = getActiveStorage();

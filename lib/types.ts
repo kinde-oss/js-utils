@@ -37,6 +37,21 @@ export type LoginMethodParams<T = Record<string, string>> = Partial<
   >
 >;
 
+export enum ProfilePage {
+  organizationDetails = "organization_details",
+  organizationMembers = "organization_members",
+  organizationPlanDetails = "organization_plan_details",
+  organizationPaymentDetails = "organization_payment_details",
+  organizationPlanSelection = "organization_plan_selection",
+  profile = "profile",
+}
+
+export type GenerateProfileUrlParams = {
+  domain: string;
+  returnUrl: string;
+  subNav?: ProfilePage;
+};
+
 export type KindeProperties = Partial<{
   // UTM tags
   utm_source: string;

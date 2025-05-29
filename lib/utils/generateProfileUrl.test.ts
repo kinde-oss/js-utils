@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
-import { generateProfileUrl, ProfilePage } from "./generateProfileUrl";
+import { generateProfileUrl } from "./generateProfileUrl";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import { clearActiveStorage, setActiveStorage } from "./token";
+import { ProfilePage } from "../types";
 const fetchMock = createFetchMock(vi);
 
 describe("generateProfileUrl", () => {
