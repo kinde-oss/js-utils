@@ -1,6 +1,33 @@
 # Changelog
 
 
+## 0.16.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.16.0...main)
+
+### 🚀 Enhancements
+
+- GenerateProfileUrl ([0b91c88](https://github.com/kinde-oss/js-utils/commit/0b91c88))
+- Switch subnav to enum ([9f57750](https://github.com/kinde-oss/js-utils/commit/9f57750))
+- Make subNav optional ([c72565e](https://github.com/kinde-oss/js-utils/commit/c72565e))
+
+### 🩹 Fixes
+
+- Add export for generateProfileUrl ([159f025](https://github.com/kinde-oss/js-utils/commit/159f025))
+
+### 💅 Refactors
+
+- Update generateProfileUrl types ([e27bcf6](https://github.com/kinde-oss/js-utils/commit/e27bcf6))
+
+### 🏡 Chore
+
+- Release v0.16.0 ([9b1ed67](https://github.com/kinde-oss/js-utils/commit/9b1ed67))
+- Update endpoint and remove orgCode ([0f484f3](https://github.com/kinde-oss/js-utils/commit/0f484f3))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.15.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.15.0...main)
