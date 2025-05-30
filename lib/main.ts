@@ -17,6 +17,7 @@ export {
   frameworkSettings,
   splitString,
   generateProfileUrl,
+  generatePortalUrl,
 } from "./utils";
 
 export {

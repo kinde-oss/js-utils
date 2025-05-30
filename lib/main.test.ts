@@ -33,12 +33,14 @@ describe("index exports", () => {
       "Scopes",
       "StorageKeys",
       "RefreshType",
+      "PortalPage",
       "ProfilePage",
 
       // utils
       "base64UrlEncode",
       "extractAuthResults",
       "generateAuthUrl",
+      "generatePortalUrl",
       "generateProfileUrl",
       "generateRandomString",
       "mapLoginMethodParamsForUrl",
