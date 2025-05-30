@@ -1,15 +1,43 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
-import { generateProfileUrl } from "./generateProfileUrl";
+import { generatePortalUrl, generateProfileUrl } from "./generatePortalUrl";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import { clearActiveStorage, setActiveStorage } from "./token";
-import { ProfilePage } from "../types";
+import { PortalPage } from "../types";
+
 const fetchMock = createFetchMock(vi);
 
 describe("generateProfileUrl", () => {
   beforeEach(() => {
     clearActiveStorage();
     fetchMock.enableMocks();
+    fetchMock.resetMocks();
+    vi.restoreAllMocks();
+  });
+
+  it("emits a console warning when called", async () => {
+    const warnSpy = vi.spyOn(console, "warn");
+    const domain = "https://mykindedomain.com";
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    await storage.setSessionItem(StorageKeys.accessToken, "storedAccessToken");
+    fetchMock.mockOnce(
+      JSON.stringify({
+        url: "http://responseurl",
+      }),
+    );
+    generateProfileUrl({ domain });
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Warning: generateProfileUrl is deprecated. Please use generatePortalUrl instead.",
+    );
+  });
+});
+
+describe("generatePortalUrl", () => {
+  beforeEach(() => {
+    clearActiveStorage();
+    fetchMock.enableMocks();
+    fetchMock.resetMocks();
   });
 
   it("throws error when storage is not set", () => {
@@ -17,11 +45,11 @@ describe("generateProfileUrl", () => {
     const returnUrl = "http://somereturnurl.com";
 
     expect(() =>
-      generateProfileUrl({
+      generatePortalUrl({
         domain,
         returnUrl,
       }),
-    ).rejects.toThrowError("generateProfileUrl: Active storage not found");
+    ).rejects.toThrowError("generatePortalUrl: Active storage not found");
   });
 
   it("throws error when Access Token is not set", () => {
@@ -32,11 +60,11 @@ describe("generateProfileUrl", () => {
     setActiveStorage(storage);
 
     expect(() =>
-      generateProfileUrl({
+      generatePortalUrl({
         domain,
         returnUrl,
       }),
-    ).rejects.toThrowError("generateProfileUrl: Access Token not found");
+    ).rejects.toThrowError("generatePortalUrl: Access Token not found");
   });
 
   it("requests the URL correctly", async () => {
@@ -53,9 +81,9 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const subNav: ProfilePage = ProfilePage.organizationMembers;
+    const subNav: PortalPage = PortalPage.organizationMembers;
 
-    const result = await generateProfileUrl({
+    const result = await generatePortalUrl({
       domain,
       returnUrl,
       subNav,
@@ -87,7 +115,7 @@ describe("generateProfileUrl", () => {
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
 
-    const result = await generateProfileUrl({
+    const result = await generatePortalUrl({
       domain,
       returnUrl,
     });
@@ -114,13 +142,13 @@ describe("generateProfileUrl", () => {
       }),
     );
 
-    const subNav: ProfilePage = ProfilePage.organizationPaymentDetails;
+    const subNav: PortalPage = PortalPage.organizationPaymentDetails;
 
     const fetchSpy = vi.spyOn(global, "fetch");
     const domain = "https://mykindedomain.kinde.com/";
     const returnUrl = "http://anotherredirect.com";
 
-    const result = await generateProfileUrl({
+    const result = await generatePortalUrl({
       domain,
       returnUrl,
       subNav,
@@ -152,9 +180,9 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com?param=value with spaces";
-    const subNav: ProfilePage = ProfilePage.organizationPlanSelection;
+    const subNav: PortalPage = PortalPage.organizationPlanSelection;
 
-    await generateProfileUrl({
+    await generatePortalUrl({
       domain,
       returnUrl,
       subNav,
@@ -185,10 +213,10 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const subNav: ProfilePage = ProfilePage.organizationPlanDetails;
+    const subNav: PortalPage = PortalPage.organizationPlanDetails;
 
     await expect(
-      generateProfileUrl({
+      generatePortalUrl({
         domain,
         returnUrl,
         subNav,
@@ -209,10 +237,10 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const subNav: ProfilePage = ProfilePage.profile;
+    const subNav: PortalPage = PortalPage.profile;
 
     await expect(
-      generateProfileUrl({
+      generatePortalUrl({
         domain,
         returnUrl,
         subNav,
@@ -229,14 +257,56 @@ describe("generateProfileUrl", () => {
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
-    const subNav: ProfilePage = ProfilePage.profile;
+    const subNav: PortalPage = PortalPage.profile;
 
     await expect(
-      generateProfileUrl({
+      generatePortalUrl({
         domain,
         returnUrl,
         subNav,
       }),
     ).rejects.toThrow("Failed to fetch profile URL: 500");
+  });
+});
+
+describe("generateProfileUrl", () => {
+  beforeEach(() => {
+    clearActiveStorage();
+    fetchMock.enableMocks();
+    fetchMock.resetMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("emits a console warning when called", async () => {
+    // Setup storage and mock response
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    await storage.setSessionItem(StorageKeys.accessToken, "storedAccessToken");
+
+    fetchMock.mockOnce(
+      JSON.stringify({
+        url: "http://responseurl",
+      }),
+    );
+
+    // Spy on console.warn
+    const warnSpy = vi.spyOn(console, "warn");
+
+    // Call the deprecated function
+    const domain = "https://mykindedomain.com";
+    const returnUrl = "http://somereturnurl.com";
+
+    await generateProfileUrl({
+      domain,
+      returnUrl,
+    });
+
+    // Verify the warning was emitted
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Warning: generateProfileUrl is deprecated. Please use generatePortalUrl instead.",
+    );
   });
 });

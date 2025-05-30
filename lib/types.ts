@@ -37,6 +37,19 @@ export type LoginMethodParams<T = Record<string, string>> = Partial<
   >
 >;
 
+export enum PortalPage {
+  organizationDetails = "organization_details",
+  organizationMembers = "organization_members",
+  organizationPlanDetails = "organization_plan_details",
+  organizationPaymentDetails = "organization_payment_details",
+  organizationPlanSelection = "organization_plan_selection",
+  profile = "profile",
+}
+
+/**
+ * @deprecated This enum is deprecated and will be removed in a future version.
+ * Please use `PortalPage` instead.
+ */
 export enum ProfilePage {
   organizationDetails = "organization_details",
   organizationMembers = "organization_members",
@@ -46,10 +59,10 @@ export enum ProfilePage {
   profile = "profile",
 }
 
-export type GenerateProfileUrlParams = {
+export type GeneratePortalUrlParams = {
   domain: string;
   returnUrl: string;
-  subNav?: ProfilePage;
+  subNav?: PortalPage;
 };
 
 export type KindeProperties = Partial<{
