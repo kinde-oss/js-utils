@@ -1,6 +1,22 @@
 # Changelog
 
 
+## 0.17.1...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.17.1...main)
+
+### 💅 Refactors
+
+- Renamed generateProfileUrl to generatePortalUrl ([4dc8bd1](https://github.com/kinde-oss/js-utils/commit/4dc8bd1))
+
+### 🏡 Chore
+
+- Remove deplicate test ([f45be0c](https://github.com/kinde-oss/js-utils/commit/f45be0c))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.16.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.16.0...main)
