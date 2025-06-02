@@ -38,7 +38,7 @@
   "sideEffects": false,
   "devDependencies": {
     "@eslint/js": "^9.9.1",
-    "@types/chrome": "^0.0.322",
+    "@types/chrome": "^0.0.326",
     "@types/node": "^22.5.1",
     "@vitejs/plugin-react": "^4.3.1",
     "@vitest/coverage-v8": "^3.0.0",
