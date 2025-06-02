@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
 import { generatePortalUrl, generateProfileUrl } from "./generatePortalUrl";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
@@ -266,47 +266,5 @@ describe("generatePortalUrl", () => {
         subNav,
       }),
     ).rejects.toThrow("Failed to fetch profile URL: 500");
-  });
-});
-
-describe("generateProfileUrl", () => {
-  beforeEach(() => {
-    clearActiveStorage();
-    fetchMock.enableMocks();
-    fetchMock.resetMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("emits a console warning when called", async () => {
-    // Setup storage and mock response
-    const storage = new MemoryStorage();
-    setActiveStorage(storage);
-    await storage.setSessionItem(StorageKeys.accessToken, "storedAccessToken");
-
-    fetchMock.mockOnce(
-      JSON.stringify({
-        url: "http://responseurl",
-      }),
-    );
-
-    // Spy on console.warn
-    const warnSpy = vi.spyOn(console, "warn");
-
-    // Call the deprecated function
-    const domain = "https://mykindedomain.com";
-    const returnUrl = "http://somereturnurl.com";
-
-    await generateProfileUrl({
-      domain,
-      returnUrl,
-    });
-
-    // Verify the warning was emitted
-    expect(warnSpy).toHaveBeenCalledWith(
-      "Warning: generateProfileUrl is deprecated. Please use generatePortalUrl instead.",
-    );
   });
 });
