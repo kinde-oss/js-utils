@@ -1,6 +1,18 @@
 # Changelog
 
 
+## 0.18.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.18.0...main)
+
+### 🩹 Fixes
+
+- Ensure absolute returnUrls are supplied to portal generation ([8b4e282](https://github.com/kinde-oss/js-utils/commit/8b4e282))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.17.1...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.17.1...main)
