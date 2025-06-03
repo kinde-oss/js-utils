@@ -51,6 +51,10 @@ export const generatePortalUrl = async ({
     throw new Error("generatePortalUrl: Access Token not found");
   }
 
+  if (!returnUrl.startsWith("http")) {
+    throw new Error("generatePortalUrl: returnUrl must be an absolute URL");
+  }
+
   const params = new URLSearchParams({
     sub_nav: subNav || PortalPage.profile,
     return_url: returnUrl,
