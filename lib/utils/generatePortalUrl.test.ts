@@ -26,7 +26,7 @@ describe("generateProfileUrl", () => {
         url: "http://responseurl",
       }),
     );
-    generateProfileUrl({ domain });
+    generateProfileUrl({ domain, returnUrl: "http://returnurl.com" });
     expect(warnSpy).toHaveBeenCalledWith(
       "Warning: generateProfileUrl is deprecated. Please use generatePortalUrl instead.",
     );
@@ -266,5 +266,29 @@ describe("generatePortalUrl", () => {
         subNav,
       }),
     ).rejects.toThrow("Failed to fetch profile URL: 500");
+  });
+
+  it("Handles when the returnUrl is not absolute", async () => {
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    await storage.setSessionItem(StorageKeys.accessToken, "storedAccessToken");
+
+    fetchMock.mockOnce(
+      JSON.stringify({
+        url: "/tst",
+      }),
+    );
+
+    const domain = "https://mykindedomain.com";
+    const returnUrl = "somereturnurl.com";
+    const subNav: PortalPage = PortalPage.profile;
+
+    await expect(
+      generatePortalUrl({
+        domain,
+        returnUrl,
+        subNav,
+      }),
+    ).rejects.toThrow("generatePortalUrl: returnUrl must be an absolute URL");
   });
 });
