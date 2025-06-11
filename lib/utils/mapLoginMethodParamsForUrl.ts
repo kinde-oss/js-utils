@@ -28,6 +28,7 @@ export const mapLoginMethodParamsForUrl = (
     workflow_deployment_id: options.workflowDeploymentId,
     supports_reauth: options.supportsReauth?.toString(),
     plan_interest: options.planInterest,
+    pricing_table_key: options.pricingTableKey,
   };
 
   Object.keys(translate).forEach(
