@@ -291,4 +291,62 @@ describe("generatePortalUrl", () => {
       }),
     ).rejects.toThrow("generatePortalUrl: returnUrl must be an absolute URL");
   });
+
+  it("Handles expo returnUrl", async () => {
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    await storage.setSessionItem(StorageKeys.accessToken, "storedAccessToken");
+
+    fetchMock.mockOnce(
+       JSON.stringify({
+        url: "http://responseurl",
+      }),
+    );
+
+    const domain = "https://mykindedomain.com";
+    const returnUrl = "http://192.168.68.61";
+    const subNav: PortalPage = PortalPage.profile;
+
+    const fetchSpy = vi.spyOn(global, "fetch");
+
+    await generatePortalUrl({
+      domain,
+      returnUrl,
+      subNav,
+    })
+    expect(fetchSpy).toBeCalled()
+    expect(fetchSpy).toBeCalledWith(
+      expect.stringContaining(`sub_nav=${subNav}`),
+      expect.any(Object),
+    );
+  });
+
+  it("Handles custom schema returnUrl", async () => {
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    await storage.setSessionItem(StorageKeys.accessToken, "storedAccessToken");
+
+    fetchMock.mockOnce(
+       JSON.stringify({
+        url: "http://responseurl",
+      }),
+    );
+
+    const domain = "https://mykindedomain.com";
+    const returnUrl = "somecustomschema://192.168.68.61:8081";
+    const subNav: PortalPage = PortalPage.profile;
+
+    const fetchSpy = vi.spyOn(global, "fetch");
+
+    await generatePortalUrl({
+      domain,
+      returnUrl,
+      subNav,
+    })
+
+    expect(fetchSpy).toBeCalledWith(
+    expect.stringContaining(`sub_nav=${subNav}`),
+    expect.any(Object),
+    );
+  });
 });

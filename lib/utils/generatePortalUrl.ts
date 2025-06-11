@@ -51,7 +51,15 @@ export const generatePortalUrl = async ({
     throw new Error("generatePortalUrl: Access Token not found");
   }
 
-  if (!returnUrl.startsWith("http")) {
+  // Validate that returnUrl is an absolute URL using the URL constructor
+  let isAbsoluteUrl = false;
+  try {
+    const testUrl = new URL(returnUrl);
+    isAbsoluteUrl = !!testUrl.protocol && !!testUrl.host;
+  } catch {
+    isAbsoluteUrl = false;
+  }
+  if (!isAbsoluteUrl) {
     throw new Error("generatePortalUrl: returnUrl must be an absolute URL");
   }
 
