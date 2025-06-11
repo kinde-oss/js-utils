@@ -34,6 +34,7 @@ export type LoginMethodParams<T = Record<string, string>> = Partial<
     | "supportsReauth"
     | "reauthState"
     | "planInterest"
+    | "pricingTableKey"
   >
 >;
 
@@ -212,6 +213,10 @@ export type LoginOptions<T = Record<string, string>> = {
    * Plan the user has indicated interest in
    */
   planInterest?: string;
+  /**
+   * Key for the pricing table to use (optional)
+   */
+  pricingTableKey?: string;
 };
 
 export enum IssuerRouteTypes {
