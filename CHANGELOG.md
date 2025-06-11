@@ -1,6 +1,18 @@
 # Changelog
 
 
+## 0.18.1...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.18.1...main)
+
+### 🚀 Enhancements
+
+- Add pricingTableKey ([f72a2df](https://github.com/kinde-oss/js-utils/commit/f72a2df))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.18.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.18.0...main)
