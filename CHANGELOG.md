@@ -1,6 +1,22 @@
 # Changelog
 
 
+## 0.18.2...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.18.2...main)
+
+### 🩹 Fixes
+
+- Portal return URL validation ([cfadcbb](https://github.com/kinde-oss/js-utils/commit/cfadcbb))
+
+### 🏡 Chore
+
+- Refactor and disallow ws and ftp: ([d50bf02](https://github.com/kinde-oss/js-utils/commit/d50bf02))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.18.1...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.18.1...main)
