@@ -23,6 +23,19 @@ export const generateProfileUrl = async (params: {
     subNav: params.subNav as unknown as PortalPage,
   });
 };
+
+export function isAllowedReturnUrl(
+  value: string,
+  disallowedProtocols: string[] = [],
+): boolean {
+  try {
+    const u = new URL(value);
+    return !disallowedProtocols.includes(u.protocol) && Boolean(u.host);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Generates a URL to the user profile portal
  *
@@ -51,7 +64,8 @@ export const generatePortalUrl = async ({
     throw new Error("generatePortalUrl: Access Token not found");
   }
 
-  if (!returnUrl.startsWith("http")) {
+  // Validate that returnUrl is an absolute URL using the URL constructor
+  if (!isAllowedReturnUrl(returnUrl, ["ftp:", "ws:"])) {
     throw new Error("generatePortalUrl: returnUrl must be an absolute URL");
   }
 
