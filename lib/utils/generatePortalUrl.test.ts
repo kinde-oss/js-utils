@@ -298,7 +298,7 @@ describe("generatePortalUrl", () => {
     await storage.setSessionItem(StorageKeys.accessToken, "storedAccessToken");
 
     fetchMock.mockOnce(
-       JSON.stringify({
+      JSON.stringify({
         url: "http://responseurl",
       }),
     );
@@ -313,8 +313,8 @@ describe("generatePortalUrl", () => {
       domain,
       returnUrl,
       subNav,
-    })
-    expect(fetchSpy).toBeCalled()
+    });
+    expect(fetchSpy).toBeCalled();
     expect(fetchSpy).toBeCalledWith(
       expect.stringContaining(`sub_nav=${subNav}`),
       expect.any(Object),
@@ -327,7 +327,7 @@ describe("generatePortalUrl", () => {
     await storage.setSessionItem(StorageKeys.accessToken, "storedAccessToken");
 
     fetchMock.mockOnce(
-       JSON.stringify({
+      JSON.stringify({
         url: "http://responseurl",
       }),
     );
@@ -342,11 +342,11 @@ describe("generatePortalUrl", () => {
       domain,
       returnUrl,
       subNav,
-    })
+    });
 
     expect(fetchSpy).toBeCalledWith(
-    expect.stringContaining(`sub_nav=${subNav}`),
-    expect.any(Object),
+      expect.stringContaining(`sub_nav=${subNav}`),
+      expect.any(Object),
     );
   });
 });

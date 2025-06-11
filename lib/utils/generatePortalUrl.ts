@@ -23,6 +23,19 @@ export const generateProfileUrl = async (params: {
     subNav: params.subNav as unknown as PortalPage,
   });
 };
+
+export function isAllowedReturnUrl(
+  value: string,
+  disallowedProtocols: string[] = [],
+): boolean {
+  try {
+    const u = new URL(value);
+    return !disallowedProtocols.includes(u.protocol) && Boolean(u.host);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Generates a URL to the user profile portal
  *
@@ -52,14 +65,7 @@ export const generatePortalUrl = async ({
   }
 
   // Validate that returnUrl is an absolute URL using the URL constructor
-  let isAbsoluteUrl = false;
-  try {
-    const testUrl = new URL(returnUrl);
-    isAbsoluteUrl = !!testUrl.protocol && !!testUrl.host;
-  } catch {
-    isAbsoluteUrl = false;
-  }
-  if (!isAbsoluteUrl) {
+  if (!isAllowedReturnUrl(returnUrl, ["ftp:", "ws:"])) {
     throw new Error("generatePortalUrl: returnUrl must be an absolute URL");
   }
 
