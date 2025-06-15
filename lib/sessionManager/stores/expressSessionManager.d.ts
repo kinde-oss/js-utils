@@ -1,7 +1,8 @@
-import "express-session";
+import { Session, SessionData } from "express-session";
+
 
 declare module "express-session" {
-    interface SessionData {
-        [key: string]: unknown;
+    interface Request {
+        session: Session & Partial<SessionData>;
     }
 }
