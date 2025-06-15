@@ -1,12 +1,10 @@
-import { Session, SessionData } from 'express-session';
-
-declare module 'express-serve-static-core' {
-  interface Request {
-    session: Session & Partial<SessionData>;
-  }
+interface KindeSession {
+  [key: string]: unknown;
+  destroy: (callback: (err?: Error | null) => void) => void;
 }
-declare module 'express-session' {
-  interface SessionData {
-    [key: string]: any;
+
+declare module "express-serve-static-core" {
+  interface Request {
+    session?: KindeSession;
   }
 }
