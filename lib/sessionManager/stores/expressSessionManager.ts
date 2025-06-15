@@ -36,6 +36,43 @@ export class ExpressSessionManager<V extends string = StorageKeys>
     return Promise.resolve(itemValue);
    }
 
+   /**
+    * Sets a value in the Express session.
+    * @param {string} itemKey 
+    * @param {unknown} itemValue
+    * @returns {Promise<void>}
+    */
+   async setSessionItem(itemKey: V | StorageKeys, itemValue: unknown): Promise<void> {
+    this.req.session![itemKey as string] = itemValue;
+    return Promise.resolve();
+   }
+
+   /**
+    * Removes a value from the Express session.
+    * @param {string} itemKey
+    * @returns {Promise<void>}
+    */
+   async removeSessionItem(itemKey: V | StorageKeys): Promise<void>{
+    delete this.req.session![itemKey as string];
+    return Promise.resolve();
+   }
+
+   /**
+    * Clears the entire Express session.
+    * @returns {Promise<void>}
+    */
+   async destroySession(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.req.session!.destroy((err: Error | null) => {
+        if (err) {
+          //figure out how to handle this better
+          console.error("Error destroying session:", err);
+          return reject(err);
+        }
+        resolve();
+      });
+    });
+   }
 
 
 

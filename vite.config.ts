@@ -19,7 +19,7 @@ export default defineConfig({
     outDir: "../dist",
     emptyOutDir: true,
     rollupOptions: {
-      external: ["expo-secure-store", "/src/tests/**"],
+      external: ["expo-secure-store", "/src/tests/**", "express-session"],
     },
   },
   root: "lib",
