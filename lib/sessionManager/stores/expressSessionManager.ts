@@ -1,5 +1,6 @@
-import type {Request} from 'express';
-import {SessionBase, StorageKeys, type SessionManager} from '../types.js';
+// @ts-expect-error express is not in dev deps but in peer deps
+import type { Request } from "express";
+import { SessionBase, StorageKeys, type SessionManager } from "../types.js";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
