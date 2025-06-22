@@ -82,8 +82,6 @@ export class ExpressSessionManager<V extends string = StorageKeys>
     return new Promise((resolve, reject) => {
       this.req.session!.destroy((err) => {
         if (err) {
-          //figure out how to handle this better
-          console.error("Error destroying session:", err);
           return reject(err);
         }
         resolve();
