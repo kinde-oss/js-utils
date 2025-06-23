@@ -35,6 +35,7 @@ export type LoginMethodParams<T = Record<string, string>> = Partial<
     | "reauthState"
     | "planInterest"
     | "pricingTableKey"
+    | "pagesMode"
   >
 >;
 
@@ -217,6 +218,10 @@ export type LoginOptions<T = Record<string, string>> = {
    * Key for the pricing table to use (optional)
    */
   pricingTableKey?: string;
+  /**
+   * Configuration mode for custom code pages
+   */
+  pagesMode?: "preview";
 };
 
 export enum IssuerRouteTypes {
