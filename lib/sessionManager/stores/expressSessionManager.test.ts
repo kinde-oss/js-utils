@@ -1,125 +1,91 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { MemoryStorage } from "./memory";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { ExpressSessionManager } from "./expressSessionManager";
 import { StorageKeys } from "../types";
+import type { Request } from "express";
 
-enum ExtraKeys {
-  testKey = "testKey2",
-}
+const mockRequest = (
+  sessionData: Record<string, unknown> | null,
+  destroyError: Error | null = null
+) => {
+  const session = sessionData
+    ? {
+        ...sessionData,
+        destroy: vi.fn((callback: (err: Error | null) => void) => {
+          callback(destroyError);
+        }),
+      }
+    : undefined;
 
-describe("MemoryStorage standard keys", () => {
-  let sessionManager: MemoryStorage;
+  return {
+    session,
+  } as unknown as Request;
+};
 
-  beforeEach(() => {
-    sessionManager = new MemoryStorage();
-  });
+describe("ExpressSessionManager", () => {
+  let req: Request;
+  let sessionManager: ExpressSessionManager;
 
-  it("should set and get an item in session storage", async () => {
-    await sessionManager.setSessionItem(StorageKeys.accessToken, "testValue");
-    expect(await sessionManager.getSessionItem(StorageKeys.accessToken)).toBe(
-      "testValue",
-    );
-  });
-
-  it("should remove an item from session storage", async () => {
-    await sessionManager.setSessionItem(StorageKeys.accessToken, "testValue");
-    expect(await sessionManager.getSessionItem(StorageKeys.accessToken)).toBe(
-      "testValue",
-    );
-
-    await sessionManager.removeSessionItem(StorageKeys.accessToken);
-    expect(
-      await sessionManager.getSessionItem(StorageKeys.accessToken),
-    ).toBeNull();
-  });
-
-  it("should clear all items from session storage", async () => {
-    await sessionManager.setSessionItem(StorageKeys.accessToken, "testValue");
-    expect(await sessionManager.getSessionItem(StorageKeys.accessToken)).toBe(
-      "testValue",
-    );
-
-    sessionManager.destroySession();
-    expect(
-      await sessionManager.getSessionItem(StorageKeys.accessToken),
-    ).toBeNull();
-  });
-
-  it("should set many items", async () => {
-    await sessionManager.setItems({
-      [StorageKeys.accessToken]: "accessTokenValue",
-      [StorageKeys.idToken]: "idTokenValue",
+  describe("constructor", () => {
+    it("should throw an error if session is not available on the request", () => {
+      req = mockRequest(null);
+      expect(() => new ExpressSessionManager(req)).toThrow(
+        "Session not available on the request. Please ensure the 'express-session' middleware is configured and running before the Kinde middleware."
+      );
     });
-    expect(await sessionManager.getSessionItem(StorageKeys.accessToken)).toBe(
-      "accessTokenValue",
-    );
-    expect(await sessionManager.getSessionItem(StorageKeys.idToken)).toBe(
-      "idTokenValue",
-    );
-  });
-});
 
-describe("MemoryStorage keys: storageKeys", () => {
-  let sessionManager: MemoryStorage<ExtraKeys>;
-
-  beforeEach(() => {
-    sessionManager = new MemoryStorage<ExtraKeys>();
+    it("should not throw an error if session is available on the request", () => {
+      req = mockRequest({});
+      expect(() => new ExpressSessionManager(req)).not.toThrow();
+    });
   });
 
-  it("should set and get an item in storage: StorageKeys", async () => {
-    await sessionManager.setSessionItem(StorageKeys.accessToken, "testValue");
-    expect(await sessionManager.getSessionItem(StorageKeys.accessToken)).toBe(
-      "testValue",
-    );
-  });
+  describe("with a valid session", () => {
+    beforeEach(() => {
+      const initialSession = {
+        [StorageKeys.accessToken]: "access-token",
+        [StorageKeys.idToken]: "id-token",
+      };
+      req = mockRequest(initialSession);
+      sessionManager = new ExpressSessionManager(req);
+    });
 
-  it("should remove an item from storage: StorageKeys", async () => {
-    await sessionManager.setSessionItem(StorageKeys.accessToken, "testValue");
-    expect(await sessionManager.getSessionItem(StorageKeys.accessToken)).toBe(
-      "testValue",
-    );
+    it("should get an item from the session", async () => {
+      const accessToken = await sessionManager.getSessionItem(
+        StorageKeys.accessToken
+      );
+      expect(accessToken).toBe("access-token");
+    });
 
-    await sessionManager.removeSessionItem(StorageKeys.accessToken);
-    expect(
-      await sessionManager.getSessionItem(StorageKeys.accessToken),
-    ).toBeNull();
-  });
+    it("should return null for a non-existent item", async () => {
+      const refreshToken = await sessionManager.getSessionItem(
+        StorageKeys.refreshToken
+      );
+      expect(refreshToken).toBeNull();
+    });
 
-  it("should clear all items from storage: StorageKeys", async () => {
-    await sessionManager.setSessionItem(StorageKeys.accessToken, "testValue");
-    expect(await sessionManager.getSessionItem(StorageKeys.accessToken)).toBe(
-      "testValue",
-    );
+    it("should set an item in the session", async () => {
+      await sessionManager.setSessionItem(
+        StorageKeys.refreshToken,
+        "refresh-token"
+      );
+      expect(req.session![StorageKeys.refreshToken]).toBe("refresh-token");
+    });
 
-    sessionManager.destroySession();
-    expect(
-      await sessionManager.getSessionItem(StorageKeys.accessToken),
-    ).toBeNull();
-  });
+    it("should remove an item from the session", async () => {
+      await sessionManager.removeSessionItem(StorageKeys.accessToken);
+      expect(req.session![StorageKeys.accessToken]).toBeUndefined();
+    });
 
-  it("should set and get an item in extra storage", async () => {
-    await sessionManager.setSessionItem(ExtraKeys.testKey, "testValue");
-    expect(await sessionManager.getSessionItem(ExtraKeys.testKey)).toBe(
-      "testValue",
-    );
-  });
+    it("should destroy the session", async () => {
+      await sessionManager.destroySession();
+      expect(req.session!.destroy).toHaveBeenCalled();
+    });
 
-  it("should remove an item from extra storage", async () => {
-    await sessionManager.setSessionItem(ExtraKeys.testKey, "testValue");
-    expect(await sessionManager.getSessionItem(ExtraKeys.testKey)).toBe(
-      "testValue",
-    );
-
-    sessionManager.removeSessionItem(ExtraKeys.testKey);
-    expect(await sessionManager.getSessionItem(ExtraKeys.testKey)).toBeNull();
-  });
-
-  it("should clear all items from extra storage", async () => {
-    await sessionManager.setSessionItem(ExtraKeys.testKey, "testValue");
-    expect(await sessionManager.getSessionItem(ExtraKeys.testKey)).toBe(
-      "testValue",
-    );
-
-    sessionManager.destroySession();
-    expect(await sessionManager.getSessionItem(ExtraKeys.testKey)).toBeNull();
+    it("should reject with an error if destroying the session fails", async () => {
+      const error = new Error("Failed to destroy Kinde session");
+      req = mockRequest({}, error);
+      sessionManager = new ExpressSessionManager(req);
+      await expect(sessionManager.destroySession()).rejects.toThrow(error);
+    });
   });
 });

@@ -60,6 +60,7 @@ describe("index exports", () => {
       "LocalStorage",
       "storageSettings",
       "ExpoSecureStore",
+      "ExpressSessionManager",
 
       // token utils
       "getActiveStorage",
