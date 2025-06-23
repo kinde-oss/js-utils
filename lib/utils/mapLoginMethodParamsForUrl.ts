@@ -29,6 +29,7 @@ export const mapLoginMethodParamsForUrl = (
     supports_reauth: options.supportsReauth?.toString(),
     plan_interest: options.planInterest,
     pricing_table_key: options.pricingTableKey,
+    pages_mode: options.pagesMode,
   };
 
   Object.keys(translate).forEach(
