@@ -53,6 +53,7 @@ describe("index exports", () => {
       "setRefreshTimer",
       "clearRefreshTimer",
       "splitString",
+      "generateKindeSDKHeader",
 
       // session manager
       "MemoryStorage",
