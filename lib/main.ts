@@ -18,6 +18,7 @@ export {
   splitString,
   generateProfileUrl,
   generatePortalUrl,
+  generateKindeSDKHeader,
 } from "./utils";
 
 export {

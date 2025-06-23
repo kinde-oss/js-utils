@@ -58,6 +58,10 @@ const clearTempStore = async () => {
   );
 };
 
+export const generateKindeSDKHeader = (): string => {
+  return `${frameworkSettings.framework}/${frameworkSettings.sdkVersion}/${frameworkSettings.frameworkVersion}/Javascript`;
+};
+
 export const exchangeAuthCode = async ({
   urlParams,
   domain,
@@ -121,8 +125,7 @@ export const exchangeAuthCode = async ({
   };
 
   if (frameworkSettings.framework) {
-    headers["Kinde-SDK"] =
-      `${frameworkSettings.framework}/${frameworkSettings.sdkVersion}/${frameworkSettings.frameworkVersion}/Javascript`;
+    headers["Kinde-SDK"] = generateKindeSDKHeader();
   }
 
   const credentialsHeader: Partial<RequestInit> =
