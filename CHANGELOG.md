@@ -1,6 +1,23 @@
 # Changelog
 
 
+## 0.18.3...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.18.3...main)
+
+### 🚀 Enhancements
+
+- Add pages mode auth param ([3eae947](https://github.com/kinde-oss/js-utils/commit/3eae947))
+- Add method to generate version header ([e31c6f0](https://github.com/kinde-oss/js-utils/commit/e31c6f0))
+
+### 🩹 Fixes
+
+- Expo-secure-store build imports ([ac39c3b](https://github.com/kinde-oss/js-utils/commit/ac39c3b))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.18.2...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.18.2...main)
