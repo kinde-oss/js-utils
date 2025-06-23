@@ -26,7 +26,9 @@ export class ExpoSecureStore<
 
   private async loadExpoStore() {
     try {
-      expoSecureStore = await import("expo-secure-store");
+      expoSecureStore = await import(
+        /* webpackIgnore: true */ "expo-secure-store"
+      );
     } catch (error) {
       console.error("Error loading dependency expo storage:", error);
     }
