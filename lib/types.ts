@@ -253,3 +253,24 @@ export enum RefreshType {
   refreshToken,
   cookie,
 }
+
+export type GetPermissionOptions = ForceApi;
+export type GetPermissionsOptions = ForceApi;
+export type GetRolesOptions = ForceApi;
+
+type ForceApi = {
+  /**
+   * If true, the API will be called to check permissions, otherwise it will check the token.
+   * This is useful for ensuring the latest permissions are fetched, but may incur additional API calls
+   */
+  forceApi?: boolean;
+};
+
+type Metadata = {
+  has_more: boolean;
+  next_page_starting_after: string;
+};
+
+export type BaseAccountResponse = {
+  metadata: Metadata;
+};

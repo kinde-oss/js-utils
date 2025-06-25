@@ -17,7 +17,7 @@ export { getRoles } from "./getRoles";
 export type { Role } from "./getRoles";
 export { isAuthenticated } from "./isAuthenticated";
 export { refreshToken } from "./refreshToken";
-
+export { getEntitlements } from "./getEntitlements";
 const storage = {
   secure: null as SessionManager | null,
   insecure: null as SessionManager | null,
