@@ -57,6 +57,7 @@ export {
   MemoryStorage,
   ChromeStore,
   LocalStorage,
+  KvStorage,
   StorageKeys,
 } from "./sessionManager";
 
