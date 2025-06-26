@@ -1,4 +1,4 @@
-// @ts-expect-error express is not in dev deps but in peer deps
+// express is not in dev deps but in peer deps
 import type { Request } from "express";
 import { SessionBase, StorageKeys, type SessionManager } from "../types.js";
 
@@ -46,8 +46,7 @@ export class ExpressSessionManager<V extends string = StorageKeys>
    */
   async getSessionItem(itemKey: V | StorageKeys): Promise<unknown | null> {
     // ?? null ensures we consistently return null for missing keys
-    const itemValue = this.req.session![itemKey as string] ?? null;
-    return Promise.resolve(itemValue);
+    return this.req.session![itemKey as string] ?? null;
   }
 
   /**
@@ -61,7 +60,6 @@ export class ExpressSessionManager<V extends string = StorageKeys>
     itemValue: unknown
   ): Promise<void> {
     this.req.session![itemKey as string] = itemValue;
-    return Promise.resolve();
   }
 
   /**
@@ -71,7 +69,6 @@ export class ExpressSessionManager<V extends string = StorageKeys>
    */
   async removeSessionItem(itemKey: V | StorageKeys): Promise<void> {
     delete this.req.session![itemKey as string];
-    return Promise.resolve();
   }
 
   /**
