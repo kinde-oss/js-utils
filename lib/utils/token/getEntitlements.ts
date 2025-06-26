@@ -1,3 +1,4 @@
+import { BaseAccountResponse } from "../../types";
 import { callAccountApi } from "./accountApi/callAccountApi";
 
 /**
@@ -26,18 +27,12 @@ type Plan = {
   subscribed_on: string; // ISO date string
 };
 
-type Data = {
+type EntitlementData = {
   org_code: string;
   plans: Plan[];
   entitlements: Entitlement[];
 };
 
-type Metadata = {
-  has_more: boolean;
-  next_page_starting_after: string;
-};
-
-type EntitlementsResponse = {
-  data: Data;
-  metadata: Metadata;
+type EntitlementsResponse = BaseAccountResponse & {
+  data: EntitlementData;
 };

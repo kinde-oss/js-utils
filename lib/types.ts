@@ -253,3 +253,18 @@ export enum RefreshType {
   refreshToken,
   cookie,
 }
+
+export type GetPermissionsOptions = HardCheck;
+
+type HardCheck = {
+  hardCheck?: boolean;
+};
+
+type Metadata = {
+  has_more: boolean;
+  next_page_starting_after: string;
+};
+
+export type BaseAccountResponse = {
+  metadata: Metadata;
+};
