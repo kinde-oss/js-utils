@@ -1,3 +1,4 @@
+import { BaseAccountResponse } from "../../types";
 import { callAccountApi } from "./accountApi/callAccountApi";
 
 /**
@@ -12,20 +13,22 @@ export const getEntitlements = async (): Promise<getEntitlementsResponse> => {
   );
   return {
     orgCode: response.data.org_code,
-    plans: response.data.plans.map((plan) => ({
+    plans: response.data.plans.map((plan: ApiPlan) => ({
       key: plan.key,
       subscribedOn: plan.subscribed_on,
     })),
-    entitlements: response.data.entitlements.map((entitlement) => ({
-      id: entitlement.id,
-      fixedCharge: entitlement.fixed_charge,
-      priceName: entitlement.price_name,
-      unitAmount: entitlement.unit_amount,
-      featureKey: entitlement.feature_key,
-      featureName: entitlement.feature_name,
-      entitlementLimitMax: entitlement.entitlement_limit_max,
-      entitlementLimitMin: entitlement.entitlement_limit_min,
-    })),
+    entitlements: response.data.entitlements.map(
+      (entitlement: ApiEntitlement) => ({
+        id: entitlement.id,
+        fixedCharge: entitlement.fixed_charge,
+        priceName: entitlement.price_name,
+        unitAmount: entitlement.unit_amount,
+        featureKey: entitlement.feature_key,
+        featureName: entitlement.feature_name,
+        entitlementLimitMax: entitlement.entitlement_limit_max,
+        entitlementLimitMin: entitlement.entitlement_limit_min,
+      }),
+    ),
   };
 };
 
@@ -65,20 +68,4 @@ type ApiPlan = {
 type Plan = {
   key: string;
   subscribedOn: string; // ISO date string
-};
-
-type Data = {
-  org_code: string;
-  plans: ApiPlan[];
-  entitlements: ApiEntitlement[];
-};
-
-type Metadata = {
-  has_more: boolean;
-  next_page_starting_after: string;
-};
-
-type EntitlementsResponse = {
-  data: Data;
-  metadata: Metadata;
 };

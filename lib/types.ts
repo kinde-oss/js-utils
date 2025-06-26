@@ -273,4 +273,5 @@ type Metadata = {
 
 export type BaseAccountResponse = {
   metadata: Metadata;
+  data: unknown;
 };

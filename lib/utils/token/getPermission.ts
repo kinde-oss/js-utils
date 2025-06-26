@@ -1,4 +1,6 @@
 import { getDecodedToken } from ".";
+import { GetPermissionOptions } from "../../types";
+import { callAccountApi } from "./accountApi/callAccountApi";
 
 export type PermissionAccess = {
   permissionKey: string;
@@ -13,7 +15,14 @@ export type PermissionAccess = {
  */
 export const getPermission = async <T = string>(
   permissionKey: T,
+  options?: GetPermissionOptions,
 ): Promise<PermissionAccess> => {
+  if (options?.forceApi) {
+    return callAccountApi<PermissionAccess>(
+      `account_api/v1/permission/${permissionKey}`,
+    );
+  }
+
   const token = await getDecodedToken();
 
   if (!token) {
