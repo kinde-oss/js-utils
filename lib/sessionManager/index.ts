@@ -26,7 +26,9 @@ export { ChromeStore } from "./stores/chromeStore.js";
 export { ExpoSecureStore } from "./stores/expoSecureStore.js";
 export { LocalStorage } from "./stores/localStorage.ts";
 export { KvStorage } from "./stores/kvStorage.ts";
+export { CookieStorage, createGenericCookieAdapter } from "./stores/cookieStorage.ts";
+export type { CookieAdapter, CookieOptions } from "./stores/cookieStorage.ts";
 
-// Export types directly
 export { StorageKeys } from "./types.ts";
 export type { SessionManager } from "./types.ts";
+
