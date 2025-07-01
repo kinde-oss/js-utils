@@ -7,7 +7,7 @@ import createFetchMock from "vitest-fetch-mock";
 
 const fetchMock = createFetchMock(vi);
 
-const mockEntitlementResponse = {
+const mockEntitlementAPIResponse = {
   data: {
     org_code: "org_0195ac80a14e",
     plans: [{ key: "pro_plan", subscribed_on: "2025-06-01T12:00:00Z" }],
@@ -30,6 +30,28 @@ const mockEntitlementResponse = {
   },
 };
 
+const expectedResponse = {
+  orgCode: "org_0195ac80a14e",
+  plans: [
+    {
+      key: "pro_plan",
+      subscribedOn: "2025-06-01T12:00:00Z",
+    },
+  ],
+  entitlements: [
+    {
+      id: "entitlement_0195ac80a14e8d71f42b98e75d3c61ad",
+      fixedCharge: 35,
+      priceName: "Pro gym",
+      unitAmount: 1,
+      featureCode: "base_price",
+      featureName: "Pro Gym",
+      entitlementLimitMax: 1,
+      entitlementLimitMin: 1,
+    },
+  ],
+};
+
 const storage: MemoryStorage = new MemoryStorage();
 describe("getEntitlements", () => {
   beforeEach(async () => {
@@ -47,9 +69,9 @@ describe("getEntitlements", () => {
   });
 
   it("returns entitlement data on success", async () => {
-    fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementResponse));
+    fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementAPIResponse));
     const result = await getEntitlements();
-    expect(result).toEqual(mockEntitlementResponse);
+    expect(result).toEqual(expectedResponse);
   });
 
   it("throws if no domain (iss claim)", async () => {
@@ -97,7 +119,7 @@ describe("getEntitlements", () => {
 
   // add a test to make sure the correct URL is called
   it("calls the correct URL", async () => {
-    fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementResponse));
+    fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementAPIResponse));
     const fetchSpy = vi.spyOn(global, "fetch");
 
     await getEntitlements();
