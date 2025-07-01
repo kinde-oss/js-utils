@@ -30,6 +30,7 @@ export {
   getFlag,
   getUserProfile,
   getPermission,
+  getEntitlements,
   getPermissions,
   getUserOrganizations,
   getRoles,
