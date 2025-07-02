@@ -21,7 +21,7 @@ export const getEntitlements = async (): Promise<getEntitlementsResponse> => {
       fixedCharge: entitlement.fixed_charge,
       priceName: entitlement.price_name,
       unitAmount: entitlement.unit_amount,
-      featureCode: entitlement.feature_code,
+      featureKey: entitlement.feature_key,
       featureName: entitlement.feature_name,
       entitlementLimitMax: entitlement.entitlement_limit_max,
       entitlementLimitMin: entitlement.entitlement_limit_min,
@@ -40,7 +40,7 @@ type Entitlement = {
   fixedCharge: number;
   priceName: string;
   unitAmount: number;
-  featureCode: string;
+  featureKey: string;
   featureName: string;
   entitlementLimitMax: number;
   entitlementLimitMin: number;
@@ -51,7 +51,7 @@ type ApiEntitlement = {
   fixed_charge: number;
   price_name: string;
   unit_amount: number;
-  feature_code: string;
+  feature_key: string;
   feature_name: string;
   entitlement_limit_max: number;
   entitlement_limit_min: number;
