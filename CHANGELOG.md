@@ -1,6 +1,22 @@
 # Changelog
 
 
+## 0.20.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.20.0...main)
+
+### 🩹 Fixes
+
+- Update to the getEntitlements response ([c59e159](https://github.com/kinde-oss/js-utils/commit/c59e159))
+
+### 🏡 Chore
+
+- Rename feature code to feature code ([772012b](https://github.com/kinde-oss/js-utils/commit/772012b))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.19.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.19.0...main)
