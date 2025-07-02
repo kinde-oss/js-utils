@@ -62,7 +62,7 @@ export enum ProfilePage {
 }
 
 export type GeneratePortalUrlParams = {
-  domain: string;
+  domain?: string;
   returnUrl: string;
   subNav?: PortalPage;
 };

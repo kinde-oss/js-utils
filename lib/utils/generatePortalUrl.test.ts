@@ -4,6 +4,7 @@ import { generatePortalUrl, generateProfileUrl } from "./generatePortalUrl";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import { clearActiveStorage, setActiveStorage } from "./token";
 import { PortalPage } from "../types";
+import { createMockAccessToken } from "./token/testUtils";
 
 const fetchMock = createFetchMock(vi);
 
@@ -347,6 +348,67 @@ describe("generatePortalUrl", () => {
     expect(fetchSpy).toBeCalledWith(
       expect.stringContaining(`sub_nav=${subNav}`),
       expect.any(Object),
+    );
+  });
+
+  it("Obtain the domain from token when not defined", async () => {
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    await storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        iss: "https://mykindedomain.com",
+      }),
+    );
+
+    fetchMock.mockOnce(
+      JSON.stringify({
+        url: "http://responseurl",
+      }),
+    );
+
+    const returnUrl = "somecustomschema://192.168.68.61:8081";
+    const subNav: PortalPage = PortalPage.profile;
+
+    const fetchSpy = vi.spyOn(global, "fetch");
+
+    await generatePortalUrl({
+      returnUrl,
+      subNav,
+    });
+
+    expect(fetchSpy).toBeCalledWith(
+      expect.stringMatching(`^https://mykindedomain.com`),
+      expect.any(Object),
+    );
+  });
+
+  it("Throws error when iss is missing", async () => {
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    await storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        iss: undefined,
+      }),
+    );
+
+    fetchMock.mockOnce(
+      JSON.stringify({
+        url: "http://responseurl",
+      }),
+    );
+
+    const returnUrl = "somecustomschema://192.168.68.61:8081";
+    const subNav: PortalPage = PortalPage.profile;
+
+    expect(() =>
+      generatePortalUrl({
+        returnUrl,
+        subNav,
+      }),
+    ).rejects.toThrowError(
+      "generatePortalUrl: Unable to determine domain from access token",
     );
   });
 });

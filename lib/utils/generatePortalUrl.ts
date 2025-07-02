@@ -1,7 +1,7 @@
 import { StorageKeys } from "../sessionManager";
 import { GeneratePortalUrlParams, PortalPage, ProfilePage } from "../types";
 import { sanitizeUrl } from "./sanitizeUrl";
-import { getActiveStorage } from "./token";
+import { getActiveStorage, getClaim } from "./token";
 
 /**
  * @deprecated This function is deprecated and will be removed in a future version.
@@ -62,6 +62,16 @@ export const generatePortalUrl = async ({
   )) as string;
   if (!token) {
     throw new Error("generatePortalUrl: Access Token not found");
+  }
+
+  if (!domain || typeof domain !== "string") {
+    const issClaim = await getClaim("iss");
+    if (!issClaim?.value || typeof issClaim.value !== "string") {
+      throw new Error(
+        "generatePortalUrl: Unable to determine domain from access token",
+      );
+    }
+    domain = issClaim.value;
   }
 
   // Validate that returnUrl is an absolute URL using the URL constructor
