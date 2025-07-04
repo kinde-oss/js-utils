@@ -19,7 +19,7 @@ export const getPermission = async <T = string>(
 ): Promise<PermissionAccess> => {
   if (options?.forceApi) {
     return callAccountApi<PermissionAccess>(
-      `account_api/v1/permission/${permissionKey}`,
+      `account_api/v1/permission/${encodeURIComponent(permissionKey as string)}`,
     );
   }
 

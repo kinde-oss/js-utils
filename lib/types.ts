@@ -275,3 +275,57 @@ export type BaseAccountResponse = {
   metadata: Metadata;
   data: unknown;
 };
+
+export type ApiEntitlement = {
+  id: string;
+  fixed_charge: number;
+  price_name: string;
+  unit_amount: number;
+  feature_key: string;
+  feature_name: string;
+  entitlement_limit_max: number;
+  entitlement_limit_min: number;
+};
+
+export type Entitlement = {
+  id: string;
+  fixedCharge: number;
+  priceName: string;
+  unitAmount: number;
+  featureKey: string;
+  featureName: string;
+  entitlementLimitMax: number;
+  entitlementLimitMin: number;
+};
+
+export type ApiGetEntitlementsResponse = {
+  org_code: string;
+  plans: ApiPlan[];
+  entitlements: ApiEntitlement[];
+};
+
+export type ApiGetEntitlementResponse = {
+  org_code: string;
+  entitlement: ApiEntitlement;
+};
+
+export type getEntitlementsResponse = {
+  orgCode: string;
+  plans: Plan[];
+  entitlements: Entitlement[];
+};
+
+export type getEntitlementResponse = {
+  orgCode: string;
+  entitlement: Entitlement;
+};
+
+export type Plan = {
+  key: string;
+  subscribedOn: string; // ISO date string
+};
+
+export type ApiPlan = {
+  key: string;
+  subscribed_on: string; // ISO date string
+};
