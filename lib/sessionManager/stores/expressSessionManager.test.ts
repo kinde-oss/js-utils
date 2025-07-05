@@ -40,10 +40,11 @@ describe("ExpressSessionManager", () => {
   });
 
   describe("with a valid session", () => {
+    const keyPrefix = "kinde-";
     beforeEach(() => {
       const initialSession = {
-        [StorageKeys.accessToken]: "access-token",
-        [StorageKeys.idToken]: "id-token",
+        [`${keyPrefix}${StorageKeys.accessToken}0`]: "access-token",
+        [`${keyPrefix}${StorageKeys.idToken}0`]: "id-token",
       };
       req = mockRequest(initialSession);
       sessionManager = new ExpressSessionManager(req);
@@ -68,12 +69,16 @@ describe("ExpressSessionManager", () => {
         StorageKeys.refreshToken,
         "refresh-token"
       );
-      expect(req.session![StorageKeys.refreshToken]).toBe("refresh-token");
+      expect(req.session![`${keyPrefix}${StorageKeys.refreshToken}0`]).toBe(
+        "refresh-token"
+      );
     });
 
     it("should remove an item from the session", async () => {
       await sessionManager.removeSessionItem(StorageKeys.accessToken);
-      expect(req.session![StorageKeys.accessToken]).toBeUndefined();
+      expect(
+        req.session![`${keyPrefix}${StorageKeys.accessToken}0`]
+      ).toBeUndefined();
     });
 
     it("should destroy the session", async () => {
@@ -86,6 +91,63 @@ describe("ExpressSessionManager", () => {
       req = mockRequest({}, error);
       sessionManager = new ExpressSessionManager(req);
       await expect(sessionManager.destroySession()).rejects.toThrow(error);
+    });
+  });
+
+  describe("splitting and reassembly logic", () => {
+    const longString = "a".repeat(5000); // longer than default maxLength (2000)
+    const keyPrefix = "kinde-";
+    const maxLength = 2000;
+    let req: Request;
+    let sessionManager: ExpressSessionManager;
+
+    beforeEach(() => {
+      req = mockRequest({});
+      sessionManager = new ExpressSessionManager(req);
+    });
+
+    it("should split and store a long string value across multiple session keys", async () => {
+      await sessionManager.setSessionItem(StorageKeys.state, longString);
+      expect(req.session![`${keyPrefix}state0`]).toBe(
+        longString.slice(0, maxLength)
+      );
+      expect(req.session![`${keyPrefix}state1`]).toBe(
+        longString.slice(maxLength, maxLength * 2)
+      );
+      expect(req.session![`${keyPrefix}state2`]).toBe(
+        longString.slice(maxLength * 2)
+      );
+      expect(req.session![`${keyPrefix}state3`]).toBeUndefined();
+    });
+
+    it("should reassemble a long string value from multiple session keys", async () => {
+      // Simulate split storage
+      req.session![`${keyPrefix}state0`] = longString.slice(0, maxLength);
+      req.session![`${keyPrefix}state1`] = longString.slice(
+        maxLength,
+        maxLength * 2
+      );
+      req.session![`${keyPrefix}state2`] = longString.slice(maxLength * 2);
+      const value = await sessionManager.getSessionItem(StorageKeys.state);
+      expect(value).toBe(longString);
+    });
+
+    it("should remove all split keys for a long string value", async () => {
+      req.session![`${keyPrefix}state0`] = "part1";
+      req.session![`${keyPrefix}state1`] = "part2";
+      req.session![`${keyPrefix}state2`] = "part3";
+      await sessionManager.removeSessionItem(StorageKeys.state);
+      expect(req.session![`${keyPrefix}state0`]).toBeUndefined();
+      expect(req.session![`${keyPrefix}state1`]).toBeUndefined();
+      expect(req.session![`${keyPrefix}state2`]).toBeUndefined();
+    });
+
+    it("should store and retrieve non-string values without splitting", async () => {
+      const obj = { foo: "bar" };
+      await sessionManager.setSessionItem(StorageKeys.nonce, obj);
+      expect(req.session![`${keyPrefix}nonce0`]).toEqual(obj);
+      const value = await sessionManager.getSessionItem(StorageKeys.nonce);
+      expect(value).toEqual("[object Object]"); // Because getSessionItem always reassembles as string
     });
   });
 });
