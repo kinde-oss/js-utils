@@ -78,3 +78,4 @@ export const ExpoSecureStore: {
 };
 
 export type { SessionManager } from "./sessionManager";
+export { ExpressSessionManager } from "./sessionManager/stores/expressSessionManager";

@@ -145,7 +145,7 @@ export const exchangeAuthCode = async ({
       code_verifier: codeVerifier,
       grant_type: "authorization_code",
       redirect_uri: redirectURL,
-    }),
+    }).toString(),
   };
 
   let response;
