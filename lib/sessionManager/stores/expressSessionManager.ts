@@ -1,6 +1,8 @@
 // express is not in dev deps but in peer deps
 import type { Request } from "express";
 import { SessionBase, StorageKeys, type SessionManager } from "../types.js";
+import { storageSettings } from "../index.js";
+import { splitString } from "../../utils/splitString.js";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -45,8 +47,20 @@ export class ExpressSessionManager<V extends string = StorageKeys>
    * @returns {Promise<unknown | null>}
    */
   async getSessionItem(itemKey: V | StorageKeys): Promise<unknown | null> {
-    // ?? null ensures we consistently return null for missing keys
-    return this.req.session![itemKey as string] ?? null;
+    // Reassemble split string values if present
+    const baseKey = `${storageSettings.keyPrefix}${String(itemKey)}`;
+    if (this.req.session![`${baseKey}0`] === undefined) {
+      return null;
+    }
+    let itemValue = "";
+    let index = 0;
+    let key = `${baseKey}${index}`;
+    while (this.req.session![key] !== undefined) {
+      itemValue += this.req.session![key] as string;
+      index++;
+      key = `${baseKey}${index}`;
+    }
+    return itemValue;
   }
 
   /**
@@ -59,7 +73,18 @@ export class ExpressSessionManager<V extends string = StorageKeys>
     itemKey: V | StorageKeys,
     itemValue: unknown
   ): Promise<void> {
-    this.req.session![itemKey as string] = itemValue;
+    // Remove any existing split items first
+    await this.removeSessionItem(itemKey);
+    const baseKey = `${storageSettings.keyPrefix}${String(itemKey)}`;
+    if (typeof itemValue === "string") {
+      splitString(itemValue, storageSettings.maxLength).forEach(
+        (splitValue, index) => {
+          this.req.session![`${baseKey}${index}`] = splitValue;
+        }
+      );
+      return;
+    }
+    this.req.session![`${baseKey}0`] = itemValue;
   }
 
   /**
@@ -68,7 +93,13 @@ export class ExpressSessionManager<V extends string = StorageKeys>
    * @returns {Promise<void>}
    */
   async removeSessionItem(itemKey: V | StorageKeys): Promise<void> {
-    delete this.req.session![itemKey as string];
+    // Remove all items with the key prefix
+    const baseKey = `${storageSettings.keyPrefix}${String(itemKey)}`;
+    for (const key in this.req.session!) {
+      if (key.startsWith(baseKey)) {
+        delete this.req.session![key];
+      }
+    }
   }
 
   /**
