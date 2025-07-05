@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ExpressSessionManager } from "./expressSessionManager";
 import { StorageKeys } from "../types";
 import type { Request } from "express";
+import { storageSettings } from "../index.js";
 
 const mockRequest = (
   sessionData: Record<string, unknown> | null,
@@ -40,7 +41,7 @@ describe("ExpressSessionManager", () => {
   });
 
   describe("with a valid session", () => {
-    const keyPrefix = "kinde-";
+    const keyPrefix = storageSettings.keyPrefix;
     beforeEach(() => {
       const initialSession = {
         [`${keyPrefix}${StorageKeys.accessToken}0`]: "access-token",
@@ -96,8 +97,8 @@ describe("ExpressSessionManager", () => {
 
   describe("splitting and reassembly logic", () => {
     const longString = "a".repeat(5000); // longer than default maxLength (2000)
-    const keyPrefix = "kinde-";
-    const maxLength = 2000;
+    const keyPrefix = storageSettings.keyPrefix;
+    const maxLength = storageSettings.maxLength;
     let req: Request;
     let sessionManager: ExpressSessionManager;
 
