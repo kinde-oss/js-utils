@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../../sessionManager";
 import { setActiveStorage } from "..";
 import { createMockAccessToken } from "../testUtils";
-import { hasPermissions } from "./has-permissions";
+import { hasPermissions } from "./hasPermissions";
 
 const storage = new MemoryStorage();
 
@@ -12,7 +12,7 @@ describe("hasPermissions", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeSessionItem(StorageKeys.idToken);
     const result = await hasPermissions({ permissions: ["canEdit"] });
 
     expect(result).toBe(false);
@@ -41,9 +41,13 @@ describe("hasPermissions", () => {
   it("when user has all required permissions", async () => {
     await storage.setSessionItem(
       StorageKeys.accessToken,
-      createMockAccessToken({ permissions: ["canEdit", "canDelete", "canView"] }),
+      createMockAccessToken({
+        permissions: ["canEdit", "canDelete", "canView"],
+      }),
     );
-    const result = await hasPermissions({ permissions: ["canEdit", "canView"] });
+    const result = await hasPermissions({
+      permissions: ["canEdit", "canView"],
+    });
 
     expect(result).toBe(true);
   });
@@ -53,7 +57,9 @@ describe("hasPermissions", () => {
       StorageKeys.accessToken,
       createMockAccessToken({ permissions: ["canEdit"] }),
     );
-    const result = await hasPermissions({ permissions: ["canEdit", "canDelete"] });
+    const result = await hasPermissions({
+      permissions: ["canEdit", "canDelete"],
+    });
 
     expect(result).toBe(false);
   });
@@ -63,7 +69,9 @@ describe("hasPermissions", () => {
       StorageKeys.accessToken,
       createMockAccessToken({ permissions: ["canView"] }),
     );
-    const result = await hasPermissions({ permissions: ["canEdit", "canDelete"] });
+    const result = await hasPermissions({
+      permissions: ["canEdit", "canDelete"],
+    });
 
     expect(result).toBe(false);
   });
@@ -87,4 +95,4 @@ describe("hasPermissions", () => {
 
     expect(result).toBe(false);
   });
-}); 
+});

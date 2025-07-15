@@ -64,6 +64,10 @@ describe("index exports", () => {
 
       // token utils
       "getActiveStorage",
+      "has",
+      "hasPermissions",
+      "hasRoles",
+      "hasFeatureFlags",
       "hasActiveStorage",
       "clearActiveStorage",
       "clearInsecureStorage",

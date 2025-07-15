@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../../sessionManager";
 import { setActiveStorage } from "..";
 import { createMockAccessToken } from "../testUtils";
-import { hasFeatureFlags } from "./has-feature-flags";
+import { hasFeatureFlags } from "./hasFeatureFlags";
 
 const storage = new MemoryStorage();
 
@@ -12,7 +12,7 @@ describe("hasFeatureFlags", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeSessionItem(StorageKeys.idToken);
     const result = await hasFeatureFlags({ featureFlags: ["darkMode"] });
 
     expect(result).toBe(false);
@@ -57,7 +57,9 @@ describe("hasFeatureFlags", () => {
         },
       }),
     );
-    const result = await hasFeatureFlags({ featureFlags: ["darkMode", "newDashboard"] });
+    const result = await hasFeatureFlags({
+      featureFlags: ["darkMode", "newDashboard"],
+    });
 
     expect(result).toBe(true);
   });
@@ -71,7 +73,9 @@ describe("hasFeatureFlags", () => {
         },
       }),
     );
-    const result = await hasFeatureFlags({ featureFlags: ["darkMode", "newDashboard"] });
+    const result = await hasFeatureFlags({
+      featureFlags: ["darkMode", "newDashboard"],
+    });
 
     expect(result).toBe(false);
   });
@@ -85,7 +89,9 @@ describe("hasFeatureFlags", () => {
         },
       }),
     );
-    const result = await hasFeatureFlags({ featureFlags: ["darkMode", "newDashboard"] });
+    const result = await hasFeatureFlags({
+      featureFlags: ["darkMode", "newDashboard"],
+    });
 
     expect(result).toBe(false);
   });
@@ -139,8 +145,10 @@ describe("hasFeatureFlags", () => {
         },
       }),
     );
-    const result = await hasFeatureFlags({ featureFlags: ["darkMode", "theme", "maxItems"] });
+    const result = await hasFeatureFlags({
+      featureFlags: ["darkMode", "theme", "maxItems"],
+    });
 
     expect(result).toBe(true);
   });
-}); 
+});

@@ -12,7 +12,7 @@ describe("has", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeItems(StorageKeys.idToken);
     const result = await has({ roles: ["admin"], permissions: ["canEdit"] });
 
     expect(result).toBe(false);
@@ -269,4 +269,4 @@ describe("has", () => {
 
     expect(result).toBe(false);
   });
-}); 
+});

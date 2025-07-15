@@ -47,7 +47,7 @@ export {
   has,
   hasPermissions,
   hasRoles,
-  hasFeatureFlags
+  hasFeatureFlags,
 } from "./utils/token";
 
 export type {

@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, vi } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../../sessionManager";
 import { setActiveStorage } from "..";
 import { createMockAccessToken } from "../testUtils";
-import { hasRoles } from "./has-roles";
+import { hasRoles } from "./hasRoles";
 
 const storage = new MemoryStorage();
 
@@ -12,7 +12,7 @@ describe("hasRoles", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeSessionItem(StorageKeys.idToken);
     const result = await hasRoles({ roles: ["admin"] });
 
     expect(result).toBe(false);
@@ -152,4 +152,4 @@ describe("hasRoles", () => {
       "No roles found in token, ensure roles have been included in the token customisation within the application settings",
     );
   });
-}); 
+});
