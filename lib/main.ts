@@ -46,7 +46,8 @@ export {
   clearInsecureStorage,
   has,
   hasPermissions,
-  hasRoles
+  hasRoles,
+  hasFeatureFlags
 } from "./utils/token";
 
 export type {
