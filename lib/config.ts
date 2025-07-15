@@ -8,8 +8,10 @@ export interface KindeConfig {}
 interface BaseKindeConfig {
     roles: string[]
     permissions: string[]
+    featureFlags: string[]
 }
 
 export type InternalKindeConfig = Omit<BaseKindeConfig, keyof KindeConfig> & KindeConfig
 export type KindeRoles = InternalKindeConfig['roles'][number]
 export type KindePermissions = InternalKindeConfig['permissions'][number]
+export type KindeFeatureFlags = InternalKindeConfig['featureFlags'][number]

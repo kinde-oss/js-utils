@@ -1,10 +1,12 @@
-import { KindePermissions, KindeRoles } from "../../../config"
+import { KindePermissions, KindeRoles, KindeFeatureFlags } from "../../../config"
 import { hasPermissions } from "./has-permissions"
 import { hasRoles } from "./has-roles"
+import { hasFeatureFlags } from "./has-feature-flags"
 
 type HasParams = {
     roles?: KindeRoles[]
     permissions?: KindePermissions[]
+    featureFlags?: KindeFeatureFlags[]
 }
 
 export const has = async (params: HasParams): Promise<boolean> => {
@@ -16,6 +18,9 @@ export const has = async (params: HasParams): Promise<boolean> => {
         return false;
     }
 
+    if (params.featureFlags && !(await hasFeatureFlags({ featureFlags: params.featureFlags }))) {
+        return false;
+    }
 
     return true;
 }

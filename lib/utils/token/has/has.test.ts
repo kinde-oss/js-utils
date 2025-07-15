@@ -195,4 +195,78 @@ describe("has", () => {
 
     expect(result).toBe(false);
   });
+
+  it("when only feature flags provided and user has all feature flags", async () => {
+    await storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        roles: [{ id: "1", key: "admin", name: "admin" }],
+        permissions: ["canEdit"],
+        feature_flags: {
+          darkMode: { v: true, t: "b" },
+          newDashboard: { v: "enabled", t: "s" },
+        },
+      }),
+    );
+    const result = await has({ featureFlags: ["darkMode"] });
+
+    expect(result).toBe(true);
+  });
+
+  it("when only feature flags provided and user missing feature flags", async () => {
+    await storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        roles: [{ id: "1", key: "admin", name: "admin" }],
+        permissions: ["canEdit"],
+        feature_flags: {
+          otherFlag: { v: true, t: "b" },
+        },
+      }),
+    );
+    const result = await has({ featureFlags: ["darkMode"] });
+
+    expect(result).toBe(false);
+  });
+
+  it("when roles, permissions, and feature flags all provided and user has all", async () => {
+    await storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        roles: [{ id: "1", key: "admin", name: "admin" }],
+        permissions: ["canEdit"],
+        feature_flags: {
+          darkMode: { v: true, t: "b" },
+          newDashboard: { v: "enabled", t: "s" },
+        },
+      }),
+    );
+    const result = await has({
+      roles: ["admin"],
+      permissions: ["canEdit"],
+      featureFlags: ["darkMode"],
+    });
+
+    expect(result).toBe(true);
+  });
+
+  it("when roles, permissions, and feature flags all provided but user missing feature flags", async () => {
+    await storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        roles: [{ id: "1", key: "admin", name: "admin" }],
+        permissions: ["canEdit"],
+        feature_flags: {
+          otherFlag: { v: true, t: "b" },
+        },
+      }),
+    );
+    const result = await has({
+      roles: ["admin"],
+      permissions: ["canEdit"],
+      featureFlags: ["darkMode"],
+    });
+
+    expect(result).toBe(false);
+  });
 }); 
