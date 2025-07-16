@@ -14,6 +14,7 @@ const isCustomRolesCondition = (role: HasRoleOptions) => {
 
 export type HasRolesParams = {
   roles: HasRoleOptions[];
+  forceApi?: boolean;
 };
 
 export const hasRoles = async (params: HasRolesParams): Promise<boolean> => {
@@ -24,12 +25,12 @@ export const hasRoles = async (params: HasRolesParams): Promise<boolean> => {
   }
 
   const { roles } = params;
+  const accountRoles = await getRoles({ forceApi: params.forceApi });
 
   const roleChecks = await Promise.all(
     roles.map(async (role) => {
       if (isCustomRolesCondition(role)) {
-        const userRoles = await getRoles();
-        const matchingRole = userRoles.find(
+        const matchingRole = accountRoles.find(
           (userRole) => userRole.key === role.role,
         );
         if (!matchingRole) {
@@ -38,8 +39,7 @@ export const hasRoles = async (params: HasRolesParams): Promise<boolean> => {
         const result = await role.condition(matchingRole);
         return result;
       } else {
-        const userRoles = await getRoles();
-        const userRoleKeys = userRoles.map((userRole) => userRole.key);
+        const userRoleKeys = accountRoles.map((userRole) => userRole.key);
         return userRoleKeys.includes(role);
       }
     }),
