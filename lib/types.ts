@@ -349,3 +349,11 @@ export type InternalKindeConfig = Omit<BaseKindeConfig, keyof KindeConfig> &
 export type KindeRoles = InternalKindeConfig["roles"][number];
 export type KindePermissions = InternalKindeConfig["permissions"][number];
 export type KindeFeatureFlags = InternalKindeConfig["featureFlags"][number];
+export type CustomConditionCallback<T> =
+  | ((item: T) => Promise<boolean>)
+  | ((item: T) => boolean);
+export type CustomCondition<TKey extends PropertyKey, TValue, TCallbackItem> = {
+  [P in TKey]: TValue;
+} & {
+  condition: CustomConditionCallback<TCallbackItem>;
+};
