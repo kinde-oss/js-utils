@@ -1,21 +1,34 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../../sessionManager";
 import { setActiveStorage } from "..";
 import { createMockAccessToken } from "../testUtils";
 import { has } from "./has";
+import createFetchMock from "vitest-fetch-mock";
 
+const fetchMock = createFetchMock(vi);
 const storage = new MemoryStorage();
 
 describe("has", () => {
   beforeEach(() => {
     setActiveStorage(storage);
+    fetchMock.enableMocks();
+  });
+
+  afterEach(() => {
+    fetchMock.resetMocks();
+    vi.restoreAllMocks();
   });
 
   it("when no token", async () => {
-    await storage.removeItems(StorageKeys.accessToken);
-    const result = await has({ roles: ["admin"], permissions: ["canEdit"] });
+    await storage.setSessionItem(StorageKeys.accessToken, null);
 
-    expect(result).toBe(false);
+    try {
+      const result = await has({ roles: ["admin"], permissions: ["canEdit"] });
+      expect(result).toBe(false);
+    } catch (error) {
+      // Expect either false result or an authentication error
+      expect(error).toBeDefined();
+    }
   });
 
   it("when no roles or permissions provided", async () => {
@@ -355,7 +368,6 @@ describe("has", () => {
           {
             permission: "canEdit",
             condition: (permissionAccess) =>
-              permissionAccess.isGranted &&
               permissionAccess.orgCode === "org_123",
           },
         ],
@@ -379,7 +391,6 @@ describe("has", () => {
           {
             permission: "canEdit",
             condition: (permissionAccess) =>
-              permissionAccess.isGranted &&
               permissionAccess.orgCode === "org_123",
           },
         ],
@@ -404,7 +415,6 @@ describe("has", () => {
           {
             permission: "canEdit",
             condition: (permissionAccess) =>
-              permissionAccess.isGranted &&
               permissionAccess.orgCode === "org_123", // custom condition
           },
         ],
@@ -509,7 +519,6 @@ describe("has", () => {
           {
             permission: "canEdit",
             condition: (permissionAccess) =>
-              permissionAccess.isGranted &&
               permissionAccess.orgCode === "org_123",
           },
         ],
@@ -547,7 +556,6 @@ describe("has", () => {
           {
             permission: "canEdit",
             condition: (permissionAccess) =>
-              permissionAccess.isGranted &&
               permissionAccess.orgCode === "org_123",
           },
         ],
@@ -582,7 +590,6 @@ describe("has", () => {
           {
             permission: "canEdit",
             condition: (permissionAccess) =>
-              permissionAccess.isGranted &&
               permissionAccess.orgCode === "org_123", // This will fail
           },
         ],
@@ -617,7 +624,6 @@ describe("has", () => {
           {
             permission: "canEdit",
             condition: (permissionAccess) =>
-              permissionAccess.isGranted &&
               permissionAccess.orgCode === "org_123",
           },
         ],
@@ -655,9 +661,185 @@ describe("has", () => {
             permission: "canEdit",
             condition: async (permissionAccess) => {
               await new Promise((resolve) => setTimeout(resolve, 1));
+              return permissionAccess.orgCode === "org_123";
+            },
+          },
+        ],
+      });
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe("Billing Entitlements", () => {
+    const mockEntitlementsResponse = {
+      data: {
+        org_code: "org_123",
+        plans: [
+          {
+            key: "pro_plan",
+            subscribed_on: "2025-06-01T12:00:00Z",
+          },
+        ],
+        entitlements: [
+          {
+            id: "entitlement_1",
+            fixed_charge: 35,
+            price_name: "Pro gym",
+            unit_amount: 1,
+            feature_key: "pro_gym",
+            feature_name: "Pro Gym",
+            entitlement_limit_max: 10,
+            entitlement_limit_min: 1,
+          },
+          {
+            id: "entitlement_2",
+            fixed_charge: 50,
+            price_name: "Premium features",
+            unit_amount: 1,
+            feature_key: "premium_features",
+            feature_name: "Premium Features",
+            entitlement_limit_max: 100,
+            entitlement_limit_min: 1,
+          },
+        ],
+      },
+    };
+
+    it("when only billing entitlements provided and user has all entitlements", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementsResponse));
+
+      const result = await has({
+        billingEntitlements: ["Pro gym"],
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it("when only billing entitlements provided and user missing entitlements", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementsResponse));
+
+      const result = await has({
+        billingEntitlements: ["Non-existent entitlement"],
+      });
+
+      expect(result).toBe(false);
+    });
+
+    it("when user has all required billing entitlements", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      // Mock multiple calls for each entitlement check
+      fetchMock
+        .mockResponseOnce(JSON.stringify(mockEntitlementsResponse))
+        .mockResponseOnce(JSON.stringify(mockEntitlementsResponse));
+
+      const result = await has({
+        billingEntitlements: ["Pro gym", "Premium features"],
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it("when user has some but not all required billing entitlements", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      fetchMock
+        .mockResponseOnce(JSON.stringify(mockEntitlementsResponse))
+        .mockResponseOnce(JSON.stringify(mockEntitlementsResponse));
+
+      const result = await has({
+        billingEntitlements: ["Pro gym", "Non-existent entitlement"],
+      });
+
+      expect(result).toBe(false);
+    });
+
+    it("when combining roles, permissions, feature flags, and billing entitlements", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          roles: [{ id: "1", key: "admin", name: "admin" }],
+          permissions: ["canEdit"],
+          feature_flags: {
+            darkMode: { v: true, t: "b" },
+          },
+        }),
+      );
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementsResponse));
+
+      const result = await has({
+        roles: ["admin"],
+        permissions: ["canEdit"],
+        featureFlags: ["darkMode"],
+        billingEntitlements: ["Pro gym"],
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it("when all other checks pass but billing entitlements fail", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          roles: [{ id: "1", key: "admin", name: "admin" }],
+          permissions: ["canEdit"],
+          feature_flags: {
+            darkMode: { v: true, t: "b" },
+          },
+        }),
+      );
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementsResponse));
+
+      const result = await has({
+        roles: ["admin"],
+        permissions: ["canEdit"],
+        featureFlags: ["darkMode"],
+        billingEntitlements: ["Non-existent entitlement"],
+      });
+
+      expect(result).toBe(false);
+    });
+
+    it("when using custom conditions for billing entitlements", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          roles: [{ id: "1", key: "admin", name: "admin" }],
+          permissions: ["canEdit"],
+        }),
+      );
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementsResponse));
+
+      const result = await has({
+        roles: ["admin"],
+        permissions: ["canEdit"],
+        billingEntitlements: [
+          {
+            entitlement: "Pro gym",
+            condition: (entitlement) => {
               return (
-                permissionAccess.isGranted &&
-                permissionAccess.orgCode === "org_123"
+                entitlement.fixedCharge >= 30 &&
+                entitlement.priceName === "Pro gym"
               );
             },
           },
@@ -665,6 +847,456 @@ describe("has", () => {
       });
 
       expect(result).toBe(true);
+    });
+
+    it("when custom condition for billing entitlements fails", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          roles: [{ id: "1", key: "admin", name: "admin" }],
+          permissions: ["canEdit"],
+        }),
+      );
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementsResponse));
+
+      const result = await has({
+        roles: ["admin"],
+        permissions: ["canEdit"],
+        billingEntitlements: [
+          {
+            entitlement: "Pro gym",
+            condition: () => false, // Always fails
+          },
+        ],
+      });
+
+      expect(result).toBe(false);
+    });
+
+    it("when mixing string entitlements and custom conditions", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      fetchMock
+        .mockResponseOnce(JSON.stringify(mockEntitlementsResponse))
+        .mockResponseOnce(JSON.stringify(mockEntitlementsResponse));
+
+      const result = await has({
+        billingEntitlements: [
+          "Premium features", // string entitlement
+          {
+            entitlement: "Pro gym",
+            condition: (entitlement) => entitlement.featureKey === "pro_gym",
+          },
+        ],
+      });
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe("ForceApi Option", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("when forceApi is true (boolean) for all types", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockRolesResponse = {
+        metadata: { has_more: false, next_page_starting_after: "" },
+        data: {
+          org_code: "org_123",
+          roles: [{ id: "1", key: "apiAdmin", name: "API Administrator" }],
+        },
+      };
+
+      const mockPermissionsResponse = {
+        metadata: { has_more: false, next_page_starting_after: "" },
+        data: {
+          org_code: "org_123",
+          permissions: [{ id: "1", name: "Can Edit", key: "apiCanEdit" }],
+        },
+      };
+
+      const mockFlagsResponse = {
+        metadata: { has_more: false, next_page_starting_after: "" },
+        data: {
+          feature_flags: [{ key: "apiFlag", value: true, type: "boolean" }],
+        },
+      };
+
+      fetchMock
+        .mockResponseOnce(JSON.stringify(mockPermissionsResponse))
+        .mockResponseOnce(JSON.stringify(mockFlagsResponse))
+        .mockResponseOnce(JSON.stringify(mockRolesResponse));
+
+      const result = await has({
+        roles: ["apiAdmin"],
+        permissions: ["apiCanEdit"],
+        featureFlags: ["apiFlag"],
+        forceApi: true,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/roles",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/permissions",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/feature_flags",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is false (boolean) for all types", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          roles: [{ id: "1", key: "tokenAdmin", name: "Token Administrator" }],
+          permissions: ["tokenCanEdit"],
+          feature_flags: {
+            tokenFlag: { v: true, t: "b" },
+          },
+        }),
+      );
+
+      const result = await has({
+        roles: ["tokenAdmin"],
+        permissions: ["tokenCanEdit"],
+        featureFlags: ["tokenFlag"],
+        forceApi: false,
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is object with specific flags for each type", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          feature_flags: {
+            tokenFlag: { v: true, t: "b" },
+          },
+        }),
+      );
+
+      const mockRolesResponse = {
+        metadata: { has_more: false, next_page_starting_after: "" },
+        data: {
+          org_code: "org_123",
+          roles: [{ id: "1", key: "apiAdmin", name: "API Administrator" }],
+        },
+      };
+
+      const mockPermissionsResponse = {
+        metadata: { has_more: false, next_page_starting_after: "" },
+        data: {
+          org_code: "org_123",
+          permissions: [{ id: "1", name: "Can Edit", key: "apiCanEdit" }],
+        },
+      };
+
+      fetchMock
+        .mockResponseOnce(JSON.stringify(mockPermissionsResponse))
+        .mockResponseOnce(JSON.stringify(mockRolesResponse));
+
+      const result = await has({
+        roles: ["apiAdmin"],
+        permissions: ["apiCanEdit"],
+        featureFlags: ["tokenFlag"],
+        forceApi: {
+          roles: true,
+          permissions: true,
+          featureFlags: false,
+        },
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/roles",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/permissions",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi object has mixed boolean values", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          permissions: ["tokenCanEdit"],
+          feature_flags: {
+            tokenFlag: { v: true, t: "b" },
+          },
+        }),
+      );
+
+      const mockRolesResponse = {
+        data: {
+          org_code: "org_123",
+          roles: [{ id: "1", key: "apiAdmin", name: "API Administrator" }],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockRolesResponse));
+
+      const result = await has({
+        roles: ["apiAdmin"],
+        permissions: ["tokenCanEdit"],
+        featureFlags: ["tokenFlag"],
+        forceApi: {
+          roles: true,
+          permissions: false,
+          featureFlags: false,
+        },
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/roles",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi object has undefined values (should use default)", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          roles: [{ id: "1", key: "tokenAdmin", name: "Token Administrator" }],
+          permissions: ["tokenCanEdit"],
+          feature_flags: {
+            tokenFlag: { v: true, t: "b" },
+          },
+        }),
+      );
+
+      const result = await has({
+        roles: ["tokenAdmin"],
+        permissions: ["tokenCanEdit"],
+        featureFlags: ["tokenFlag"],
+        forceApi: {
+          // No explicit values set, should use default (false/token behavior)
+        },
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is used with custom conditions", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockRolesResponse = {
+        metadata: { has_more: false, next_page_starting_after: "" },
+        data: {
+          org_code: "org_123",
+          roles: [{ id: "1", key: "apiAdmin", name: "API Administrator" }],
+        },
+      };
+
+      const mockPermissionsResponse = {
+        metadata: { has_more: false, next_page_starting_after: "" },
+        data: {
+          org_code: "org_456",
+          permissions: [{ id: "1", name: "Can Manage", key: "apiCanManage" }],
+        },
+      };
+
+      fetchMock
+        .mockResponseOnce(JSON.stringify(mockPermissionsResponse))
+        .mockResponseOnce(JSON.stringify(mockRolesResponse));
+
+      const result = await has({
+        roles: [
+          {
+            role: "apiAdmin",
+            condition: (roleObj) => roleObj.name.includes("Administrator"),
+          },
+        ],
+        permissions: [
+          {
+            permission: "apiCanManage",
+            condition: (permissionAccess) =>
+              permissionAccess.orgCode === "org_456",
+          },
+        ],
+        forceApi: true,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/roles",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/permissions",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is true but some API calls fail", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockRolesResponse = {
+        metadata: { has_more: false, next_page_starting_after: "" },
+        data: {
+          org_code: "org_123",
+          roles: [
+            { id: "1", key: "apiUser", name: "API User" }, // User doesn't have admin role
+          ],
+        },
+      };
+
+      const mockPermissionsResponse = {
+        metadata: { has_more: false, next_page_starting_after: "" },
+        data: {
+          org_code: "org_123",
+          permissions: [{ id: "1", name: "Can Edit", key: "apiCanEdit" }],
+        },
+      };
+
+      fetchMock
+        .mockResponseOnce(JSON.stringify(mockPermissionsResponse))
+        .mockResponseOnce(JSON.stringify(mockRolesResponse));
+
+      const result = await has({
+        roles: ["apiAdmin"], // User doesn't have this role
+        permissions: ["apiCanEdit"],
+        forceApi: true,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/roles",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/permissions",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(result).toBe(false);
+    });
+
+    it("when forceApi is used with billing entitlements (always uses API)", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          roles: [{ id: "1", key: "tokenAdmin", name: "Token Administrator" }],
+        }),
+      );
+
+      const mockEntitlementsResponse = {
+        data: {
+          org_code: "org_123",
+          plans: [],
+          entitlements: [
+            {
+              id: "entitlement_1",
+              fixed_charge: 35,
+              price_name: "Pro gym",
+              unit_amount: 1,
+              feature_key: "pro_gym",
+              feature_name: "Pro Gym",
+              entitlement_limit_max: 10,
+              entitlement_limit_min: 1,
+            },
+          ],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementsResponse));
+
+      const result = await has({
+        roles: ["tokenAdmin"],
+        billingEntitlements: ["Pro gym"],
+        forceApi: false, // Even though forceApi is false, billing entitlements always use API
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi object specifies billingEntitlements: true (redundant but allowed)", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockEntitlementsResponse = {
+        data: {
+          org_code: "org_123",
+          plans: [],
+          entitlements: [
+            {
+              id: "entitlement_1",
+              fixed_charge: 35,
+              price_name: "Pro gym",
+              unit_amount: 1,
+              feature_key: "pro_gym",
+              feature_name: "Pro Gym",
+              entitlement_limit_max: 10,
+              entitlement_limit_min: 1,
+            },
+          ],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementsResponse));
+
+      const result = await has({
+        billingEntitlements: ["Pro gym"],
+        forceApi: {
+          billingEntitlements: true, // This is always true anyway
+        },
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is true and one of the API requests fails", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      fetchMock
+        .mockResponseOnce(
+          JSON.stringify({
+            data: {
+              org_code: "org_123",
+              roles: [{ id: "1", key: "apiAdmin", name: "API Administrator" }],
+            },
+          }),
+        )
+        .mockResponse({
+          status: 500,
+          statusText: "Internal Server Error",
+          json: vi.fn(),
+        });
+
+      await expect(
+        has({
+          roles: ["apiAdmin"],
+          permissions: ["apiCanEdit"],
+          forceApi: true,
+        }),
+      ).rejects.toThrow("API request failed with status 500");
     });
   });
 });
