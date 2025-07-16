@@ -86,4 +86,248 @@ describe("getRoles - Hasura", () => {
 
     expect(idToken).toStrictEqual([{ id: "1", key: "admin", name: "Admin" }]);
   });
+
+  describe("forceApi option", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("when forceApi is true, should fetch roles from API", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          roles: undefined,
+          "x-hasura-roles": [{ id: "1", key: "tokenAdmin", name: "Token Admin" }],
+        }),
+      );
+
+      const mockApiResponse = {
+        data: {
+          org_code: "org_123",
+          roles: [
+            { id: "2", key: "apiAdmin", name: "API Administrator" },
+            { id: "3", key: "apiUser", name: "API User" },
+          ],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await getRoles({ forceApi: true });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/roles",
+        expect.objectContaining({
+          method: "GET",
+          headers: expect.objectContaining({
+            Authorization: expect.stringContaining("Bearer"),
+            "Content-Type": "application/json",
+          }),
+        }),
+      );
+
+      expect(result).toEqual([
+        { id: "2", key: "apiAdmin", name: "API Administrator" },
+        { id: "3", key: "apiUser", name: "API User" },
+      ]);
+    });
+
+    it("when forceApi is false, should use token x-hasura-roles", async () => {
+      // Mock getClaim to return a value so it doesn't go to API
+      const getClaimSpy = vi
+        .spyOn(await import("./getClaim"), "getClaim")
+        .mockResolvedValue({ name: "roles", value: true });
+
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          roles: undefined,
+          "x-hasura-roles": [{ id: "1", key: "tokenAdmin", name: "Token Admin" }],
+        }),
+      );
+
+      const result = await getRoles({ forceApi: false });
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(result).toEqual([
+        { id: "1", key: "tokenAdmin", name: "Token Admin" },
+      ]);
+
+      getClaimSpy.mockRestore();
+    });
+
+    it("when forceApi is not provided but token has no x-hasura-roles, should call API", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({ roles: undefined, "x-hasura-roles": undefined }),
+      );
+
+      const mockApiResponse = {
+        data: {
+          org_code: "org_123",
+          roles: [{ id: "1", key: "apiAdmin", name: "API Administrator" }],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await getRoles();
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/roles",
+        expect.objectContaining({
+          method: "GET",
+        }),
+      );
+
+      expect(result).toEqual([
+        { id: "1", key: "apiAdmin", name: "API Administrator" },
+      ]);
+    });
+
+    it("when forceApi is not provided and token has x-hasura-roles, should use token", async () => {
+      // Mock getClaim to return a value so it doesn't go to API
+      const getClaimSpy = vi
+        .spyOn(await import("./getClaim"), "getClaim")
+        .mockResolvedValue({ name: "roles", value: true });
+
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          roles: undefined,
+          "x-hasura-roles": [{ id: "1", key: "tokenAdmin", name: "Token Admin" }],
+        }),
+      );
+
+      const result = await getRoles();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(result).toEqual([
+        { id: "1", key: "tokenAdmin", name: "Token Admin" },
+      ]);
+
+      getClaimSpy.mockRestore();
+    });
+
+    it("when API returns empty roles array", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({ roles: undefined, "x-hasura-roles": undefined }),
+      );
+
+      const mockApiResponse = {
+        data: {
+          org_code: "org_123",
+          roles: [],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await getRoles({ forceApi: true });
+
+      expect(result).toEqual([]);
+    });
+
+    it("when API request fails, should throw error", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({ roles: undefined, "x-hasura-roles": undefined }),
+      );
+
+      fetchMock.mockResponse({
+        status: 401,
+        statusText: "Unauthorized",
+        json: vi.fn(),
+      });
+
+      await expect(getRoles({ forceApi: true })).rejects.toThrow(
+        "API request failed with status 401",
+      );
+    });
+
+    it("when API returns multiple roles with different properties", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({ roles: undefined, "x-hasura-roles": undefined }),
+      );
+
+      const mockApiResponse = {
+        data: {
+          org_code: "org_456",
+          roles: [
+            { id: "role_1", key: "super_admin", name: "Super Administrator" },
+            { id: "role_2", key: "editor", name: "Content Editor" },
+            { id: "role_3", key: "viewer", name: "Read Only User" },
+          ],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await getRoles({ forceApi: true });
+
+      expect(result).toEqual([
+        { id: "role_1", key: "super_admin", name: "Super Administrator" },
+        { id: "role_2", key: "editor", name: "Content Editor" },
+        { id: "role_3", key: "viewer", name: "Read Only User" },
+      ]);
+    });
+
+    it("when token has roles instead of x-hasura-roles", async () => {
+      // Mock getClaim to return a value so it doesn't go to API
+      const getClaimSpy = vi
+        .spyOn(await import("./getClaim"), "getClaim")
+        .mockResolvedValue({ name: "roles", value: true });
+
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          roles: [{ id: "1", key: "regularAdmin", name: "Regular Admin" }],
+          "x-hasura-roles": undefined,
+        }),
+      );
+
+      const result = await getRoles();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(result).toEqual([
+        { id: "1", key: "regularAdmin", name: "Regular Admin" },
+      ]);
+
+      getClaimSpy.mockRestore();
+    });
+
+    it("when forceApi is true and token has roles, should still use API", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          roles: [{ id: "1", key: "regularAdmin", name: "Regular Admin" }],
+          "x-hasura-roles": undefined,
+        }),
+      );
+
+      const mockApiResponse = {
+        data: {
+          org_code: "org_789",
+          roles: [{ id: "2", key: "apiSuperAdmin", name: "API Super Admin" }],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await getRoles({ forceApi: true });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/roles",
+        expect.objectContaining({
+          method: "GET",
+        }),
+      );
+
+      expect(result).toEqual([
+        { id: "2", key: "apiSuperAdmin", name: "API Super Admin" },
+      ]);
+    });
+  });
 });
