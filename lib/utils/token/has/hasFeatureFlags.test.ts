@@ -1,14 +1,22 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../../sessionManager";
 import { setActiveStorage } from "..";
 import { createMockAccessToken } from "../testUtils";
 import { hasFeatureFlags } from "./hasFeatureFlags";
+import createFetchMock from "vitest-fetch-mock";
 
+const fetchMock = createFetchMock(vi);
 const storage = new MemoryStorage();
 
 describe("hasFeatureFlags", () => {
   beforeEach(() => {
     setActiveStorage(storage);
+    fetchMock.enableMocks();
+  });
+
+  afterEach(() => {
+    fetchMock.resetMocks();
+    vi.restoreAllMocks();
   });
 
   it("when no token", async () => {
@@ -28,6 +36,7 @@ describe("hasFeatureFlags", () => {
       }),
     );
 
+    // @ts-expect-error - no params provided
     const result = await hasFeatureFlags();
 
     expect(result).toBe(true);
@@ -42,6 +51,8 @@ describe("hasFeatureFlags", () => {
         },
       }),
     );
+
+    // @ts-expect-error - no params provided
     const result = await hasFeatureFlags({});
 
     expect(result).toBe(true);
@@ -294,6 +305,192 @@ describe("hasFeatureFlags", () => {
       });
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe("forceApi option", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("when forceApi is true and feature flags are fetched from API", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockApiResponse = {
+        data: {
+          feature_flags: [
+            { key: "apiFlag", value: true, type: "boolean" },
+            { key: "apiTheme", value: "dark", type: "string" },
+          ],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await hasFeatureFlags({
+        featureFlags: ["apiFlag"],
+        forceApi: true,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/feature_flags",
+        expect.objectContaining({
+          method: "GET",
+          headers: expect.objectContaining({
+            Authorization: expect.stringContaining("Bearer"),
+            "Content-Type": "application/json",
+          }),
+        }),
+      );
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is false and feature flags are read from token", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          feature_flags: {
+            tokenFlag: { v: true, t: "b" },
+          },
+        }),
+      );
+
+      const result = await hasFeatureFlags({
+        featureFlags: ["tokenFlag"],
+        forceApi: false,
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is not provided and defaults to token behavior", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          feature_flags: {
+            defaultFlag: { v: true, t: "b" },
+          },
+        }),
+      );
+
+      const result = await hasFeatureFlags({
+        featureFlags: ["defaultFlag"],
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is true with KV conditions", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockApiResponse = {
+        data: {
+          feature_flags: [
+            { key: "apiTheme", value: "dark", type: "string" },
+            { key: "apiMaxUsers", value: 100, type: "integer" },
+          ],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await hasFeatureFlags({
+        featureFlags: [
+          { flag: "apiTheme", value: "dark" },
+          { flag: "apiMaxUsers", value: 100 },
+        ],
+        forceApi: true,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/feature_flags",
+        expect.objectContaining({
+          method: "GET",
+        }),
+      );
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is true but API returns no matching flags", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockApiResponse = {
+        data: {
+          feature_flags: [{ key: "otherFlag", value: true, type: "boolean" }],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await hasFeatureFlags({
+        featureFlags: ["nonExistentFlag"],
+        forceApi: true,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/feature_flags",
+        expect.objectContaining({
+          method: "GET",
+        }),
+      );
+      expect(result).toBe(false);
+    });
+
+    it("when forceApi is true and API returns empty feature flags", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockApiResponse = {
+        data: {
+          feature_flags: [],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await hasFeatureFlags({
+        featureFlags: ["anyFlag"],
+        forceApi: true,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/feature_flags",
+        expect.objectContaining({
+          method: "GET",
+        }),
+      );
+      expect(result).toBe(false);
+    });
+
+    it("when forceApi is true and API request fails", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      fetchMock.mockResponse({
+        status: 500,
+        statusText: "Internal Server Error",
+        json: vi.fn(),
+      });
+
+      await expect(
+        hasFeatureFlags({
+          featureFlags: ["anyFlag"],
+          forceApi: true,
+        }),
+      ).rejects.toThrow("API request failed with status 500");
     });
   });
 });

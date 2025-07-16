@@ -1,5 +1,5 @@
-import { KindeFeatureFlags } from "../../../types";
-import { getFlag } from "../getFlag";
+import { type KindeFeatureFlags } from "../../../types";
+import { getFlags } from "../getFlags";
 
 type FeatureFlagKVCondition = {
   flag: KindeFeatureFlags;
@@ -10,6 +10,7 @@ type HasFeatureFlagOptions = KindeFeatureFlags | FeatureFlagKVCondition;
 
 export type HasFeatureFlagsParams = {
   featureFlags: HasFeatureFlagOptions[];
+  forceApi?: boolean;
 };
 
 const isFeatureFlagKVCondition = (flag: HasFeatureFlagOptions) => {
@@ -30,15 +31,18 @@ export const hasFeatureFlags = async (
   }
 
   const { featureFlags } = params;
+  const accountFlags = await getFlags({ forceApi: params.forceApi });
 
   const featureFlagChecks = await Promise.all(
     featureFlags.map(async (featureFlag) => {
       if (isFeatureFlagKVCondition(featureFlag)) {
-        const flagValue = await getFlag(featureFlag.flag);
-        return flagValue !== null && flagValue === featureFlag.value;
+        const flag = accountFlags?.find(
+          (flag) => flag.key === featureFlag.flag,
+        );
+        return flag !== undefined && flag.value === featureFlag.value;
       } else {
-        const flagValue = await getFlag(featureFlag);
-        return flagValue !== null;
+        const flag = accountFlags?.find((flag) => flag.key === featureFlag);
+        return flag !== undefined;
       }
     }),
   );
