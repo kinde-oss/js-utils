@@ -33,19 +33,17 @@ export const hasFeatureFlags = async (
   const { featureFlags } = params;
   const accountFlags = await getFlags({ forceApi: params.forceApi });
 
-  const featureFlagChecks = await Promise.all(
-    featureFlags.map(async (featureFlag) => {
-      if (isFeatureFlagKVCondition(featureFlag)) {
-        const flag = accountFlags?.find(
-          (flag) => flag.key === featureFlag.flag,
-        );
-        return flag !== undefined && flag.value === featureFlag.value;
-      } else {
-        const flag = accountFlags?.find((flag) => flag.key === featureFlag);
-        return flag !== undefined;
-      }
-    }),
-  );
+  const featureFlagChecks = featureFlags.map((featureFlag) => {
+    if (isFeatureFlagKVCondition(featureFlag)) {
+      const flag = accountFlags?.find(
+        (flag) => flag.key === featureFlag.flag,
+      );
+      return flag !== undefined && flag.value === featureFlag.value;
+    } else {
+      const flag = accountFlags?.find((flag) => flag.key === featureFlag);
+      return flag !== undefined;
+    }
+  });
 
   return featureFlagChecks.every((result) => result === true);
 };
