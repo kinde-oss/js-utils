@@ -7,11 +7,13 @@ import {
 } from "../../types";
 import { callAccountApiPaginated } from "./accountApi/callAccountApi";
 
+export type EntitlementsResponse = BaseAccountResponse & {
+  data: ApiGetEntitlementsResponse;
+};
+
 /**
  * Fetches entitlements from the account API.
  * @returns {Promise<{ name: keyof T; value: V } | EntitlementsResponse>}
- * @template T - Type of the decoded JWT.
- * @template V - Type of the entitlement value.
  */
 export const getEntitlements = async (): Promise<getEntitlementsResponse> => {
   const response = await callAccountApiPaginated<EntitlementsResponse>({
@@ -34,8 +36,4 @@ export const getEntitlements = async (): Promise<getEntitlementsResponse> => {
       entitlementLimitMin: entitlement.entitlement_limit_min,
     })),
   };
-};
-
-type EntitlementsResponse = BaseAccountResponse & {
-  data: ApiGetEntitlementsResponse;
 };

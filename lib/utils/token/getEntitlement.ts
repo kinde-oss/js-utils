@@ -5,11 +5,14 @@ import {
 } from "../../types";
 import { callAccountApi } from "./accountApi/callAccountApi";
 
+type EntitlementResponse = BaseAccountResponse & {
+  data: ApiGetEntitlementResponse;
+};
+
 /**
- * Fetches entitlements from the account API.
- * @returns {Promise<{ name: keyof T; value: V } | EntitlementsResponse>}
- * @template T - Type of the decoded JWT.
- * @template V - Type of the entitlement value.
+ * Fetches a single entitlement from the account API.
+ * @param key - The entitlement key to fetch
+ * @returns {Promise<{ name: keyof T; value: V } | EntitlementResponse>}
  */
 export const getEntitlement = async (
   key: string,
@@ -30,8 +33,4 @@ export const getEntitlement = async (
       entitlementLimitMin: response.data.entitlement.entitlement_limit_min,
     },
   };
-};
-
-type EntitlementResponse = BaseAccountResponse & {
-  data: ApiGetEntitlementResponse;
 };
