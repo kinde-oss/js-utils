@@ -1,6 +1,12 @@
 import { SessionManager } from "../../sessionManager";
 
-export { has, hasPermissions, hasRoles, hasFeatureFlags, hasBillingEntitlements } from "./has";
+export {
+  has,
+  hasPermissions,
+  hasRoles,
+  hasFeatureFlags,
+  hasBillingEntitlements,
+} from "./has";
 export { getClaim } from "./getClaim";
 export { getClaims } from "./getClaims";
 export { getCurrentOrganization } from "./getCurrentOrganization";
