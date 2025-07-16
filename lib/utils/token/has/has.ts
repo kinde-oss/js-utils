@@ -11,7 +11,7 @@ type HasForceApi = {
   permissions?: boolean;
   featureFlags?: boolean;
   /**
-   * Billing entitlements always use the API as they're unavailble in the token.
+   * Billing entitlements always use the API as they're unavailable in the token.
    */
   billingEntitlements?: true;
 };
