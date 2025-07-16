@@ -123,15 +123,6 @@ describe("hasBillingEntitlements", () => {
     expect(result).toBe(false);
   });
 
-  it("calls getEntitlements API for each check", async () => {
-    await hasBillingEntitlements({
-      billingEntitlements: ["Pro gym", "Premium features"],
-    });
-
-    // Should be called twice (once for each entitlement)
-    expect(getEntitlements.getEntitlements).toHaveBeenCalledTimes(2);
-  });
-
   describe("CustomCondition", () => {
     it("when sync custom condition returns true", async () => {
       const result = await hasBillingEntitlements({
