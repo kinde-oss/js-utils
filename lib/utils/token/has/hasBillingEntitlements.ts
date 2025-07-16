@@ -32,7 +32,7 @@ export const hasBillingEntitlements = async (
     !params.billingEntitlements ||
     params?.billingEntitlements?.length === 0
   ) {
-    // no permissions provided, so assuming true
+    // no entitlements provided, so assuming true
     return true;
   }
 
