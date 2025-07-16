@@ -19,7 +19,8 @@ export const getFlag = async <T = string | boolean | number | object>(
       url: `account_api/v1/feature_flags`,
     });
 
-    return data.feature_flags.find((flag) => flag.name === name)?.value as T;
+    const flag = data.feature_flags.find((flag) => flag.name === name);
+    return flag ? (flag.value as T) : null;
   }
 
   const claims = await getDecodedToken();
