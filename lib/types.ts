@@ -257,6 +257,7 @@ export enum RefreshType {
 export type GetPermissionOptions = ForceApi;
 export type GetPermissionsOptions = ForceApi;
 export type GetRolesOptions = ForceApi;
+export type GetFeatureFlagsOptions = ForceApi;
 
 type ForceApi = {
   /**
@@ -274,6 +275,20 @@ type Metadata = {
 export type BaseAccountResponse = {
   metadata: Metadata;
   data: unknown;
+};
+
+export type FeatureFlag = {
+  id: string;
+  name: string;
+  key: string;
+  type: string;
+  value: string | boolean | number | object;
+};
+
+export type AccountFeatureFlagsResult = BaseAccountResponse & {
+  data: {
+    feature_flags: FeatureFlag[];
+  };
 };
 
 export type ApiEntitlement = {
@@ -350,7 +365,8 @@ export type InternalKindeConfig = Omit<BaseKindeConfig, keyof KindeConfig> &
 export type KindeRoles = InternalKindeConfig["roles"][number];
 export type KindePermissions = InternalKindeConfig["permissions"][number];
 export type KindeFeatureFlags = InternalKindeConfig["featureFlags"][number];
-export type KindeBillingEntitlements = InternalKindeConfig["billingEntitlements"][number];
+export type KindeBillingEntitlements =
+  InternalKindeConfig["billingEntitlements"][number];
 
 export type CustomConditionCallback<T> =
   | ((item: T) => Promise<boolean>)
