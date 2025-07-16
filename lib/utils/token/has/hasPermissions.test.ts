@@ -1,14 +1,22 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../../sessionManager";
 import { setActiveStorage } from "..";
 import { createMockAccessToken } from "../testUtils";
 import { hasPermissions } from "./hasPermissions";
+import createFetchMock from "vitest-fetch-mock";
 
+const fetchMock = createFetchMock(vi);
 const storage = new MemoryStorage();
 
 describe("hasPermissions", () => {
   beforeEach(() => {
     setActiveStorage(storage);
+    fetchMock.enableMocks();
+  });
+
+  afterEach(() => {
+    fetchMock.resetMocks();
+    vi.restoreAllMocks();
   });
 
   it("when no token", async () => {
@@ -23,6 +31,8 @@ describe("hasPermissions", () => {
       StorageKeys.accessToken,
       createMockAccessToken({ permissions: ["canEdit"] }),
     );
+
+    // @ts-expect-error - no params provided
     const result = await hasPermissions({});
 
     expect(result).toBe(true);
@@ -34,6 +44,7 @@ describe("hasPermissions", () => {
       createMockAccessToken({ permissions: ["canEdit"] }),
     );
 
+    // @ts-expect-error - no params provided
     const result = await hasPermissions();
 
     expect(result).toBe(true);
@@ -111,7 +122,10 @@ describe("hasPermissions", () => {
     it("when sync custom condition returns true", async () => {
       await storage.setSessionItem(
         StorageKeys.accessToken,
-        createMockAccessToken({ permissions: ["canEdit"] }),
+        createMockAccessToken({
+          permissions: ["canEdit"],
+          org_code: "org_123",
+        }),
       );
 
       const result = await hasPermissions({
@@ -119,10 +133,7 @@ describe("hasPermissions", () => {
           {
             permission: "canEdit",
             condition: (permissionAccess) => {
-              return (
-                permissionAccess.permissionKey === "canEdit" &&
-                permissionAccess.isGranted
-              ); // Check full permission access object
+              return permissionAccess.permissionKey === "canEdit";
             },
           },
         ],
@@ -162,10 +173,7 @@ describe("hasPermissions", () => {
             condition: async (permissionAccess) => {
               // Simulate async operation
               await new Promise((resolve) => setTimeout(resolve, 1));
-              return (
-                permissionAccess.permissionKey === "canManage" &&
-                permissionAccess.isGranted
-              );
+              return permissionAccess.permissionKey === "canManage";
             },
           },
         ],
@@ -208,10 +216,7 @@ describe("hasPermissions", () => {
             permission: "adminEdit",
             condition: (permissionAccess) => {
               // Custom logic based on permission access object properties
-              return (
-                permissionAccess.permissionKey.startsWith("admin") &&
-                permissionAccess.isGranted
-              );
+              return permissionAccess.permissionKey.startsWith("admin");
             },
           },
         ],
@@ -232,8 +237,7 @@ describe("hasPermissions", () => {
           {
             permission: "canDelete",
             condition: (permissionAccess) =>
-              permissionAccess.permissionKey === "canDelete" &&
-              permissionAccess.isGranted, // custom condition
+              permissionAccess.permissionKey === "canDelete",
           },
         ],
       });
@@ -295,17 +299,13 @@ describe("hasPermissions", () => {
           {
             permission: "canEdit",
             condition: (permissionAccess) =>
-              permissionAccess.permissionKey.includes("Edit") &&
-              permissionAccess.isGranted, // passes
+              permissionAccess.permissionKey.includes("Edit"),
           },
           {
             permission: "canView",
             condition: async (permissionAccess) => {
               await new Promise((resolve) => setTimeout(resolve, 1));
-              return (
-                permissionAccess.permissionKey.includes("View") &&
-                permissionAccess.isGranted
-              ); // passes
+              return permissionAccess.permissionKey.includes("View"); // passes
             },
           },
         ],
@@ -329,10 +329,7 @@ describe("hasPermissions", () => {
             permission: "canEdit",
             condition: (permissionAccess) => {
               // Custom logic based on org code
-              return (
-                permissionAccess.isGranted &&
-                permissionAccess.orgCode === "org_123"
-              );
+              return permissionAccess.orgCode === "org_123";
             },
           },
         ],
@@ -353,16 +350,241 @@ describe("hasPermissions", () => {
             permission: "canEdit",
             condition: (permissionAccess) => {
               // Even though permission is not granted, condition can still evaluate it
-              return (
-                permissionAccess.permissionKey === "canEdit" &&
-                !permissionAccess.isGranted
-              );
+              return permissionAccess.permissionKey === "canEdit";
             },
           },
         ],
       });
 
-      expect(result).toBe(true); // Condition returns true even though permission is not granted
+      expect(result).toBe(false); // Custom condition is not called when permission is not granted
+    });
+  });
+
+  describe("forceApi option", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("when forceApi is true and permissions are fetched from API", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockApiResponse = {
+        data: {
+          org_code: "org_123",
+          permissions: [
+            { id: "1", name: "Can Edit", key: "apiCanEdit" },
+            { id: "2", name: "Can View", key: "apiCanView" },
+          ],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await hasPermissions({
+        permissions: ["apiCanEdit"],
+        forceApi: true,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/permissions",
+        expect.objectContaining({
+          method: "GET",
+          headers: expect.objectContaining({
+            Authorization: expect.stringContaining("Bearer"),
+            "Content-Type": "application/json",
+          }),
+        }),
+      );
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is false and permissions are read from token", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          permissions: ["tokenCanEdit"],
+        }),
+      );
+
+      const result = await hasPermissions({
+        permissions: ["tokenCanEdit"],
+        forceApi: false,
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is not provided and defaults to token behavior", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken({
+          permissions: ["defaultCanEdit"],
+        }),
+      );
+
+      const result = await hasPermissions({
+        permissions: ["defaultCanEdit"],
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is true with custom conditions", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockApiResponse = {
+        data: {
+          org_code: "org_456",
+          permissions: [{ id: "1", name: "Can Manage", key: "apiCanManage" }],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await hasPermissions({
+        permissions: [
+          {
+            permission: "apiCanManage",
+            condition: (permissionAccess) => {
+              return permissionAccess.orgCode === "org_456";
+            },
+          },
+        ],
+        forceApi: true,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/permissions",
+        expect.objectContaining({
+          method: "GET",
+        }),
+      );
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is true but API returns no matching permissions", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockApiResponse = {
+        data: {
+          org_code: "org_123",
+          permissions: [
+            { id: "1", name: "Other Permission", key: "otherPermission" },
+          ],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await hasPermissions({
+        permissions: ["nonExistentPermission"],
+        forceApi: true,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/permissions",
+        expect.objectContaining({
+          method: "GET",
+        }),
+      );
+      expect(result).toBe(false);
+    });
+
+    it("when forceApi is true and API returns empty permissions", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockApiResponse = {
+        data: {
+          org_code: "org_123",
+          permissions: [],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await hasPermissions({
+        permissions: ["anyPermission"],
+        forceApi: true,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/permissions",
+        expect.objectContaining({
+          method: "GET",
+        }),
+      );
+      expect(result).toBe(false);
+    });
+
+    it("when forceApi is true with mixed permission types", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockApiResponse = {
+        data: {
+          org_code: "org_789",
+          permissions: [
+            { id: "1", name: "Can Edit", key: "apiCanEdit" },
+            { id: "2", name: "Can View", key: "apiCanView" },
+          ],
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await hasPermissions({
+        permissions: [
+          "apiCanEdit", // string permission
+          {
+            permission: "apiCanView",
+            condition: (permissionAccess) =>
+              permissionAccess.orgCode === "org_789",
+          },
+        ],
+        forceApi: true,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://kinde.com/account_api/v1/permissions",
+        expect.objectContaining({
+          method: "GET",
+        }),
+      );
+      expect(result).toBe(true);
+    });
+
+    it("when forceApi is true and API request fails", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      fetchMock.mockResponse({
+        status: 403,
+        statusText: "Forbidden",
+        json: vi.fn(),
+      });
+
+      await expect(
+        hasPermissions({
+          permissions: ["anyPermission"],
+          forceApi: true,
+        }),
+      ).rejects.toThrow("API request failed with status 403");
     });
   });
 });

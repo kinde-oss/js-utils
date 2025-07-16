@@ -1,9 +1,14 @@
 import { KindePermissions, CustomCondition } from "../../../types";
-import { getPermission, PermissionAccess } from "../getPermission";
+import { PermissionAccess } from "../getPermission";
+import { getPermissions } from "../getPermissions";
 
 type HasPermissionOptions =
   | KindePermissions
-  | CustomCondition<"permission", KindePermissions, PermissionAccess>;
+  | CustomCondition<
+      "permission",
+      KindePermissions,
+      Omit<PermissionAccess, "isGranted">
+    >;
 
 const isCustomPermissionsCondition = (permission: HasPermissionOptions) => {
   return (
@@ -28,16 +33,31 @@ export const hasPermissions = async (
   }
 
   const { permissions } = params;
+  const accountPermissions = await getPermissions({
+    forceApi: params.forceApi,
+  });
 
   const permissionChecks = await Promise.all(
     permissions.map(async (permission) => {
       if (isCustomPermissionsCondition(permission)) {
-        const permissionAccess = await getPermission(permission.permission);
-        const result = await permission.condition(permissionAccess);
-        return result;
+        const matchingPermission = accountPermissions.permissions.find(
+          (innerPermission) => innerPermission === permission.permission,
+        );
+        if (!matchingPermission) {
+          return false;
+        }
+        return await permission.condition({
+          permissionKey: permission.permission,
+          orgCode: accountPermissions.orgCode,
+        });
       } else {
-        const permissionResult = await getPermission(permission);
-        return permissionResult.isGranted;
+        const matchingPermission = accountPermissions.permissions.find(
+          (innerPermission) => innerPermission === permission,
+        );
+        if (!matchingPermission) {
+          return false;
+        }
+        return true;
       }
     }),
   );
