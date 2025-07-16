@@ -20,7 +20,7 @@ describe("getRoles - Hasura", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeSessionItem(StorageKeys.accessToken);  
 
     await expect(getRoles).rejects.toThrow("Authentication token not found.");
   });
