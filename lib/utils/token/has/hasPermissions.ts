@@ -16,6 +16,7 @@ const isCustomPermissionsCondition = (permission: HasPermissionOptions) => {
 
 export type HasPermissionsParams = {
   permissions: HasPermissionOptions[];
+  forceApi?: boolean;
 };
 
 export const hasPermissions = async (

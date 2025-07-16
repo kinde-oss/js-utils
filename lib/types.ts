@@ -342,6 +342,7 @@ interface BaseKindeConfig {
   roles: string[];
   permissions: string[];
   featureFlags: string[];
+  billingEntitlements: string[];
 }
 
 export type InternalKindeConfig = Omit<BaseKindeConfig, keyof KindeConfig> &
@@ -349,6 +350,8 @@ export type InternalKindeConfig = Omit<BaseKindeConfig, keyof KindeConfig> &
 export type KindeRoles = InternalKindeConfig["roles"][number];
 export type KindePermissions = InternalKindeConfig["permissions"][number];
 export type KindeFeatureFlags = InternalKindeConfig["featureFlags"][number];
+export type KindeBillingEntitlements = InternalKindeConfig["billingEntitlements"][number];
+
 export type CustomConditionCallback<T> =
   | ((item: T) => Promise<boolean>)
   | ((item: T) => boolean);
