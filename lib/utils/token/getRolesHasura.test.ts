@@ -25,23 +25,33 @@ describe("getRoles - Hasura", () => {
     await expect(getRoles).rejects.toThrow("Authentication token not found.");
   });
 
-  it("with token no roles", async () => {
-    await storage.setSessionItem(
-      StorageKeys.accessToken,
-      createMockAccessToken({ "x-hasura-roles": undefined }),
-    );
+  it("calls API when token has no roles claim", async () => {
+   await storage.setSessionItem(
+     StorageKeys.accessToken,
+     createMockAccessToken({ "x-hasura-roles": undefined }),
+   );
 
-    fetchMock.mockResponseOnce(
-      JSON.stringify({
-        data: {
-          org_code: "org_123",
-          roles: [],
-        },
+   fetchMock.mockResponseOnce(
+     JSON.stringify({
+       data: {
+         org_code: "org_123",
+         roles: [],
+       },
+     }),
+   );
+
+    const roles = await getRoles();
+    expect(roles).toStrictEqual([]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://kinde.com/account_api/v1/roles",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({
+          Authorization: expect.stringContaining("Bearer"),
+          "Content-Type": "application/json",
+        }),
       }),
     );
-
-    const idToken = await getRoles();
-    expect(idToken).toStrictEqual([]);
   });
 
   it("warns when token no roles", async () => {
