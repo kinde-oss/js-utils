@@ -23,7 +23,6 @@ export default defineConfig({
     },
   },
   root: "",
-  base: "lib",
   resolve: { alias: { src: resolve(__dirname, "./lib") } },
   plugins: [dts({ insertTypesEntry: true, outDir: "dist" }), react()],
 });
