@@ -68,6 +68,7 @@ describe("index exports", () => {
       "hasPermissions",
       "hasRoles",
       "hasFeatureFlags",
+      "hasBillingEntitlements",
       "hasActiveStorage",
       "clearActiveStorage",
       "clearInsecureStorage",
