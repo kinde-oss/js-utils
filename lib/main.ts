@@ -48,6 +48,7 @@ export {
   hasPermissions,
   hasRoles,
   hasFeatureFlags,
+  hasBillingEntitlements,
 } from "./utils/token";
 
 export type {
