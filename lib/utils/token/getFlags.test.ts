@@ -309,5 +309,31 @@ describe("getFlags", () => {
 
       await expect(getFlags({ forceApi: true })).rejects.toThrow("API Error");
     });
+
+    it("when API returns null feature_flags", async () => {
+      const mockApiResponse = {
+        feature_flags: null,
+      };
+
+      vi.mocked(callAccountApi.callAccountApiPaginated).mockResolvedValue(
+        mockApiResponse,
+      );
+
+      const flags = await getFlags({ forceApi: true });
+      expect(flags).toStrictEqual([]);
+    });
+
+    it("when API returns undefined feature_flags", async () => {
+      const mockApiResponse = {
+        feature_flags: undefined,
+      };
+
+      vi.mocked(callAccountApi.callAccountApiPaginated).mockResolvedValue(
+        mockApiResponse,
+      );
+
+      const flags = await getFlags({ forceApi: true });
+      expect(flags).toStrictEqual([]);
+    });
   });
 });

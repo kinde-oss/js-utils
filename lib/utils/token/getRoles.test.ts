@@ -232,6 +232,26 @@ describe("getRoles", () => {
       );
     });
 
+    it("when API returns null data.roles", async () => {
+      await storage.setSessionItem(
+        StorageKeys.accessToken,
+        createMockAccessToken(),
+      );
+
+      const mockApiResponse = {
+        data: {
+          org_code: "org_123",
+          roles: null,
+        },
+      };
+
+      fetchMock.mockResponseOnce(JSON.stringify(mockApiResponse));
+
+      const result = await getRoles({ forceApi: true });
+
+      expect(result).toEqual([]);
+    });
+
     it("when API returns multiple roles with different properties", async () => {
       await storage.setSessionItem(
         StorageKeys.accessToken,
@@ -320,5 +340,23 @@ describe("getRoles", () => {
         { id: "2", key: "apiSuperAdmin", name: "API Super Admin" },
       ]);
     });
+  });
+
+  it("when token exists but getDecodedToken returns null", async () => {
+    // Mock getClaim to return a value so it doesn't go to API
+    const getClaimSpy = vi
+      .spyOn(await import("./getClaim"), "getClaim")
+      .mockResolvedValue({ name: "roles", value: true });
+
+    // Mock getDecodedToken to return null (simulating token decoding failure)
+    const getDecodedTokenSpy = vi
+      .spyOn(await import("./getDecodedToken"), "getDecodedToken")
+      .mockResolvedValue(null);
+
+    const result = await getRoles();
+    expect(result).toEqual([]);
+
+    getClaimSpy.mockRestore();
+    getDecodedTokenSpy.mockRestore();
   });
 });
