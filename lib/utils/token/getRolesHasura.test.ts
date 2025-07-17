@@ -92,9 +92,9 @@ describe("getRoles - Hasura", () => {
       }),
     );
 
-    const idToken = await getRoles();
+    const roles = await getRoles();
 
-    expect(idToken).toStrictEqual([{ id: "1", key: "admin", name: "Admin" }]);
+    expect(roles).toStrictEqual([{ id: "1", key: "admin", name: "Admin" }]);
   });
 
   describe("forceApi option", () => {
