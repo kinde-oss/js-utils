@@ -213,7 +213,9 @@ describe("generateAuthUrl", () => {
       domain,
       IssuerRouteTypes.login,
       options,
-      { disableUrlSanitization: true },
+      {
+        disableUrlSanitization: true,
+      },
     );
     const nonce = result.url.searchParams.get("nonce");
     expect(nonce).not.toBeNull();

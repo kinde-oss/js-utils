@@ -16,14 +16,13 @@ export default defineConfig({
       fileName: "js-utils",
     },
     target: "esnext",
-    outDir: "../dist",
+    outDir: "dist",
     emptyOutDir: true,
     rollupOptions: {
       external: ["expo-secure-store", "/src/tests/**"],
     },
   },
-  root: "lib",
-  base: "",
+  root: "",
   resolve: { alias: { src: resolve(__dirname, "./lib") } },
-  plugins: [dts({ insertTypesEntry: true, outDir: "../dist" }), react()],
+  plugins: [dts({ insertTypesEntry: true, outDir: "dist" }), react()],
 });

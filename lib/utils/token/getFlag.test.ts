@@ -1,19 +1,26 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
 import { setActiveStorage, getFlag } from ".";
 import { createMockAccessToken } from "./testUtils";
+import * as callAccountApi from "./accountApi/callAccountApi";
+
+// Mock the API call
+vi.mock("./accountApi/callAccountApi", () => ({
+  callAccountApiPaginated: vi.fn(),
+}));
 
 const storage = new MemoryStorage();
 
 describe("getFlag", () => {
   beforeEach(() => {
     setActiveStorage(storage);
+    vi.clearAllMocks();
   });
 
   it("when no token", async () => {
     await storage.setSessionItem(StorageKeys.idToken, null);
-    const idToken = await getFlag("test");
-    expect(idToken).toStrictEqual(null);
+    const flagValue = await getFlag("test");
+    expect(flagValue).toStrictEqual(null);
   });
 
   it("when no flags", async () => {
@@ -23,9 +30,9 @@ describe("getFlag", () => {
         feature_flags: null,
       }),
     );
-    const idToken = await getFlag("test");
+    const flagValue = await getFlag("test");
 
-    expect(idToken).toStrictEqual(null);
+    expect(flagValue).toStrictEqual(null);
   });
 
   it("when name missing", async () => {
@@ -40,9 +47,11 @@ describe("getFlag", () => {
         },
       }),
     );
-    const idToken = await getFlag();
 
-    expect(idToken).toStrictEqual(null);
+    // @ts-expect-error - we want to test the case where no flag name is provided
+    const flagValue = await getFlag();
+
+    expect(flagValue).toStrictEqual(null);
   });
 
   it("boolean true", async () => {
@@ -57,9 +66,9 @@ describe("getFlag", () => {
         },
       }),
     );
-    const idToken = await getFlag<boolean>("test");
+    const flagValue = await getFlag<boolean>("test");
 
-    expect(idToken).toStrictEqual(true);
+    expect(flagValue).toStrictEqual(true);
   });
 
   it("boolean false", async () => {
@@ -74,9 +83,9 @@ describe("getFlag", () => {
         },
       }),
     );
-    const idToken = await getFlag<boolean>("test");
+    const flagValue = await getFlag<boolean>("test");
 
-    expect(idToken).toStrictEqual(false);
+    expect(flagValue).toStrictEqual(false);
   });
 
   it("string", async () => {
@@ -91,9 +100,9 @@ describe("getFlag", () => {
         },
       }),
     );
-    const idToken = await getFlag<string>("test");
+    const flagValue = await getFlag<string>("test");
 
-    expect(idToken).toStrictEqual("hello");
+    expect(flagValue).toStrictEqual("hello");
   });
 
   it("integer", async () => {
@@ -108,9 +117,9 @@ describe("getFlag", () => {
         },
       }),
     );
-    const idToken = await getFlag<number>("test");
+    const flagValue = await getFlag<number>("test");
 
-    expect(idToken).toStrictEqual(5);
+    expect(flagValue).toStrictEqual(5);
   });
 
   it("no existing flag", async () => {
@@ -125,8 +134,89 @@ describe("getFlag", () => {
         },
       }),
     );
-    const idToken = await getFlag<number>("noexist");
+    const flagValue = await getFlag<number>("noexist");
 
-    expect(idToken).toStrictEqual(null);
+    expect(flagValue).toStrictEqual(null);
+  });
+
+  describe("with forceApi option", () => {
+    it("calls API and returns flag value when found", async () => {
+      const mockApiResponse = {
+        feature_flags: [
+          {
+            id: "1",
+            name: "test-flag",
+            key: "testFlag",
+            type: "boolean",
+            value: true,
+          },
+          {
+            id: "2",
+            name: "another-flag",
+            key: "anotherFlag",
+            type: "string",
+            value: "api-value",
+          },
+        ],
+      };
+
+      vi.mocked(callAccountApi.callAccountApiPaginated).mockResolvedValue(
+        mockApiResponse,
+      );
+
+      const result = await getFlag("test-flag", { forceApi: true });
+
+      expect(callAccountApi.callAccountApiPaginated).toHaveBeenCalledWith({
+        url: "account_api/v1/feature_flags",
+      });
+
+      expect(result).toStrictEqual(true);
+    });
+
+    it("returns null when flag not found in API", async () => {
+      const mockApiResponse = {
+        feature_flags: [
+          {
+            id: "1",
+            name: "other-flag",
+            key: "otherFlag",
+            type: "string",
+            value: "other-value",
+          },
+        ],
+      };
+
+      vi.mocked(callAccountApi.callAccountApiPaginated).mockResolvedValue(
+        mockApiResponse,
+      );
+
+      const result = await getFlag("nonexistent-flag", { forceApi: true });
+
+      expect(result).toStrictEqual(null);
+    });
+
+    it("returns null when API returns no flags", async () => {
+      const mockApiResponse = {
+        feature_flags: [],
+      };
+
+      vi.mocked(callAccountApi.callAccountApiPaginated).mockResolvedValue(
+        mockApiResponse,
+      );
+
+      const result = await getFlag("test-flag", { forceApi: true });
+
+      expect(result).toStrictEqual(null);
+    });
+
+    it("handles API error gracefully", async () => {
+      vi.mocked(callAccountApi.callAccountApiPaginated).mockRejectedValue(
+        new Error("API Error"),
+      );
+
+      await expect(getFlag("test-flag", { forceApi: true })).rejects.toThrow(
+        "API Error",
+      );
+    });
   });
 });

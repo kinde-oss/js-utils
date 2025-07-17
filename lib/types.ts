@@ -257,6 +257,7 @@ export enum RefreshType {
 export type GetPermissionOptions = ForceApi;
 export type GetPermissionsOptions = ForceApi;
 export type GetRolesOptions = ForceApi;
+export type GetFeatureFlagsOptions = ForceApi;
 
 type ForceApi = {
   /**
@@ -274,6 +275,20 @@ type Metadata = {
 export type BaseAccountResponse = {
   metadata: Metadata;
   data: unknown;
+};
+
+export type FeatureFlag = {
+  id: string;
+  name: string;
+  key: string;
+  type: string;
+  value: string | boolean | number | object;
+};
+
+export type AccountFeatureFlagsResult = BaseAccountResponse & {
+  data: {
+    feature_flags: FeatureFlag[];
+  };
 };
 
 export type ApiEntitlement = {
@@ -328,4 +343,36 @@ export type Plan = {
 export type ApiPlan = {
   key: string;
   subscribed_on: string; // ISO date string
+};
+
+// By having this empty interface here, we tell TS that it exists
+// and exporting it allows for augmentation
+//
+// because we use Override for InternalKindeConfig, anything the user hasn't provided
+// (or not code-genned) will fallback to what's in BaseKindeConfig
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface KindeConfig {}
+
+interface BaseKindeConfig {
+  roles: string[];
+  permissions: string[];
+  featureFlags: string[];
+  billingEntitlements: string[];
+}
+
+export type InternalKindeConfig = Omit<BaseKindeConfig, keyof KindeConfig> &
+  KindeConfig;
+export type KindeRoles = InternalKindeConfig["roles"][number];
+export type KindePermissions = InternalKindeConfig["permissions"][number];
+export type KindeFeatureFlags = InternalKindeConfig["featureFlags"][number];
+export type KindeBillingEntitlements =
+  InternalKindeConfig["billingEntitlements"][number];
+
+export type CustomConditionCallback<T> =
+  | ((item: T) => Promise<boolean>)
+  | ((item: T) => boolean);
+export type CustomCondition<TKey extends PropertyKey, TValue, TCallbackItem> = {
+  [P in TKey]: TValue;
+} & {
+  condition: CustomConditionCallback<TCallbackItem>;
 };

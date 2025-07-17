@@ -1,4 +1,9 @@
 import { getDecodedToken } from ".";
+import {
+  type AccountFeatureFlagsResult,
+  type GetFeatureFlagsOptions,
+} from "../../types";
+import { callAccountApiPaginated } from "./accountApi/callAccountApi";
 
 /**
  *
@@ -7,7 +12,17 @@ import { getDecodedToken } from ".";
  */
 export const getFlag = async <T = string | boolean | number | object>(
   name: string,
+  options?: GetFeatureFlagsOptions,
 ): Promise<T | null> => {
+  if (options?.forceApi) {
+    const data = await callAccountApiPaginated<AccountFeatureFlagsResult>({
+      url: `account_api/v1/feature_flags`,
+    });
+
+    const flag = data.feature_flags.find((flag) => flag.name === name);
+    return flag ? (flag.value as T) : null;
+  }
+
   const claims = await getDecodedToken();
 
   if (!claims) {

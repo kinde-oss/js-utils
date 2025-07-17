@@ -1,11 +1,19 @@
 import { SessionManager } from "../../sessionManager";
 
+export {
+  has,
+  hasPermissions,
+  hasRoles,
+  hasFeatureFlags,
+  hasBillingEntitlements,
+} from "./has";
 export { getClaim } from "./getClaim";
 export { getClaims } from "./getClaims";
 export { getCurrentOrganization } from "./getCurrentOrganization";
 export { getDecodedToken } from "./getDecodedToken";
 export { getRawToken } from "./getRawToken";
 export { getFlag } from "./getFlag";
+export { getFlags } from "./getFlags";
 export { getUserProfile } from "./getUserProfile";
 export type { UserProfile } from "./getUserProfile";
 export { getPermission } from "./getPermission";

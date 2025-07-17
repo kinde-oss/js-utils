@@ -9,7 +9,10 @@ type AccountPermissionsResult = BaseAccountResponse & {
   };
 };
 
-export type Permissions<T> = { orgCode: string | null; permissions: T[] };
+export type Permissions<T = string> = {
+  orgCode: string | null;
+  permissions: T[];
+};
 /**
  * Get all permissions
  * @returns { Promise<Permissions> }
@@ -24,7 +27,8 @@ export const getPermissions = async <T = string>(
 
     return {
       orgCode: data.org_code,
-      permissions: data.permissions.map((permission) => permission.key) as T[],
+      permissions:
+        (data.permissions?.map((permission) => permission.key) as T[]) || [],
     };
   }
 
