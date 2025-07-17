@@ -19,8 +19,8 @@ describe("getFlag", () => {
 
   it("when no token", async () => {
     await storage.setSessionItem(StorageKeys.idToken, null);
-    const idToken = await getFlag("test");
-    expect(idToken).toStrictEqual(null);
+    const flagValue = await getFlag("test");
+    expect(flagValue).toStrictEqual(null);
   });
 
   it("when no flags", async () => {
@@ -30,9 +30,9 @@ describe("getFlag", () => {
         feature_flags: null,
       }),
     );
-    const idToken = await getFlag("test");
+    const flagValue = await getFlag("test");
 
-    expect(idToken).toStrictEqual(null);
+    expect(flagValue).toStrictEqual(null);
   });
 
   it("when name missing", async () => {
@@ -47,9 +47,11 @@ describe("getFlag", () => {
         },
       }),
     );
-    const idToken = await getFlag();
 
-    expect(idToken).toStrictEqual(null);
+    // @ts-expect-error - we want to test the case where no flag name is provided
+    const flagValue = await getFlag();
+
+    expect(flagValue).toStrictEqual(null);
   });
 
   it("boolean true", async () => {
@@ -64,9 +66,9 @@ describe("getFlag", () => {
         },
       }),
     );
-    const idToken = await getFlag<boolean>("test");
+    const flagValue = await getFlag<boolean>("test");
 
-    expect(idToken).toStrictEqual(true);
+    expect(flagValue).toStrictEqual(true);
   });
 
   it("boolean false", async () => {
@@ -81,9 +83,9 @@ describe("getFlag", () => {
         },
       }),
     );
-    const idToken = await getFlag<boolean>("test");
+    const flagValue = await getFlag<boolean>("test");
 
-    expect(idToken).toStrictEqual(false);
+    expect(flagValue).toStrictEqual(false);
   });
 
   it("string", async () => {
@@ -98,9 +100,9 @@ describe("getFlag", () => {
         },
       }),
     );
-    const idToken = await getFlag<string>("test");
+    const flagValue = await getFlag<string>("test");
 
-    expect(idToken).toStrictEqual("hello");
+    expect(flagValue).toStrictEqual("hello");
   });
 
   it("integer", async () => {
@@ -115,9 +117,9 @@ describe("getFlag", () => {
         },
       }),
     );
-    const idToken = await getFlag<number>("test");
+    const flagValue = await getFlag<number>("test");
 
-    expect(idToken).toStrictEqual(5);
+    expect(flagValue).toStrictEqual(5);
   });
 
   it("no existing flag", async () => {
@@ -132,9 +134,9 @@ describe("getFlag", () => {
         },
       }),
     );
-    const idToken = await getFlag<number>("noexist");
+    const flagValue = await getFlag<number>("noexist");
 
-    expect(idToken).toStrictEqual(null);
+    expect(flagValue).toStrictEqual(null);
   });
 
   describe("with forceApi option", () => {
@@ -193,7 +195,7 @@ describe("getFlag", () => {
       expect(result).toStrictEqual(null);
     });
 
-    it("returns empty array when API returns no flags", async () => {
+    it("returns null when API returns no flags", async () => {
       const mockApiResponse = {
         feature_flags: [],
       };
