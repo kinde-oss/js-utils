@@ -1,5 +1,5 @@
-import { KindeRoles, CustomCondition } from "../../../types";
-import { getRoles, Role } from "../getRoles";
+import type { KindeRoles, CustomCondition } from "../../../types";
+import { getRoles, type Role } from "../getRoles";
 
 type HasRoleOptions = KindeRoles | CustomCondition<"role", KindeRoles, Role>;
 

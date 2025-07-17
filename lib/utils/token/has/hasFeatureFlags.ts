@@ -1,4 +1,4 @@
-import { type KindeFeatureFlags } from "../../../types";
+import type { KindeFeatureFlags } from "../../../types";
 import { getFlags } from "../getFlags";
 
 type FeatureFlagKVCondition = {

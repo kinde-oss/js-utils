@@ -1,5 +1,5 @@
-import { KindePermissions, CustomCondition } from "../../../types";
-import { PermissionAccess } from "../getPermission";
+import type { KindePermissions, CustomCondition } from "../../../types";
+import type { PermissionAccess } from "../getPermission";
 import { getPermissions } from "../getPermissions";
 
 type HasPermissionOptions =
