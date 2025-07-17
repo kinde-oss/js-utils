@@ -61,8 +61,11 @@ export type {
 export {
   storageSettings,
   MemoryStorage,
+  KvStorage,
   ChromeStore,
   LocalStorage,
+  CookieStorage,
+  createGenericCookieAdapter,
   StorageKeys,
 } from "./sessionManager";
 
@@ -82,4 +85,4 @@ export const ExpoSecureStore: {
   },
 };
 
-export type { SessionManager } from "./sessionManager";
+export type { SessionManager, CookieAdapter, CookieOptions } from "./sessionManager";
