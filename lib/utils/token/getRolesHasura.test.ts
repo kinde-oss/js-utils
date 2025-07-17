@@ -20,25 +20,25 @@ describe("getRoles - Hasura", () => {
   });
 
   it("when no token", async () => {
-    await storage.removeSessionItem(StorageKeys.accessToken);  
+    await storage.removeSessionItem(StorageKeys.accessToken);
 
     await expect(getRoles).rejects.toThrow("Authentication token not found.");
   });
 
   it("calls API when token has no roles claim", async () => {
-   await storage.setSessionItem(
-     StorageKeys.accessToken,
-     createMockAccessToken({ "x-hasura-roles": undefined }),
-   );
+    await storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({ "x-hasura-roles": undefined }),
+    );
 
-   fetchMock.mockResponseOnce(
-     JSON.stringify({
-       data: {
-         org_code: "org_123",
-         roles: [],
-       },
-     }),
-   );
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        data: {
+          org_code: "org_123",
+          roles: [],
+        },
+      }),
+    );
 
     const roles = await getRoles();
     expect(roles).toStrictEqual([]);
@@ -107,7 +107,9 @@ describe("getRoles - Hasura", () => {
         StorageKeys.accessToken,
         createMockAccessToken({
           roles: undefined,
-          "x-hasura-roles": [{ id: "1", key: "tokenAdmin", name: "Token Admin" }],
+          "x-hasura-roles": [
+            { id: "1", key: "tokenAdmin", name: "Token Admin" },
+          ],
         }),
       );
 
@@ -152,7 +154,9 @@ describe("getRoles - Hasura", () => {
         StorageKeys.accessToken,
         createMockAccessToken({
           roles: undefined,
-          "x-hasura-roles": [{ id: "1", key: "tokenAdmin", name: "Token Admin" }],
+          "x-hasura-roles": [
+            { id: "1", key: "tokenAdmin", name: "Token Admin" },
+          ],
         }),
       );
 
@@ -169,7 +173,10 @@ describe("getRoles - Hasura", () => {
     it("when forceApi is not provided but token has no x-hasura-roles, should call API", async () => {
       await storage.setSessionItem(
         StorageKeys.accessToken,
-        createMockAccessToken({ roles: undefined, "x-hasura-roles": undefined }),
+        createMockAccessToken({
+          roles: undefined,
+          "x-hasura-roles": undefined,
+        }),
       );
 
       const mockApiResponse = {
@@ -205,7 +212,9 @@ describe("getRoles - Hasura", () => {
         StorageKeys.accessToken,
         createMockAccessToken({
           roles: undefined,
-          "x-hasura-roles": [{ id: "1", key: "tokenAdmin", name: "Token Admin" }],
+          "x-hasura-roles": [
+            { id: "1", key: "tokenAdmin", name: "Token Admin" },
+          ],
         }),
       );
 
@@ -222,7 +231,10 @@ describe("getRoles - Hasura", () => {
     it("when API returns empty roles array", async () => {
       await storage.setSessionItem(
         StorageKeys.accessToken,
-        createMockAccessToken({ roles: undefined, "x-hasura-roles": undefined }),
+        createMockAccessToken({
+          roles: undefined,
+          "x-hasura-roles": undefined,
+        }),
       );
 
       const mockApiResponse = {
@@ -242,7 +254,10 @@ describe("getRoles - Hasura", () => {
     it("when API request fails, should throw error", async () => {
       await storage.setSessionItem(
         StorageKeys.accessToken,
-        createMockAccessToken({ roles: undefined, "x-hasura-roles": undefined }),
+        createMockAccessToken({
+          roles: undefined,
+          "x-hasura-roles": undefined,
+        }),
       );
 
       fetchMock.mockResponse({
@@ -259,7 +274,10 @@ describe("getRoles - Hasura", () => {
     it("when API returns multiple roles with different properties", async () => {
       await storage.setSessionItem(
         StorageKeys.accessToken,
-        createMockAccessToken({ roles: undefined, "x-hasura-roles": undefined }),
+        createMockAccessToken({
+          roles: undefined,
+          "x-hasura-roles": undefined,
+        }),
       );
 
       const mockApiResponse = {

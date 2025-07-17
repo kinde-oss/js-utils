@@ -35,9 +35,7 @@ export const hasFeatureFlags = async (
 
   const featureFlagChecks = featureFlags.map((featureFlag) => {
     if (isFeatureFlagKVCondition(featureFlag)) {
-      const flag = accountFlags?.find(
-        (flag) => flag.key === featureFlag.flag,
-      );
+      const flag = accountFlags?.find((flag) => flag.key === featureFlag.flag);
       return flag !== undefined && flag.value === featureFlag.value;
     } else {
       const flag = accountFlags?.find((flag) => flag.key === featureFlag);
