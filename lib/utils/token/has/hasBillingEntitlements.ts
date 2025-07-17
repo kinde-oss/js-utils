@@ -37,7 +37,14 @@ export const hasBillingEntitlements = async (
   }
 
   const { billingEntitlements } = params;
-  const accountEntitlements = await getEntitlements();
+  let accountEntitlements;
+
+  try {
+    accountEntitlements = await getEntitlements();
+  } catch (error) {
+    console.error("[hasBillingEntitlements] Error getting entitlements", error);
+    return false;
+  }
 
   const entitlementChecks = await Promise.all(
     billingEntitlements.map(async (entitlement) => {

@@ -31,7 +31,14 @@ export const hasFeatureFlags = async (
   }
 
   const { featureFlags } = params;
-  const accountFlags = await getFlags({ forceApi: params.forceApi });
+  let accountFlags;
+
+  try {
+    accountFlags = await getFlags({ forceApi: params.forceApi });
+  } catch (error) {
+    console.error("[hasFeatureFlags] Error getting feature flags", error);
+    return false;
+  }
 
   const featureFlagChecks = featureFlags.map((featureFlag) => {
     if (isFeatureFlagKVCondition(featureFlag)) {

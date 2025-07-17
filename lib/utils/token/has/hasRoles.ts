@@ -25,7 +25,14 @@ export const hasRoles = async (params: HasRolesParams): Promise<boolean> => {
   }
 
   const { roles } = params;
-  const accountRoles = await getRoles({ forceApi: params.forceApi });
+  let accountRoles;
+
+  try {
+    accountRoles = await getRoles({ forceApi: params.forceApi });
+  } catch (error) {
+    console.error("[hasRoles] Error getting roles", error);
+    return false;
+  }
 
   const roleChecks = await Promise.all(
     roles.map(async (role) => {

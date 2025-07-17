@@ -33,9 +33,16 @@ export const hasPermissions = async (
   }
 
   const { permissions } = params;
-  const accountPermissions = await getPermissions({
-    forceApi: params.forceApi,
-  });
+  let accountPermissions;
+
+  try {
+    accountPermissions = await getPermissions({
+      forceApi: params.forceApi,
+    });
+  } catch (error) {
+    console.error("[hasPermissions] Error getting permissions", error);
+    return false;
+  }
 
   const permissionChecks = await Promise.all(
     permissions.map(async (permission) => {
