@@ -1,7 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import { MemoryStorage, StorageKeys } from "../../../sessionManager";
+import { MemoryStorage } from "../../../sessionManager";
 import { setActiveStorage } from "..";
-import { createMockAccessToken } from "../testUtils";
 import { hasBillingEntitlements } from "./hasBillingEntitlements";
 import { type Entitlement } from "../../../types";
 import * as getEntitlements from "../getEntitlements";
@@ -66,12 +65,14 @@ describe("hasBillingEntitlements", () => {
   });
 
   it("when no params are provided", async () => {
-    const result = await hasBillingEntitlements(undefined as any);
+    // @ts-expect-error - we want to test the case where no params are provided
+    const result = await hasBillingEntitlements();
     expect(result).toBe(true);
   });
 
   it("when no billingEntitlements provided", async () => {
-    const result = await hasBillingEntitlements({} as any);
+    // @ts-expect-error - we want to test the case where no billingEntitlements are provided
+    const result = await hasBillingEntitlements({});
     expect(result).toBe(true);
   });
 
