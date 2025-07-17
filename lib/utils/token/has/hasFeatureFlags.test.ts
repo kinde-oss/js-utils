@@ -485,12 +485,12 @@ describe("hasFeatureFlags", () => {
         json: vi.fn(),
       });
 
-      await expect(
-        hasFeatureFlags({
-          featureFlags: ["anyFlag"],
-          forceApi: true,
-        }),
-      ).rejects.toThrow("API request failed with status 500");
+      const result = await hasFeatureFlags({
+        featureFlags: ["anyFlag"],
+        forceApi: true,
+      });
+
+      expect(result).toBe(false);
     });
   });
 });

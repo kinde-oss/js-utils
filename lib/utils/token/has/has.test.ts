@@ -1290,13 +1290,13 @@ describe("has", () => {
           json: vi.fn(),
         });
 
-      await expect(
-        has({
-          roles: ["apiAdmin"],
-          permissions: ["apiCanEdit"],
-          forceApi: true,
-        }),
-      ).rejects.toThrow("API request failed with status 500");
+      const result = await has({
+        roles: ["apiAdmin"],
+        permissions: ["apiCanEdit"],
+        forceApi: true,
+      });
+
+      expect(result).toBe(false);
     });
   });
 });

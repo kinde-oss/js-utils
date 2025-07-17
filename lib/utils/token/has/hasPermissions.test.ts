@@ -579,12 +579,12 @@ describe("hasPermissions", () => {
         json: vi.fn(),
       });
 
-      await expect(
-        hasPermissions({
-          permissions: ["anyPermission"],
-          forceApi: true,
-        }),
-      ).rejects.toThrow("API request failed with status 403");
+      const result = await hasPermissions({
+        permissions: ["anyPermission"],
+        forceApi: true,
+      });
+
+      expect(result).toBe(false);
     });
   });
 });

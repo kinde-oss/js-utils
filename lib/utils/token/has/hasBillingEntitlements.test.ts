@@ -341,9 +341,10 @@ describe("hasBillingEntitlements", () => {
         new Error("API Error"),
       );
 
-      await expect(
-        hasBillingEntitlements({ billingEntitlements: ["Pro gym"] }),
-      ).rejects.toThrow("API Error");
+      const result = await hasBillingEntitlements({
+        billingEntitlements: ["Pro gym"],
+      });
+      expect(result).toBe(false);
     });
 
     it("handles network timeout", async () => {
@@ -351,9 +352,10 @@ describe("hasBillingEntitlements", () => {
         new Error("Network timeout"),
       );
 
-      await expect(
-        hasBillingEntitlements({ billingEntitlements: ["Premium features"] }),
-      ).rejects.toThrow("Network timeout");
+      const result = await hasBillingEntitlements({
+        billingEntitlements: ["Premium features"],
+      });
+      expect(result).toBe(false);
     });
   });
 });

@@ -696,12 +696,12 @@ describe("hasRoles", () => {
         json: vi.fn(),
       });
 
-      await expect(
-        hasRoles({
-          roles: ["anyRole"],
-          forceApi: true,
-        }),
-      ).rejects.toThrow("API request failed with status 401");
+      const result = await hasRoles({
+        roles: ["anyRole"],
+        forceApi: true,
+      });
+
+      expect(result).toBe(false);
     });
   });
 });
