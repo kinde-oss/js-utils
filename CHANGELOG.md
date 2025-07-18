@@ -1,6 +1,71 @@
 # Changelog
 
 
+## 0.20.1...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.20.1...main)
+
+### 🚀 Enhancements
+
+- Domain optional when generating the portal url ([a7d72ec](https://github.com/kinde-oss/js-utils/commit/a7d72ec))
+- GetPermissions hard check ([9589108](https://github.com/kinde-oss/js-utils/commit/9589108))
+- GetEntitlement ([9a9a507](https://github.com/kinde-oss/js-utils/commit/9a9a507))
+- Augmentable, typesafe config ([475118f](https://github.com/kinde-oss/js-utils/commit/475118f))
+- Has-like utils ([c3267af](https://github.com/kinde-oss/js-utils/commit/c3267af))
+- Add feature flags ([2a1e5a3](https://github.com/kinde-oss/js-utils/commit/2a1e5a3))
+- Conditional callback checking for roles/permissions, KV checking for featureFlags ([07146c8](https://github.com/kinde-oss/js-utils/commit/07146c8))
+- Billing entitlements, forceApi for permissions ([d4ab6cb](https://github.com/kinde-oss/js-utils/commit/d4ab6cb))
+- Add `forceApi` option to `getRoles` ([7b1ac72](https://github.com/kinde-oss/js-utils/commit/7b1ac72))
+- Add `getFlags`, add `forceApi` options ([7685ac5](https://github.com/kinde-oss/js-utils/commit/7685ac5))
+- Add `hasBillingEntitlements` ([1bc057e](https://github.com/kinde-oss/js-utils/commit/1bc057e))
+- Add `forceApi` option to `hasRoles` ([9361eaa](https://github.com/kinde-oss/js-utils/commit/9361eaa))
+- Add `forceApi` option to `hasPermissions` ([865806f](https://github.com/kinde-oss/js-utils/commit/865806f))
+- Add `forceApi` option to `hasFeatureFlags` ([c470482](https://github.com/kinde-oss/js-utils/commit/c470482))
+- Add `forceApi` and billing entitlements to `has` ([4eb12cf](https://github.com/kinde-oss/js-utils/commit/4eb12cf))
+
+### 🩹 Fixes
+
+- Add empty array fallback ([8191ee6](https://github.com/kinde-oss/js-utils/commit/8191ee6))
+- Add empty array fallback ([9c05889](https://github.com/kinde-oss/js-utils/commit/9c05889))
+- Fallback to null if a matching flag isn't found with `forceApi` ([3d8e1c2](https://github.com/kinde-oss/js-utils/commit/3d8e1c2))
+- Checking the feature flags individually is no longer an async op ([22fd6f9](https://github.com/kinde-oss/js-utils/commit/22fd6f9))
+- Remove `base` option ([5656281](https://github.com/kinde-oss/js-utils/commit/5656281))
+- Typo in test name ([c43ad1a](https://github.com/kinde-oss/js-utils/commit/c43ad1a))
+- Add `type` to type-only imports ([8d38f3d](https://github.com/kinde-oss/js-utils/commit/8d38f3d))
+- Improve error handling ([eb3ea0c](https://github.com/kinde-oss/js-utils/commit/eb3ea0c))
+- Update test cases for new error handling ([dc45bf2](https://github.com/kinde-oss/js-utils/commit/dc45bf2))
+- Add `forceApi` test cases ([f00ede8](https://github.com/kinde-oss/js-utils/commit/f00ede8))
+- Missing edge test cases ([3495d34](https://github.com/kinde-oss/js-utils/commit/3495d34))
+
+### 🏡 Chore
+
+- Small fixes ([913afad](https://github.com/kinde-oss/js-utils/commit/913afad))
+- Tests ([606ecfc](https://github.com/kinde-oss/js-utils/commit/606ecfc))
+- Exports ([b141ce7](https://github.com/kinde-oss/js-utils/commit/b141ce7))
+- Update exports ([80eab61](https://github.com/kinde-oss/js-utils/commit/80eab61))
+- Small refactors and tweaks ([fea7017](https://github.com/kinde-oss/js-utils/commit/fea7017))
+- Update types ([1e9aa3f](https://github.com/kinde-oss/js-utils/commit/1e9aa3f))
+- Update exports ([632d0c6](https://github.com/kinde-oss/js-utils/commit/632d0c6))
+- Update exports ([52d4e23](https://github.com/kinde-oss/js-utils/commit/52d4e23))
+- Update tests for `forceApi` in `getRoles` ([bc5a3eb](https://github.com/kinde-oss/js-utils/commit/bc5a3eb))
+- Remove no longer necessary test case ([04e38a2](https://github.com/kinde-oss/js-utils/commit/04e38a2))
+- Update test case to include `hasBillingEntitlements` ([beabd41](https://github.com/kinde-oss/js-utils/commit/beabd41))
+- Format ([c367a3a](https://github.com/kinde-oss/js-utils/commit/c367a3a))
+- Update tests ([6207476](https://github.com/kinde-oss/js-utils/commit/6207476))
+- Fix typo in jsdoc ([36b3947](https://github.com/kinde-oss/js-utils/commit/36b3947))
+- Update commentary ([c221ec0](https://github.com/kinde-oss/js-utils/commit/c221ec0))
+- Update hasura role test coverage ([9d8bd16](https://github.com/kinde-oss/js-utils/commit/9d8bd16))
+- Add API call test coverage ([47c9c17](https://github.com/kinde-oss/js-utils/commit/47c9c17))
+- Re-run format ([411a2ce](https://github.com/kinde-oss/js-utils/commit/411a2ce))
+- Fix typo ([41938ad](https://github.com/kinde-oss/js-utils/commit/41938ad))
+- Update test cases ([49a8548](https://github.com/kinde-oss/js-utils/commit/49a8548))
+- Nit on naming ([aadc7aa](https://github.com/kinde-oss/js-utils/commit/aadc7aa))
+
+### ❤️ Contributors
+
+- Bailey Eaton <xYoshify@gmail.com>
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.20.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.20.0...main)
