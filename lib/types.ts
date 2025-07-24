@@ -45,6 +45,9 @@ export enum PortalPage {
   organizationPlanDetails = "organization_plan_details",
   organizationPaymentDetails = "organization_payment_details",
   organizationPlanSelection = "organization_plan_selection",
+  paymentDetails = "payment_details",
+  planSelection = "plan_selection",
+  planDetails = "plan_details",
   profile = "profile",
 }
 
