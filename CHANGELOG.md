@@ -1,6 +1,18 @@
 # Changelog
 
 
+## 0.21.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.21.0...main)
+
+### 🚀 Enhancements
+
+- Add extra PortalPages ([d78f28d](https://github.com/kinde-oss/js-utils/commit/d78f28d))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.20.1...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.20.1...main)
