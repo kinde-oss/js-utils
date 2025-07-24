@@ -91,7 +91,7 @@ describe("generatePortalUrl", () => {
     });
 
     expect(fetchSpy).toBeCalledWith(
-      `https://mykindedomain.com/account_api/v1/portal_link?sub_nav=organization_members&return_url=http%3A%2F%2Fsomereturnurl.com`,
+      `https://mykindedomain.com/account_api/v1/portal_link?subnav=organization_members&return_url=http%3A%2F%2Fsomereturnurl.com`,
       {
         headers: {
           Authorization: "Bearer storedAccessToken",
@@ -122,7 +122,7 @@ describe("generatePortalUrl", () => {
     });
 
     expect(fetchSpy).toBeCalledWith(
-      `https://mykindedomain.com/account_api/v1/portal_link?sub_nav=profile&return_url=http%3A%2F%2Fsomereturnurl.com`,
+      `https://mykindedomain.com/account_api/v1/portal_link?subnav=profile&return_url=http%3A%2F%2Fsomereturnurl.com`,
       {
         headers: {
           Authorization: "Bearer storedAccessToken",
@@ -156,7 +156,7 @@ describe("generatePortalUrl", () => {
     });
 
     expect(fetchSpy).toBeCalledWith(
-      `https://mykindedomain.kinde.com/account_api/v1/portal_link?sub_nav=organization_payment_details&return_url=http%3A%2F%2Fanotherredirect.com`,
+      `https://mykindedomain.kinde.com/account_api/v1/portal_link?subnav=organization_payment_details&return_url=http%3A%2F%2Fanotherredirect.com`,
       {
         headers: {
           Authorization: "Bearer storedAccessToken",
@@ -196,7 +196,7 @@ describe("generatePortalUrl", () => {
       expect.any(Object),
     );
     expect(fetchSpy).toBeCalledWith(
-      expect.stringContaining(`sub_nav=${subNav}`),
+      expect.stringContaining(`subnav=${subNav}`),
       expect.any(Object),
     );
   });
@@ -317,7 +317,7 @@ describe("generatePortalUrl", () => {
     });
     expect(fetchSpy).toBeCalled();
     expect(fetchSpy).toBeCalledWith(
-      expect.stringContaining(`sub_nav=${subNav}`),
+      expect.stringContaining(`subnav=${subNav}`),
       expect.any(Object),
     );
   });
@@ -346,7 +346,7 @@ describe("generatePortalUrl", () => {
     });
 
     expect(fetchSpy).toBeCalledWith(
-      expect.stringContaining(`sub_nav=${subNav}`),
+      expect.stringContaining(`subnav=${subNav}`),
       expect.any(Object),
     );
   });

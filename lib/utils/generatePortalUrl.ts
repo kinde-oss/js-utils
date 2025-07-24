@@ -80,7 +80,7 @@ export const generatePortalUrl = async ({
   }
 
   const params = new URLSearchParams({
-    sub_nav: subNav || PortalPage.profile,
+    subnav: subNav || PortalPage.profile,
     return_url: returnUrl,
   });
 
