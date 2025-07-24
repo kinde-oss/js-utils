@@ -14,7 +14,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.21.1",
+  "version": "0.21.2",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

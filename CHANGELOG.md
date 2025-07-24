@@ -1,6 +1,18 @@
 # Changelog
 
 
+## 0.21.1...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.21.1...main)
+
+### 🩹 Fixes
+
+- Portal url generaton ([334a9f8](https://github.com/kinde-oss/js-utils/commit/334a9f8))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.21.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.21.0...main)
