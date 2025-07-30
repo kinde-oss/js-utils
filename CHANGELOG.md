@@ -1,6 +1,22 @@
 # Changelog
 
 
+## 0.21.2...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.21.2...main)
+
+### 🚀 Enhancements
+
+- Add navigateToKinde method ([e14b8f0](https://github.com/kinde-oss/js-utils/commit/e14b8f0))
+
+### 📖 Documentation
+
+- Add jsdoc ([ffc1bf3](https://github.com/kinde-oss/js-utils/commit/ffc1bf3))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.21.1...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.21.1...main)
