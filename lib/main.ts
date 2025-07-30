@@ -65,6 +65,7 @@ export {
   ChromeStore,
   LocalStorage,
   StorageKeys,
+  ExpressStore,
 } from "./sessionManager";
 
 // This export provides an implementation of SessionManager<V>
