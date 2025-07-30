@@ -19,6 +19,7 @@ export {
   generateProfileUrl,
   generatePortalUrl,
   generateKindeSDKHeader,
+  navigateToKinde,
 } from "./utils";
 
 export {
