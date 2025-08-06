@@ -16,3 +16,7 @@ export { splitString } from "./splitString";
 export { generatePortalUrl } from "./generatePortalUrl";
 export { generateProfileUrl } from "./generatePortalUrl";
 export { navigateToKinde } from "./navigateToKinde";
+export {
+  createMiddlewareActivityProxy,
+  ActivityExpiredError,
+} from "./activityTracking";

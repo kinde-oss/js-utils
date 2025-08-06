@@ -18,6 +18,13 @@ export const storageSettings: StorageSettingsType = {
    * Warning: This should only be used when you're not using a custom domain and no backend app to authenticate on.
    */
   useInsecureForRefreshToken: false,
+
+  /**
+   * The number of minutes of inactivity before tokens are considered expired.
+   *
+   * When undefined, activity tracking is disabled.
+   */
+  activityTimeoutMinutes: undefined,
 };
 
 // Export session manager related items directly
