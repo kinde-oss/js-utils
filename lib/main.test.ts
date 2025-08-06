@@ -55,6 +55,8 @@ describe("index exports", () => {
       "splitString",
       "generateKindeSDKHeader",
       "navigateToKinde",
+      "createMiddlewareActivityProxy",
+      "ActivityExpiredError",
 
       // session manager
       "MemoryStorage",

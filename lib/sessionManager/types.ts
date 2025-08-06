@@ -12,12 +12,14 @@ export enum StorageKeys {
   state = "state",
   nonce = "nonce",
   codeVerifier = "codeVerifier",
+  lastActivity = "lastActivity",
 }
 
 export type StorageSettingsType = {
   keyPrefix: string;
   maxLength: number;
   useInsecureForRefreshToken: boolean;
+  activityTimeoutMinutes?: number;
 };
 
 export abstract class SessionBase<V extends string = StorageKeys>
