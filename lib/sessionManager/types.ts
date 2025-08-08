@@ -15,11 +15,20 @@ export enum StorageKeys {
   lastActivity = "lastActivity",
 }
 
+export enum TimeoutActivityType {
+  preWarning = "preWarning",
+  timeout = "timeout",
+}
+
 export type StorageSettingsType = {
   keyPrefix: string;
   maxLength: number;
   useInsecureForRefreshToken: boolean;
   activityTimeoutMinutes?: number;
+  activityTimeoutPreWarningMinutes?: number;
+  onActivityTimeout?: (
+    timeoutType: TimeoutActivityType,
+  ) => void | Promise<void>;
 };
 
 export abstract class SessionBase<V extends string = StorageKeys>

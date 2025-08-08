@@ -3,7 +3,6 @@ import { storageSettings } from "../sessionManager/index.js";
 import { StorageKeys } from "../sessionManager/types.js";
 import { MemoryStorage } from "../sessionManager/stores/memory.js";
 import {
-  createMiddlewareActivityProxy,
   ActivityExpiredError,
 } from "./activityTracking.js";
 
@@ -47,7 +46,7 @@ describe("Activity Tracking", () => {
     it("should return original session manager when activity tracking is disabled", () => {
       storageSettings.activityTimeoutMinutes = undefined;
 
-      const proxy = createMiddlewareActivityProxy(sessionManager);
+      const proxy = getActiveStorage();
 
       expect(proxy).toBe(sessionManager);
     });

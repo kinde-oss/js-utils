@@ -1,15 +1,56 @@
+import { getActiveStorage, getInsecureStorage } from "../main.js";
 import { storageSettings } from "../sessionManager/index.js";
-import { StorageKeys, type SessionManager } from "../sessionManager/types.js";
+import {
+  StorageKeys,
+  TimeoutActivityType,
+  type SessionManager,
+} from "../sessionManager/types.js";
 
-/**
- * Custom error class for activity expiration
- */
-export class ActivityExpiredError extends Error {
-  constructor(message = "Session expired due to inactivity") {
-    super(message);
-    this.name = "ActivityExpiredError";
+let activityPreWarnTimer: NodeJS.Timeout | null = null;
+let activityTimer: NodeJS.Timeout | null = null;
+
+export const updateActivityTimestamp = async (): Promise<void> => {
+  const sessionManager = getActiveStorage();
+  if (!sessionManager) {
+    throw new Error("Session manager not found");
   }
-}
+
+  if (!storageSettings.activityTimeoutMinutes) {
+    throw new Error("No activity timeout minutes set");
+  }
+
+  if (activityPreWarnTimer) {
+    clearTimeout(activityPreWarnTimer);
+  }
+
+  if (activityTimer) {
+    clearTimeout(activityTimer);
+  }
+
+  activityTimer = setTimeout(
+    () => {
+      sessionManager.destroySession();
+      const insecureStorage = getInsecureStorage();
+      if (insecureStorage) {
+        insecureStorage.destroySession();
+      }
+      storageSettings.onActivityTimeout?.(TimeoutActivityType.timeout);
+    },
+    storageSettings.activityTimeoutMinutes! * 60 * 1000,
+  );
+
+  if (storageSettings.activityTimeoutPreWarningMinutes) {
+    activityPreWarnTimer = setTimeout(
+      () => {
+        storageSettings.onActivityTimeout?.(TimeoutActivityType.preWarning);
+      },
+      storageSettings.activityTimeoutPreWarningMinutes! * 60 * 1000,
+    );
+  }
+
+  const timestamp = Date.now();
+  await sessionManager.setSessionItem(StorageKeys.lastActivity, timestamp);
+};
 
 /**
  * Creates a proxy around a SessionManager that automatically tracks user activity
@@ -18,89 +59,41 @@ export class ActivityExpiredError extends Error {
  * @param sessionManager - The base SessionManager to wrap with activity tracking
  * @returns A proxied SessionManager that automatically handles activity tracking
  */
-export const createMiddlewareActivityProxy = <T extends string>(
-  sessionManager: SessionManager<T>,
+export const sessionManagerActivityProxy = <T extends StorageKeys>(
+  storageType: "secure" | "insecure" = "secure",
 ): SessionManager<T> => {
+  const sessionManager = getActiveStorage();
+  if (!sessionManager) {
+    throw new Error("Session manager not found");
+  }
+
   if (!storageSettings.activityTimeoutMinutes) {
     return sessionManager;
   }
 
-  const activityKey = `${storageSettings.keyPrefix}${StorageKeys.lastActivity}`;
-  const cleanupActivityData = async (): Promise<void> => {
-    try {
-      await sessionManager.removeSessionItem(activityKey as T);
-    } catch (cleanupError) {
-      console.warn(
-        "js-utils: Failed to cleanup activity data during expiry:",
-        cleanupError,
-      );
-    }
-  };
-
-  const checkActivityExpiry = async (): Promise<void> => {
-    const lastActivityValue = await sessionManager.getSessionItem(
-      activityKey as T,
-    );
-
-    if (lastActivityValue != null) {
-      try {
-        let lastActivity: number;
-
-        if (typeof lastActivityValue === "string") {
-          lastActivity = parseInt(lastActivityValue, 10);
-        } else if (typeof lastActivityValue === "number") {
-          lastActivity = lastActivityValue;
-        } else {
-          await cleanupActivityData();
-          throw new ActivityExpiredError();
-        }
-
-        if (!isNaN(lastActivity)) {
-          const timeoutMs = storageSettings.activityTimeoutMinutes! * 60 * 1000;
-          const timeSinceLastActivity = Date.now() - lastActivity;
-
-          if (timeSinceLastActivity > timeoutMs) {
-            await cleanupActivityData();
-            throw new ActivityExpiredError();
-          }
-        } else {
-          await cleanupActivityData();
-          throw new ActivityExpiredError();
-        }
-      } catch (error) {
-        if (error instanceof ActivityExpiredError) throw error;
-        await cleanupActivityData();
-        throw new ActivityExpiredError();
+  const proxyHandler = {
+    async get(target: SessionManager<T>, prop: string | symbol) {
+      await updateActivityTimestamp();
+      // can you look at all the properties and pass down the request?
+      if (prop in target) {
+        return target[prop as keyof SessionManager<T>];
       }
-    }
-  };
-
-  const updateActivityTimestamp = async (): Promise<void> => {
-    const timestamp = Date.now().toString();
-    await sessionManager.setSessionItem(activityKey as T, timestamp);
-  };
-
-  return new Proxy(sessionManager, {
-    get(target, prop) {
-      if (prop === "getSessionItem") {
-        return async <U = unknown>(itemKey: T | StorageKeys) => {
-          await checkActivityExpiry();
-          const result = await target.getSessionItem<U>(itemKey);
-          await updateActivityTimestamp();
-          return result;
-        };
-      }
-
-      if (prop === "setSessionItem") {
-        return async <U = unknown>(itemKey: T | StorageKeys, itemValue: U) => {
-          await checkActivityExpiry();
-          await target.setSessionItem(itemKey, itemValue);
-          await updateActivityTimestamp();
-        };
-      }
-
-      // Pass through other methods without tracking
-      return target[prop as keyof SessionManager<T>];
     },
-  });
+  }
+
+  const secureProxy = new Proxy(sessionManager, proxyHandler);
+
+  const insecureStorage = getInsecureStorage();
+  let insecureProxy: SessionManager<T> | null = null;
+  if (insecureStorage != null && insecureStorage !== sessionManager) {
+    insecureProxy = new Proxy(insecureStorage, proxyHandler);
+  }
+
+  if (storageType === "secure") {
+    return secureProxy;
+  } else if (storageType === "insecure") {
+    return insecureProxy || secureProxy;
+  } else {
+    throw Error("Invalid storage type");
+  }
 };

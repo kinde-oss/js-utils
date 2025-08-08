@@ -17,6 +17,6 @@ export { generatePortalUrl } from "./generatePortalUrl";
 export { generateProfileUrl } from "./generatePortalUrl";
 export { navigateToKinde } from "./navigateToKinde";
 export {
-  createMiddlewareActivityProxy,
+  updateActivityTimestamp,
   ActivityExpiredError,
 } from "./activityTracking";
