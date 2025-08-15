@@ -18,5 +18,5 @@ export { generateProfileUrl } from "./generatePortalUrl";
 export { navigateToKinde } from "./navigateToKinde";
 export {
   updateActivityTimestamp,
-  ActivityExpiredError,
+  sessionManagerActivityProxy,
 } from "./activityTracking";

@@ -36,7 +36,7 @@ export const storageSettings: StorageSettingsType = {
   /**
    * The function to call when the activity timeout is reached.
    *
-   * @param timeoutType - The type of timeout that occurred.   
+   * @param timeoutType - The type of timeout that occurred.
    */
   onActivityTimeout: undefined,
 };

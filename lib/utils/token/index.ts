@@ -38,7 +38,7 @@ const storage = {
  */
 export const setActiveStorage = (store: SessionManager) => {
   if (storageSettings.activityTimeoutMinutes) {
-    storage.secure = sessionManagerActivityProxy();
+    storage.secure = sessionManagerActivityProxy(store);
     return;
   }
   storage.secure = store;
@@ -73,7 +73,7 @@ export const clearActiveStorage = (): void => {
  */
 export const setInsecureStorage = (store: SessionManager) => {
   if (storageSettings.activityTimeoutMinutes) {
-    storage.insecure = sessionManagerActivityProxy("insecure");
+    storage.insecure = sessionManagerActivityProxy(store);
     return;
   }
 

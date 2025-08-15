@@ -20,7 +20,8 @@ export {
   generatePortalUrl,
   generateKindeSDKHeader,
   navigateToKinde,
-  ActivityExpiredError,
+  updateActivityTimestamp,
+  sessionManagerActivityProxy,
 } from "./utils";
 
 export {

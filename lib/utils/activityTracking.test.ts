@@ -1,231 +1,253 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { storageSettings } from "../sessionManager/index.js";
-import { StorageKeys } from "../sessionManager/types.js";
+import { TimeoutActivityType, StorageKeys } from "../sessionManager/types.js";
 import { MemoryStorage } from "../sessionManager/stores/memory.js";
+import { updateActivityTimestamp } from "./activityTracking.js";
 import {
-  ActivityExpiredError,
-} from "./activityTracking.js";
+  setActiveStorage,
+  getActiveStorage,
+  clearActiveStorage,
+} from "./token/index.js";
 
 describe("Activity Tracking", () => {
   let sessionManager: MemoryStorage<string>;
   let originalTimeoutMinutes: number | undefined;
+  let originalPreWarningMinutes: number | undefined;
   let originalKeyPrefix: string;
+  let originalOnActivityTimeout:
+    | ((type: TimeoutActivityType) => void)
+    | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockOnActivityTimeout: any;
 
   beforeEach(() => {
     sessionManager = new MemoryStorage<string>();
     originalTimeoutMinutes = storageSettings.activityTimeoutMinutes;
+    originalPreWarningMinutes =
+      storageSettings.activityTimeoutPreWarningMinutes;
     originalKeyPrefix = storageSettings.keyPrefix;
+    originalOnActivityTimeout = storageSettings.onActivityTimeout;
+
     storageSettings.activityTimeoutMinutes = undefined;
+    storageSettings.activityTimeoutPreWarningMinutes = undefined;
     storageSettings.keyPrefix = "test_";
+
+    mockOnActivityTimeout = vi.fn();
+    storageSettings.onActivityTimeout = mockOnActivityTimeout;
+
+    clearActiveStorage();
     vi.clearAllMocks();
+    vi.clearAllTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
     storageSettings.activityTimeoutMinutes = originalTimeoutMinutes;
+    storageSettings.activityTimeoutPreWarningMinutes =
+      originalPreWarningMinutes;
     storageSettings.keyPrefix = originalKeyPrefix;
+    storageSettings.onActivityTimeout = originalOnActivityTimeout;
+    clearActiveStorage();
+    vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
-  const getLastActivity = async () => {
-    const activityKey = `${storageSettings.keyPrefix}${StorageKeys.lastActivity}`;
-    const value = await sessionManager.getSessionItem(activityKey as string);
-    if (!value) return null;
-
-    let timestamp: number;
-    if (typeof value === "string") {
-      timestamp = parseInt(value, 10);
-    } else if (typeof value === "number") {
-      timestamp = value;
-    } else {
-      return null;
-    }
-
-    return isNaN(timestamp) ? null : timestamp;
-  };
-
-  describe("createMiddlewareActivityProxy", () => {
+  describe("sessionManagerActivityProxy", () => {
     it("should return original session manager when activity tracking is disabled", () => {
       storageSettings.activityTimeoutMinutes = undefined;
+      setActiveStorage(sessionManager);
 
-      const proxy = getActiveStorage();
+      const activeStorage = getActiveStorage();
 
-      expect(proxy).toBe(sessionManager);
+      expect(activeStorage).toBe(sessionManager);
     });
 
-    it("should throw ActivityExpiredError when session is expired on getSessionItem", async () => {
+    it("should trigger timeout callback when timer expires", async () => {
       storageSettings.activityTimeoutMinutes = 30;
-      const mockTime = 1000000;
-      vi.spyOn(Date, "now").mockReturnValue(mockTime);
+      setActiveStorage(sessionManager);
 
-      // Set an old activity timestamp directly using prefixed key
-      const activityKey = `${storageSettings.keyPrefix}${StorageKeys.lastActivity}`;
-      await sessionManager.setSessionItem(
-        activityKey as string,
-        mockTime.toString(),
+      const activeStorage = getActiveStorage()!;
+
+      await activeStorage.getSessionItem(StorageKeys.accessToken);
+      vi.advanceTimersByTime(30 * 60 * 1000 + 1000);
+
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
+      );
+      expect(mockOnActivityTimeout).toHaveBeenCalledTimes(1);
+    });
+
+    it("should reset activity timer on new activity", async () => {
+      storageSettings.activityTimeoutMinutes = 30;
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
+
+      await activeStorage.getSessionItem(StorageKeys.accessToken);
+      vi.advanceTimersByTime(20 * 60 * 1000);
+
+      await activeStorage.setSessionItem(
+        StorageKeys.refreshToken,
+        "refresh123",
       );
 
-      // Move time forward beyond timeout
-      vi.spyOn(Date, "now").mockReturnValue(mockTime + 45 * 60 * 1000);
+      vi.advanceTimersByTime(15 * 60 * 1000);
+      expect(mockOnActivityTimeout).not.toHaveBeenCalled();
 
-      const proxy = createMiddlewareActivityProxy(sessionManager);
-
-      await expect(proxy.getSessionItem("accessToken")).rejects.toThrow(
-        ActivityExpiredError,
+      vi.advanceTimersByTime(15 * 60 * 1000 + 1000);
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
       );
     });
 
-    it("should throw ActivityExpiredError when session is expired on setSessionItem", async () => {
+    it("should destroy session when timeout occurs", async () => {
       storageSettings.activityTimeoutMinutes = 30;
-      const mockTime = 1000000;
-      vi.spyOn(Date, "now").mockReturnValue(mockTime);
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
 
-      // Set an old activity timestamp directly using prefixed key
-      const activityKey = `${storageSettings.keyPrefix}${StorageKeys.lastActivity}`;
-      await sessionManager.setSessionItem(
-        activityKey as string,
-        mockTime.toString(),
+      await sessionManager.setSessionItem(StorageKeys.accessToken, "token123");
+      const destroySpy = vi.spyOn(sessionManager, "destroySession");
+
+      await activeStorage.getSessionItem(StorageKeys.accessToken);
+      vi.advanceTimersByTime(30 * 60 * 1000 + 1000);
+
+      expect(destroySpy).toHaveBeenCalledTimes(2);
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
       );
+    });
 
-      // Move time forward beyond timeout
-      vi.spyOn(Date, "now").mockReturnValue(mockTime + 45 * 60 * 1000);
+    it("should trigger pre-warning callback before timeout", async () => {
+      storageSettings.activityTimeoutMinutes = 30;
+      storageSettings.activityTimeoutPreWarningMinutes = 25;
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
 
-      const proxy = createMiddlewareActivityProxy(sessionManager);
+      await activeStorage.getSessionItem(StorageKeys.accessToken);
+
+      vi.advanceTimersByTime(25 * 60 * 1000 + 1000);
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.preWarning,
+      );
+      expect(mockOnActivityTimeout).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(5 * 60 * 1000);
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
+      );
+      expect(mockOnActivityTimeout).toHaveBeenCalledTimes(2);
+    });
+
+    it("should pass through all session manager methods", async () => {
+      storageSettings.activityTimeoutMinutes = 30;
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
 
       await expect(
-        proxy.setSessionItem("accessToken", "token123"),
-      ).rejects.toThrow(ActivityExpiredError);
+        activeStorage.setSessionItem(StorageKeys.accessToken, "token"),
+      ).resolves.not.toThrow();
+      await expect(
+        activeStorage.getSessionItem(StorageKeys.accessToken),
+      ).resolves.toBe("token");
+      await expect(
+        activeStorage.removeSessionItem(StorageKeys.accessToken),
+      ).resolves.not.toThrow();
+      await expect(activeStorage.destroySession()).resolves.not.toThrow();
     });
 
-    it("should update activity timestamp on successful getSessionItem", async () => {
+    it("should properly bind methods and maintain context", async () => {
       storageSettings.activityTimeoutMinutes = 30;
-      const startTime = 1000000;
-      vi.spyOn(Date, "now").mockReturnValue(startTime);
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
 
-      const proxy = createMiddlewareActivityProxy(sessionManager);
+      // Test that methods maintain their context by working correctly
+      const testValue = "test-token-123";
+      const testKey = StorageKeys.accessToken;
 
-      // Set initial data
-      await sessionManager.setSessionItem("accessToken", "token123");
+      // Store a value
+      await activeStorage.setSessionItem(testKey, testValue);
 
-      // Move time forward but within timeout
-      const laterTime = startTime + 10 * 60 * 1000;
-      vi.spyOn(Date, "now").mockReturnValue(laterTime);
+      // Retrieve the value - this should work if context is maintained
+      const retrievedValue = await activeStorage.getSessionItem(testKey);
+      expect(retrievedValue).toBe(testValue);
 
-      await proxy.getSessionItem("accessToken");
+      // Test that the method can be destructured and still work (tests binding)
+      const { getSessionItem } = activeStorage;
+      const valueFromDestructured = await getSessionItem(testKey);
+      expect(valueFromDestructured).toBe(testValue);
 
-      const lastActivity = await getLastActivity();
-      expect(lastActivity).toBe(laterTime);
+      // Verify activity tracking is called for each method access
+      // We expect the timeout to be set after each method call
+      const timeoutSpy = vi.spyOn(global, "setTimeout");
+      timeoutSpy.mockClear();
+
+      await activeStorage.setSessionItem(StorageKeys.refreshToken, "refresh");
+      expect(timeoutSpy).toHaveBeenCalled();
+
+      timeoutSpy.mockClear();
+      await activeStorage.getSessionItem(StorageKeys.refreshToken);
+      expect(timeoutSpy).toHaveBeenCalled();
     });
+  });
 
-    it("should update activity timestamp on successful setSessionItem", async () => {
+  describe("updateActivityTimestamp", () => {
+    it("should start timeout timer when called", () => {
       storageSettings.activityTimeoutMinutes = 30;
-      const startTime = 1000000;
-      vi.spyOn(Date, "now").mockReturnValue(startTime);
+      setActiveStorage(sessionManager);
 
-      const proxy = createMiddlewareActivityProxy(sessionManager);
+      updateActivityTimestamp();
 
-      // Move time forward
-      const laterTime = startTime + 10 * 60 * 1000;
-      vi.spyOn(Date, "now").mockReturnValue(laterTime);
-
-      await proxy.setSessionItem("accessToken", "token123");
-
-      const lastActivity = await getLastActivity();
-      expect(lastActivity).toBe(laterTime);
-    });
-
-    it("should pass through other methods without tracking", async () => {
-      storageSettings.activityTimeoutMinutes = 30;
-      const proxy = createMiddlewareActivityProxy(sessionManager);
-
-      await expect(proxy.destroySession()).resolves.not.toThrow();
-      await expect(proxy.removeSessionItem("someKey")).resolves.not.toThrow();
-    });
-
-    it("should handle fresh session (no activity) without throwing", async () => {
-      storageSettings.activityTimeoutMinutes = 30;
-      const proxy = createMiddlewareActivityProxy(sessionManager);
-
-      // Fresh session - should not throw and should update activity
-      const result = await proxy.getSessionItem("accessToken");
-      expect(result).toBeNull();
-
-      const lastActivity = await getLastActivity();
-      expect(lastActivity).toBeTruthy();
-    });
-
-    it("should throw ActivityExpiredError for invalid timestamp", async () => {
-      storageSettings.activityTimeoutMinutes = 30;
-
-      // Set invalid timestamp using the prefixed key that our implementation uses
-      const activityKey = `${storageSettings.keyPrefix}${StorageKeys.lastActivity}`;
-      await sessionManager.setSessionItem(
-        activityKey as string,
-        "invalid-timestamp",
-      );
-
-      const proxy = createMiddlewareActivityProxy(sessionManager);
-
-      await expect(proxy.getSessionItem("accessToken")).rejects.toThrow(
-        ActivityExpiredError,
+      vi.advanceTimersByTime(30 * 60 * 1000 + 1000);
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
       );
     });
 
-    it("should clean up activity data when session expires", async () => {
+    it("should throw error when no session manager found", () => {
       storageSettings.activityTimeoutMinutes = 30;
-      const mockTime = 1000000;
-      vi.spyOn(Date, "now").mockReturnValue(mockTime);
+      clearActiveStorage();
 
-      const activityKey = `${storageSettings.keyPrefix}${StorageKeys.lastActivity}`;
-      await sessionManager.setSessionItem(
-        activityKey as string,
-        mockTime.toString(),
+      expect(() => updateActivityTimestamp()).toThrow(
+        "Session manager not found",
       );
-
-      // Verify activity data exists
-      let activityValue = await getLastActivity();
-      expect(activityValue).toBe(mockTime);
-
-      // Move time forward beyond timeout
-      vi.spyOn(Date, "now").mockReturnValue(mockTime + 45 * 60 * 1000);
-
-      const proxy = createMiddlewareActivityProxy(sessionManager);
-
-      // Should throw and clean up activity data
-      await expect(proxy.getSessionItem("accessToken")).rejects.toThrow(
-        ActivityExpiredError,
-      );
-
-      // Verify activity data was cleaned up
-      activityValue = await getLastActivity();
-      expect(activityValue).toBeNull();
     });
 
-    it("should clean up activity data when invalid timestamp detected", async () => {
+    it("should throw error when no activity timeout configured", () => {
+      storageSettings.activityTimeoutMinutes = undefined;
+      setActiveStorage(sessionManager);
+
+      expect(() => updateActivityTimestamp()).toThrow(
+        "No activity timeout minutes set",
+      );
+    });
+  });
+
+  describe("Error Handling", () => {
+    it("should handle session method errors gracefully", async () => {
       storageSettings.activityTimeoutMinutes = 30;
 
-      const activityKey = `${storageSettings.keyPrefix}${StorageKeys.lastActivity}`;
-      await sessionManager.setSessionItem(
-        activityKey as string,
-        "invalid-timestamp",
-      );
+      const errorSessionManager = {
+        getSessionItem: vi.fn().mockRejectedValue(new Error("Storage failed")),
+        setSessionItem: vi.fn().mockRejectedValue(new Error("Storage failed")),
+        removeSessionItem: vi
+          .fn()
+          .mockRejectedValue(new Error("Storage failed")),
+        destroySession: vi.fn().mockRejectedValue(new Error("Destroy failed")),
+        setItems: vi.fn().mockRejectedValue(new Error("Storage failed")),
+        removeItems: vi.fn().mockRejectedValue(new Error("Storage failed")),
+      };
 
-      // Verify invalid activity data exists
-      const rawValue = await sessionManager.getSessionItem(
-        activityKey as string,
-      );
-      expect(rawValue).toBe("invalid-timestamp");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setActiveStorage(errorSessionManager as any);
+      const activeStorage = getActiveStorage()!;
 
-      const proxy = createMiddlewareActivityProxy(sessionManager);
+      await expect(
+        activeStorage.getSessionItem(StorageKeys.accessToken),
+      ).rejects.toThrow("Storage failed");
 
-      // Should throw and clean up activity data
-      await expect(proxy.getSessionItem("accessToken")).rejects.toThrow(
-        ActivityExpiredError,
+      vi.advanceTimersByTime(30 * 60 * 1000 + 1000);
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
       );
-
-      // Verify activity data was cleaned up
-      const cleanedValue = await sessionManager.getSessionItem(
-        activityKey as string,
-      );
-      expect(cleanedValue).toBeNull();
     });
   });
 });
