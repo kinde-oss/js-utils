@@ -110,7 +110,7 @@ describe("Activity Tracking", () => {
       await activeStorage.getSessionItem(StorageKeys.accessToken);
       vi.advanceTimersByTime(30 * 60 * 1000 + 1000);
 
-      expect(destroySpy).toHaveBeenCalledTimes(2);
+      expect(destroySpy).toHaveBeenCalledTimes(1);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
       );

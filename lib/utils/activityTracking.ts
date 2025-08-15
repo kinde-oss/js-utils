@@ -19,6 +19,16 @@ export const updateActivityTimestamp = (): void => {
     throw new Error("No activity timeout minutes set");
   }
 
+  if (
+    storageSettings.activityTimeoutPreWarningMinutes !== undefined &&
+    storageSettings.activityTimeoutPreWarningMinutes >=
+      storageSettings.activityTimeoutMinutes
+  ) {
+    throw new Error(
+      "activityTimeoutPreWarningMinutes must be less than activityTimeoutMinutes",
+    );
+  }
+
   if (activityPreWarnTimer) {
     clearTimeout(activityPreWarnTimer);
   }
@@ -28,11 +38,19 @@ export const updateActivityTimestamp = (): void => {
   }
 
   activityTimer = setTimeout(
-    () => {
-      sessionManager.destroySession();
+    async () => {
+      try {
+        await sessionManager.destroySession();
+      } catch (error) {
+        console.error("Failed to destroy secure session:", error);
+      }
       const insecureStorage = getInsecureStorage();
       if (insecureStorage) {
-        insecureStorage.destroySession();
+        try {
+          await insecureStorage.destroySession();
+        } catch (error) {
+          console.error("Failed to destroy insecure session:", error);
+        }
       }
       storageSettings.onActivityTimeout?.(TimeoutActivityType.timeout);
     },
@@ -54,7 +72,6 @@ export const updateActivityTimestamp = (): void => {
  * and enforces inactivity timeouts in environments.
  *
  * @param sessionManager - The base SessionManager to wrap with activity tracking
- * @param storageType - Type of storage to return ("secure" or "insecure")
  * @returns A proxied SessionManager that automatically handles activity tracking
  */
 export const sessionManagerActivityProxy = <T extends StorageKeys>(
@@ -68,11 +85,24 @@ export const sessionManagerActivityProxy = <T extends StorageKeys>(
     return sessionManager;
   }
 
+  if (
+    storageSettings.activityTimeoutPreWarningMinutes !== undefined &&
+    storageSettings.activityTimeoutPreWarningMinutes >=
+      storageSettings.activityTimeoutMinutes
+  ) {
+    throw new Error(
+      "activityTimeoutPreWarningMinutes must be less than activityTimeoutMinutes",
+    );
+  }
+
   const proxyHandler = {
     get(target: SessionManager<T>, prop: string | symbol) {
       updateActivityTimestamp();
       const value = target[prop as keyof SessionManager<T>];
-      return value.bind(target);
+      if (typeof value === "function") {
+        return value.bind(target);
+      }
+      return value;
     },
   };
   return new Proxy(sessionManager, proxyHandler);

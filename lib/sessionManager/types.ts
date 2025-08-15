@@ -24,6 +24,9 @@ export type StorageSettingsType = {
   maxLength: number;
   useInsecureForRefreshToken: boolean;
   activityTimeoutMinutes?: number;
+  /**
+   * Pre-warning in minutes. MUST be less than activityTimeoutMinutes when set.
+   */
   activityTimeoutPreWarningMinutes?: number;
   onActivityTimeout?: (
     timeoutType: TimeoutActivityType,
