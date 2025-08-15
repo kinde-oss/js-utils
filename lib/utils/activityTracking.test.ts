@@ -69,7 +69,9 @@ describe("Activity Tracking", () => {
       const activeStorage = getActiveStorage()!;
 
       await activeStorage.getSessionItem(StorageKeys.accessToken);
-      vi.advanceTimersByTime(30 * 60 * 1000 + 1000);
+      
+      // Advance time and wait for async operations to complete
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
 
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
@@ -93,7 +95,7 @@ describe("Activity Tracking", () => {
       vi.advanceTimersByTime(15 * 60 * 1000);
       expect(mockOnActivityTimeout).not.toHaveBeenCalled();
 
-      vi.advanceTimersByTime(15 * 60 * 1000 + 1000);
+      await vi.advanceTimersByTimeAsync(15 * 60 * 1000 + 1000);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
       );
@@ -108,7 +110,7 @@ describe("Activity Tracking", () => {
       const destroySpy = vi.spyOn(sessionManager, "destroySession");
 
       await activeStorage.getSessionItem(StorageKeys.accessToken);
-      vi.advanceTimersByTime(30 * 60 * 1000 + 1000);
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
 
       expect(destroySpy).toHaveBeenCalledTimes(1);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
@@ -130,7 +132,7 @@ describe("Activity Tracking", () => {
       );
       expect(mockOnActivityTimeout).toHaveBeenCalledTimes(1);
 
-      vi.advanceTimersByTime(5 * 60 * 1000);
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
       );
@@ -190,13 +192,13 @@ describe("Activity Tracking", () => {
   });
 
   describe("updateActivityTimestamp", () => {
-    it("should start timeout timer when called", () => {
+    it("should start timeout timer when called", async () => {
       storageSettings.activityTimeoutMinutes = 30;
       setActiveStorage(sessionManager);
 
       updateActivityTimestamp();
 
-      vi.advanceTimersByTime(30 * 60 * 1000 + 1000);
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
       );
@@ -244,7 +246,7 @@ describe("Activity Tracking", () => {
         activeStorage.getSessionItem(StorageKeys.accessToken),
       ).rejects.toThrow("Storage failed");
 
-      vi.advanceTimersByTime(30 * 60 * 1000 + 1000);
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
       );

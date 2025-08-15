@@ -45,7 +45,7 @@ export const updateActivityTimestamp = (): void => {
         console.error("Failed to destroy secure session:", error);
       }
       const insecureStorage = getInsecureStorage();
-      if (insecureStorage) {
+      if (insecureStorage && insecureStorage !== sessionManager) {
         try {
           await insecureStorage.destroySession();
         } catch (error) {
