@@ -69,7 +69,7 @@ describe("Activity Tracking", () => {
       const activeStorage = getActiveStorage()!;
 
       await activeStorage.getSessionItem(StorageKeys.accessToken);
-      
+
       // Advance time and wait for async operations to complete
       await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
 

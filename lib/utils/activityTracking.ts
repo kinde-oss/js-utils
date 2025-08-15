@@ -1,4 +1,4 @@
-import { getActiveStorage, getInsecureStorage } from "../main.js";
+import { getActiveStorage, getInsecureStorage } from "./token";
 import { storageSettings } from "../sessionManager/index.js";
 import {
   StorageKeys,
