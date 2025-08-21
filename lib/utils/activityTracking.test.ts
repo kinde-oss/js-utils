@@ -7,6 +7,7 @@ import {
   setActiveStorage,
   getActiveStorage,
   clearActiveStorage,
+  setInsecureStorage,
 } from "./token/index.js";
 
 describe("Activity Tracking", () => {
@@ -118,6 +119,57 @@ describe("Activity Tracking", () => {
       );
     });
 
+    it("should destroy insecure session when timeout occurs", async () => {
+      storageSettings.activityTimeoutMinutes = 30;
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
+
+      const insecureSessionManager = new MemoryStorage<string>();
+      setInsecureStorage(insecureSessionManager);
+
+      await insecureSessionManager.setSessionItem(StorageKeys.accessToken, "token123");
+      const destroySpy = vi.spyOn(insecureSessionManager, "destroySession");
+      const insecureDestroySpy = vi.spyOn(insecureSessionManager, "destroySession");
+
+      await activeStorage.getSessionItem(StorageKeys.accessToken);
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
+
+      expect(destroySpy).toHaveBeenCalledTimes(1);
+      expect(insecureDestroySpy).toHaveBeenCalledTimes(1);
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
+      );
+    });
+
+    it("should destroy insecure session when destroy errors", async () => {
+      storageSettings.activityTimeoutMinutes = 30;
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
+
+      const insecureSessionManager = new MemoryStorage<string>();
+      setInsecureStorage(insecureSessionManager);
+      insecureSessionManager.destroySession = vi.fn().mockRejectedValue(new Error("Destroy failed"));
+
+      await insecureSessionManager.setSessionItem(StorageKeys.accessToken, "token123");
+      const destroySpy = vi.spyOn(insecureSessionManager, "destroySession");
+      const insecureDestroySpy = vi.spyOn(insecureSessionManager, "destroySession");
+
+      await activeStorage.getSessionItem(StorageKeys.accessToken);
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
+
+      expect(destroySpy).toHaveBeenCalledTimes(1);
+      expect(insecureDestroySpy).toHaveBeenCalledTimes(1);
+     
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
+      );
+    });
+
+    it("throw proxy create session missing error on creation when missing", () => {
+      storageSettings.activityTimeoutMinutes = 30;
+      expect(() => setActiveStorage(null)).toThrow("Session manager not found");
+    });
+
     it("should trigger pre-warning callback before timeout", async () => {
       storageSettings.activityTimeoutMinutes = 30;
       storageSettings.activityTimeoutPreWarningMinutes = 25;
@@ -219,6 +271,15 @@ describe("Activity Tracking", () => {
 
       expect(() => updateActivityTimestamp()).toThrow(
         "No activity timeout minutes set",
+      );
+    });
+
+    it("should throw error when no activity timeout configured", () => {
+      setActiveStorage(sessionManager);
+      storageSettings.activityTimeoutMinutes = 30;
+      storageSettings.activityTimeoutPreWarningMinutes = 31;
+      expect(() => updateActivityTimestamp()).toThrow(
+        "activityTimeoutPreWarningMinutes must be less than activityTimeoutMinutes",
       );
     });
   });
