@@ -127,14 +127,18 @@ describe("Activity Tracking", () => {
       const insecureSessionManager = new MemoryStorage<string>();
       setInsecureStorage(insecureSessionManager);
 
-      await insecureSessionManager.setSessionItem(StorageKeys.accessToken, "token123");
-      const destroySpy = vi.spyOn(insecureSessionManager, "destroySession");
-      const insecureDestroySpy = vi.spyOn(insecureSessionManager, "destroySession");
+      await insecureSessionManager.setSessionItem(
+        StorageKeys.accessToken,
+        "token123",
+      );
+      const insecureDestroySpy = vi.spyOn(
+        insecureSessionManager,
+        "destroySession",
+      );
 
       await activeStorage.getSessionItem(StorageKeys.accessToken);
       await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
 
-      expect(destroySpy).toHaveBeenCalledTimes(1);
       expect(insecureDestroySpy).toHaveBeenCalledTimes(1);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
@@ -148,18 +152,24 @@ describe("Activity Tracking", () => {
 
       const insecureSessionManager = new MemoryStorage<string>();
       setInsecureStorage(insecureSessionManager);
-      insecureSessionManager.destroySession = vi.fn().mockRejectedValue(new Error("Destroy failed"));
+      insecureSessionManager.destroySession = vi
+        .fn()
+        .mockRejectedValue(new Error("Destroy failed"));
 
-      await insecureSessionManager.setSessionItem(StorageKeys.accessToken, "token123");
-      const destroySpy = vi.spyOn(insecureSessionManager, "destroySession");
-      const insecureDestroySpy = vi.spyOn(insecureSessionManager, "destroySession");
+      await insecureSessionManager.setSessionItem(
+        StorageKeys.accessToken,
+        "token123",
+      );
+      const insecureDestroySpy = vi.spyOn(
+        insecureSessionManager,
+        "destroySession",
+      );
 
       await activeStorage.getSessionItem(StorageKeys.accessToken);
       await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
 
-      expect(destroySpy).toHaveBeenCalledTimes(1);
       expect(insecureDestroySpy).toHaveBeenCalledTimes(1);
-     
+
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
       );
