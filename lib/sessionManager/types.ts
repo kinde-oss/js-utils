@@ -14,10 +14,23 @@ export enum StorageKeys {
   codeVerifier = "codeVerifier",
 }
 
+export enum TimeoutActivityType {
+  preWarning = "preWarning",
+  timeout = "timeout",
+}
+
 export type StorageSettingsType = {
   keyPrefix: string;
   maxLength: number;
   useInsecureForRefreshToken: boolean;
+  activityTimeoutMinutes?: number;
+  /**
+   * Pre-warning in minutes. MUST be less than activityTimeoutMinutes when set.
+   */
+  activityTimeoutPreWarningMinutes?: number;
+  onActivityTimeout?: (
+    timeoutType: TimeoutActivityType,
+  ) => void | Promise<void>;
 };
 
 export abstract class SessionBase<V extends string = StorageKeys>

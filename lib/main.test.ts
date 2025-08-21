@@ -55,6 +55,8 @@ describe("index exports", () => {
       "splitString",
       "generateKindeSDKHeader",
       "navigateToKinde",
+      "updateActivityTimestamp",
+      "sessionManagerActivityProxy",
 
       // session manager
       "MemoryStorage",

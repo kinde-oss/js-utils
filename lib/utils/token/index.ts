@@ -1,4 +1,5 @@
-import { SessionManager } from "../../sessionManager";
+import { SessionManager, storageSettings } from "../../sessionManager";
+import { sessionManagerActivityProxy } from "../activityTracking";
 
 export {
   has,
@@ -36,6 +37,10 @@ const storage = {
  * @param store Session manager instance
  */
 export const setActiveStorage = (store: SessionManager) => {
+  if (storageSettings.activityTimeoutMinutes) {
+    storage.secure = sessionManagerActivityProxy(store);
+    return;
+  }
   storage.secure = store;
 };
 
@@ -67,6 +72,11 @@ export const clearActiveStorage = (): void => {
  * @param store Session manager instance
  */
 export const setInsecureStorage = (store: SessionManager) => {
+  if (storageSettings.activityTimeoutMinutes) {
+    storage.insecure = sessionManagerActivityProxy(store);
+    return;
+  }
+
   storage.insecure = store;
 };
 
