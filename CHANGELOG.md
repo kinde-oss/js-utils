@@ -1,6 +1,39 @@
 # Changelog
 
 
+## 0.22.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.22.0...main)
+
+### 🚀 Enhancements
+
+- Add automatic activity tracking with session expiry ([7af7055](https://github.com/kinde-oss/js-utils/commit/7af7055))
+
+### 🩹 Fixes
+
+- Resolve activity proxy circular dependency, fix method binding, add tests ([cf7d01b](https://github.com/kinde-oss/js-utils/commit/cf7d01b))
+- Activity tracking async timer tests and duplicate destroySession calls ([f12fae4](https://github.com/kinde-oss/js-utils/commit/f12fae4))
+- Activity tracking test coverage ([e09828c](https://github.com/kinde-oss/js-utils/commit/e09828c))
+- Fallback to insecure storage in updateActivityTimestamp ([36b109a](https://github.com/kinde-oss/js-utils/commit/36b109a))
+
+### 💅 Refactors
+
+- Utilise active storage and timers ([425c96a](https://github.com/kinde-oss/js-utils/commit/425c96a))
+
+### 🏡 Chore
+
+- Enforce activity timeout pre-warning constraint and add error handling ([41e1eed](https://github.com/kinde-oss/js-utils/commit/41e1eed))
+- Update import from main to token ([777c738](https://github.com/kinde-oss/js-utils/commit/777c738))
+
+### ✅ Tests
+
+- Extend coverage ([8e2f782](https://github.com/kinde-oss/js-utils/commit/8e2f782))
+
+### ❤️ Contributors
+
+- Koosha Owji <koosha.owji@gmail.com>
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.21.2...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.21.2...main)
