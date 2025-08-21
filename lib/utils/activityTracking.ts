@@ -10,7 +10,7 @@ let activityPreWarnTimer: NodeJS.Timeout | null = null;
 let activityTimer: NodeJS.Timeout | null = null;
 
 export const updateActivityTimestamp = (): void => {
-  const sessionManager = getActiveStorage();
+  const sessionManager = getActiveStorage() ?? getInsecureStorage();
   if (!sessionManager) {
     throw new Error("Session manager not found");
   }

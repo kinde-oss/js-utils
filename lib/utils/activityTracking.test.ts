@@ -8,6 +8,7 @@ import {
   getActiveStorage,
   clearActiveStorage,
   setInsecureStorage,
+  clearInsecureStorage,
 } from "./token/index.js";
 
 describe("Activity Tracking", () => {
@@ -269,6 +270,7 @@ describe("Activity Tracking", () => {
     it("should throw error when no session manager found", () => {
       storageSettings.activityTimeoutMinutes = 30;
       clearActiveStorage();
+      clearInsecureStorage();
 
       expect(() => updateActivityTimestamp()).toThrow(
         "Session manager not found",
