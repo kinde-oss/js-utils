@@ -178,7 +178,10 @@ describe("Activity Tracking", () => {
 
     it("throw proxy create session missing error on creation when missing", () => {
       storageSettings.activityTimeoutMinutes = 30;
-      expect(() => setActiveStorage(null)).toThrow("Session manager not found");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect(() => setActiveStorage(null as any)).toThrow(
+        "Session manager not found",
+      );
     });
 
     it("should trigger pre-warning callback before timeout", async () => {
@@ -323,6 +326,55 @@ describe("Activity Tracking", () => {
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
       );
+    });
+  });
+
+  describe("Activity Timeout Behavior", () => {
+    it("should fire timeout callbacks only once per inactivity cycle", async () => {
+      storageSettings.activityTimeoutMinutes = 0.1; // 6 seconds for fast test
+      storageSettings.activityTimeoutPreWarningMinutes = 0.05; // 3 seconds pre-warning
+
+      const destroySessionSpy = vi.spyOn(sessionManager, "destroySession");
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
+
+      // Initial activity to start the timer system
+      await activeStorage.getSessionItem(StorageKeys.accessToken);
+
+      // Advance to pre-warning (3 seconds)
+      vi.advanceTimersByTime(3 * 1000 + 100);
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.preWarning,
+      );
+      expect(mockOnActivityTimeout).toHaveBeenCalledTimes(1);
+
+      // Clear mock to track timeout behavior
+      mockOnActivityTimeout.mockClear();
+
+      // Advance to timeout (6 seconds total)
+      await vi.advanceTimersByTimeAsync(3 * 1000 + 100);
+
+      // Timeout should occur exactly once
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
+      );
+      expect(mockOnActivityTimeout).toHaveBeenCalledTimes(1);
+      expect(destroySessionSpy).toHaveBeenCalledTimes(1);
+
+      // Clear mocks to verify no additional callbacks occur
+      mockOnActivityTimeout.mockClear();
+      destroySessionSpy.mockClear();
+
+      // Advance additional time periods - there should be NO more callbacks
+      // (this verifies no infinite recursion occurs)
+      await vi.advanceTimersByTimeAsync(6 * 1000 + 100);
+      expect(mockOnActivityTimeout).not.toHaveBeenCalled();
+      expect(destroySessionSpy).not.toHaveBeenCalled();
+
+      // Verify a third time period as well
+      await vi.advanceTimersByTimeAsync(6 * 1000 + 100);
+      expect(mockOnActivityTimeout).not.toHaveBeenCalled();
+      expect(destroySessionSpy).not.toHaveBeenCalled();
     });
   });
 });
