@@ -1,41 +1,38 @@
-import { IssuerRouteTypes, LoginOptions, PromptTypes } from "../types";
+import { IssuerRouteTypes, PromptTypes, type LoginOptions } from "../types";
 import { generateAuthUrl } from "./generateAuthUrl";
 
-interface SwitchOrgParams {
+export interface SwitchOrgParams {
   domain: string;
   orgCode: string;
   redirectURL: string;
 }
 
 /**
- *
- * @param SwitchOrgParams
- * @returns URL to redirect to which will auto switch the user's active organization without prompting
+ * Switch the active organization without prompting.
+ * @param params - { domain, orgCode, redirectURL }
+ * @returns OAuth URL bundle to redirect to (auto-switches active org).
+ * @throws Error when domain, orgCode, or redirectURL are missing.
  */
-export const switchOrg = async ({
+export const switchOrg = ({
   domain,
   orgCode,
   redirectURL,
-}: SwitchOrgParams): Promise<{
-  url: URL;
-  state: string;
-  nonce: string;
-  codeChallenge: string;
-  codeVerifier: string;
-}> => {
+}: SwitchOrgParams): Promise<Awaited<ReturnType<typeof generateAuthUrl>>> => {
+  if (!domain) {
+    throw new Error("domain is required for switchOrg");
+  }
   if (!orgCode) {
-    throw new Error("Org code is required for switchOrg");
+    throw new Error("orgCode is required for switchOrg");
   }
 
   if (!redirectURL) {
-    throw new Error("Redirect URL is required for switchOrg");
+    throw new Error("redirectURL is required for switchOrg");
   }
-
   const loginOptions: LoginOptions = {
     prompt: PromptTypes.none,
     orgCode,
     redirectURL,
   };
 
-  return await generateAuthUrl(domain, IssuerRouteTypes.login, loginOptions);
+  return generateAuthUrl(domain, IssuerRouteTypes.login, loginOptions);
 };
