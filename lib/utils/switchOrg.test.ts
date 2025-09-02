@@ -23,21 +23,31 @@ describe("switchOrg", () => {
     vi.clearAllMocks();
   });
 
-  it("throws when orgCode is missing", async () => {
-    await expect(
+  it("throws when domain is missing", () => {
+    expect(() => {
+      // @ts-expect-error testing runtime validation
+      switchOrg({
+        orgCode: "org_123",
+        redirectURL: "https://redirect.example.com",
+      });
+    }).toThrow("domain is required for switchOrg");
+  });
+
+  it("throws when orgCode is missing", () => {
+    expect(() => {
       // @ts-expect-error testing runtime validation
       switchOrg({
         domain: "https://auth.example.com",
         redirectURL: "https://redirect.example.com",
-      }),
-    ).rejects.toThrow("Org code is required for switchOrg");
+      });
+    }).toThrow("orgCode is required for switchOrg");
   });
 
-  it("throws when redirectURL is missing", async () => {
-    await expect(
+  it("throws when redirectURL is missing", () => {
+    expect(() => {
       // @ts-expect-error testing runtime validation
-      switchOrg({ domain: "https://auth.example.com", orgCode: "org_123" }),
-    ).rejects.toThrow("Redirect URL is required for switchOrg");
+      switchOrg({ domain: "https://auth.example.com", orgCode: "org_123" });
+    }).toThrow("redirectURL is required for switchOrg");
   });
 
   it("calls generateAuthUrl with correct args and returns its result", async () => {
