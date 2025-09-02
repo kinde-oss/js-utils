@@ -17,7 +17,7 @@ export const switchOrg = ({
   domain,
   orgCode,
   redirectURL,
-}: SwitchOrgParams): Promise<Awaited<ReturnType<typeof generateAuthUrl>>> => {
+}: SwitchOrgParams): ReturnType<typeof generateAuthUrl> => {
   if (!domain) {
     throw new Error("domain is required for switchOrg");
   }
