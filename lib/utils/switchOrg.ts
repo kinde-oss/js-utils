@@ -1,9 +1,9 @@
-import { IssuerRouteTypes, PromptTypes, type LoginOptions } from "../types";
+import { IssuerRouteTypes, OrgCode, PromptTypes, type LoginOptions } from "../types";
 import { generateAuthUrl } from "./generateAuthUrl";
 
 export interface SwitchOrgParams {
   domain: string;
-  orgCode: string;
+  orgCode: OrgCode;
   redirectURL: string;
 }
 
