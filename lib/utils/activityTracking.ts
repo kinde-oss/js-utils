@@ -9,9 +9,6 @@ import {
 let activityPreWarnTimer: NodeJS.Timeout | null = null;
 let activityTimer: NodeJS.Timeout | null = null;
 
-// Re-entrancy guard to prevent circular dependencies during timeout callbacks
-let suppressActivityUpdate = false;
-
 export const updateActivityTimestamp = (): void => {
   const sessionManager = getActiveStorage() ?? getInsecureStorage();
   if (!sessionManager) {
@@ -42,29 +39,27 @@ export const updateActivityTimestamp = (): void => {
 
   activityTimer = setTimeout(
     async () => {
-      suppressActivityUpdate = true;
       try {
+        await sessionManager.destroySession();
+      } catch (error) {
+        console.error("Failed to destroy secure session:", error);
+      }
+      const insecureStorage = getInsecureStorage();
+      if (insecureStorage && insecureStorage !== sessionManager) {
         try {
-          await sessionManager.destroySession();
+          await insecureStorage.destroySession();
         } catch (error) {
-          console.error("Failed to destroy secure session:", error);
+          console.error("Failed to destroy insecure session:", error);
         }
-        const insecureStorage = getInsecureStorage();
-        if (insecureStorage && insecureStorage !== sessionManager) {
-          try {
-            await insecureStorage.destroySession();
-          } catch (error) {
-            console.error("Failed to destroy insecure session:", error);
-          }
-        }
-        try {
-          storageSettings.onActivityTimeout?.(TimeoutActivityType.timeout);
-        } catch (err) {
-          // Shield callers from exceptions in user callbacks
-          console.error("onActivityTimeout callback threw:", err);
-        }
-      } finally {
-        suppressActivityUpdate = false;
+      }
+      try {
+        storageSettings.onActivityTimeout?.(TimeoutActivityType.timeout);
+      } catch (err) {
+        // Shield callers from exceptions in user callbacks
+        console.error(
+          "[activityTimeout] onActivityTimeout(timeout) threw:",
+          err,
+        );
       }
     },
     storageSettings.activityTimeoutMinutes! * 60 * 1000,
@@ -73,7 +68,14 @@ export const updateActivityTimestamp = (): void => {
   if (storageSettings.activityTimeoutPreWarningMinutes) {
     activityPreWarnTimer = setTimeout(
       () => {
-        storageSettings.onActivityTimeout?.(TimeoutActivityType.preWarning);
+        try {
+          storageSettings.onActivityTimeout?.(TimeoutActivityType.preWarning);
+        } catch (err) {
+          console.error(
+            "[activityTimeout] onActivityTimeout(preWarning) threw:",
+            err,
+          );
+        }
       },
       storageSettings.activityTimeoutPreWarningMinutes! * 60 * 1000,
     );
@@ -110,11 +112,11 @@ export const sessionManagerActivityProxy = <T extends StorageKeys>(
 
   const proxyHandler = {
     get(target: SessionManager<T>, prop: string | symbol) {
-      if (!suppressActivityUpdate) {
-        updateActivityTimestamp();
-      }
       const value = target[prop as keyof SessionManager<T>];
       if (typeof value === "function") {
+        if (prop !== "destroySession") {
+          updateActivityTimestamp();
+        }
         return value.bind(target);
       }
       return value;
