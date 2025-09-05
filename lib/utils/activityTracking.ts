@@ -65,7 +65,7 @@ export const updateActivityTimestamp = (): void => {
     storageSettings.activityTimeoutMinutes! * 60 * 1000,
   );
 
-  if (storageSettings.activityTimeoutPreWarningMinutes) {
+  if (storageSettings.activityTimeoutPreWarningMinutes !== undefined) {
     activityPreWarnTimer = setTimeout(
       () => {
         try {
