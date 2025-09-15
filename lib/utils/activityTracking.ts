@@ -52,15 +52,30 @@ export const updateActivityTimestamp = (): void => {
           console.error("Failed to destroy insecure session:", error);
         }
       }
-      storageSettings.onActivityTimeout?.(TimeoutActivityType.timeout);
+      try {
+        storageSettings.onActivityTimeout?.(TimeoutActivityType.timeout);
+      } catch (err) {
+        // Shield callers from exceptions in user callbacks
+        console.error(
+          "[activityTimeout] onActivityTimeout(timeout) threw:",
+          err,
+        );
+      }
     },
     storageSettings.activityTimeoutMinutes! * 60 * 1000,
   );
 
-  if (storageSettings.activityTimeoutPreWarningMinutes) {
+  if (storageSettings.activityTimeoutPreWarningMinutes !== undefined) {
     activityPreWarnTimer = setTimeout(
       () => {
-        storageSettings.onActivityTimeout?.(TimeoutActivityType.preWarning);
+        try {
+          storageSettings.onActivityTimeout?.(TimeoutActivityType.preWarning);
+        } catch (err) {
+          console.error(
+            "[activityTimeout] onActivityTimeout(preWarning) threw:",
+            err,
+          );
+        }
       },
       storageSettings.activityTimeoutPreWarningMinutes! * 60 * 1000,
     );
@@ -97,9 +112,11 @@ export const sessionManagerActivityProxy = <T extends StorageKeys>(
 
   const proxyHandler = {
     get(target: SessionManager<T>, prop: string | symbol) {
-      updateActivityTimestamp();
       const value = target[prop as keyof SessionManager<T>];
       if (typeof value === "function") {
+        if (prop !== "destroySession") {
+          updateActivityTimestamp();
+        }
         return value.bind(target);
       }
       return value;

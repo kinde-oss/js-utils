@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { storageSettings } from "../sessionManager/index.js";
 import { TimeoutActivityType, StorageKeys } from "../sessionManager/types.js";
 import { MemoryStorage } from "../sessionManager/stores/memory.js";
-import { updateActivityTimestamp } from "./activityTracking.js";
+import {
+  updateActivityTimestamp,
+  sessionManagerActivityProxy,
+} from "./activityTracking.js";
 import {
   setActiveStorage,
   getActiveStorage,
@@ -178,7 +181,10 @@ describe("Activity Tracking", () => {
 
     it("throw proxy create session missing error on creation when missing", () => {
       storageSettings.activityTimeoutMinutes = 30;
-      expect(() => setActiveStorage(null)).toThrow("Session manager not found");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect(() => setActiveStorage(null as any)).toThrow(
+        "Session manager not found",
+      );
     });
 
     it("should trigger pre-warning callback before timeout", async () => {
@@ -189,7 +195,7 @@ describe("Activity Tracking", () => {
 
       await activeStorage.getSessionItem(StorageKeys.accessToken);
 
-      vi.advanceTimersByTime(25 * 60 * 1000 + 1000);
+      await vi.advanceTimersByTimeAsync(25 * 60 * 1000 + 1000);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.preWarning,
       );
@@ -209,14 +215,14 @@ describe("Activity Tracking", () => {
 
       await expect(
         activeStorage.setSessionItem(StorageKeys.accessToken, "token"),
-      ).resolves.not.toThrow();
+      ).resolves.toBeUndefined();
       await expect(
         activeStorage.getSessionItem(StorageKeys.accessToken),
       ).resolves.toBe("token");
       await expect(
         activeStorage.removeSessionItem(StorageKeys.accessToken),
-      ).resolves.not.toThrow();
-      await expect(activeStorage.destroySession()).resolves.not.toThrow();
+      ).resolves.toBeUndefined();
+      await expect(activeStorage.destroySession()).resolves.toBeUndefined();
     });
 
     it("should properly bind methods and maintain context", async () => {
@@ -242,7 +248,7 @@ describe("Activity Tracking", () => {
 
       // Verify activity tracking is called for each method access
       // We expect the timeout to be set after each method call
-      const timeoutSpy = vi.spyOn(global, "setTimeout");
+      const timeoutSpy = vi.spyOn(globalThis, "setTimeout");
       timeoutSpy.mockClear();
 
       await activeStorage.setSessionItem(StorageKeys.refreshToken, "refresh");
@@ -286,7 +292,7 @@ describe("Activity Tracking", () => {
       );
     });
 
-    it("should throw error when no activity timeout configured", () => {
+    it("should throw error when pre-warning minutes >= timeout minutes", () => {
       setActiveStorage(sessionManager);
       storageSettings.activityTimeoutMinutes = 30;
       storageSettings.activityTimeoutPreWarningMinutes = 31;
@@ -323,6 +329,137 @@ describe("Activity Tracking", () => {
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
       );
+    });
+  });
+
+  describe("Activity Timeout Behavior", () => {
+    it("should fire timeout callbacks only once per inactivity cycle", async () => {
+      storageSettings.activityTimeoutMinutes = 0.1; // 6 seconds for fast test
+      storageSettings.activityTimeoutPreWarningMinutes = 0.05; // 3 seconds pre-warning
+
+      const destroySessionSpy = vi.spyOn(sessionManager, "destroySession");
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
+
+      // Initial activity to start the timer system
+      await activeStorage.getSessionItem(StorageKeys.accessToken);
+
+      // Advance to pre-warning
+      await vi.advanceTimersByTimeAsync(
+        storageSettings.activityTimeoutPreWarningMinutes! * 60 * 1000 + 100,
+      );
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.preWarning,
+      );
+      expect(mockOnActivityTimeout).toHaveBeenCalledTimes(1);
+
+      // Clear mock to track timeout behavior
+      mockOnActivityTimeout.mockClear();
+
+      // Advance to timeout
+      await vi.advanceTimersByTimeAsync(
+        (storageSettings.activityTimeoutMinutes! -
+          storageSettings.activityTimeoutPreWarningMinutes!) *
+          60 *
+          1000 +
+          100,
+      );
+
+      // Timeout should occur exactly once
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
+      );
+      expect(mockOnActivityTimeout).toHaveBeenCalledTimes(1);
+      expect(destroySessionSpy).toHaveBeenCalledTimes(1);
+
+      // Clear mocks to verify no additional callbacks occur
+      mockOnActivityTimeout.mockClear();
+      destroySessionSpy.mockClear();
+
+      // Advance additional time periods - there should be NO more callbacks
+      // (this verifies no infinite recursion occurs)
+      await vi.advanceTimersByTimeAsync(
+        storageSettings.activityTimeoutMinutes! * 60 * 1000 + 100,
+      );
+      expect(mockOnActivityTimeout).not.toHaveBeenCalled();
+      expect(destroySessionSpy).not.toHaveBeenCalled();
+
+      // Verify a third time period as well
+      await vi.advanceTimersByTimeAsync(
+        storageSettings.activityTimeoutMinutes! * 60 * 1000 + 100,
+      );
+      expect(mockOnActivityTimeout).not.toHaveBeenCalled();
+      expect(destroySessionSpy).not.toHaveBeenCalled();
+    });
+
+    it("should trigger activity updates on method property access", () => {
+      storageSettings.activityTimeoutMinutes = 5;
+      setActiveStorage(sessionManager);
+      const activeStorage = sessionManagerActivityProxy(sessionManager);
+
+      const timeoutSpy = vi.spyOn(globalThis, "setTimeout");
+      timeoutSpy.mockClear(); // Clear any setup calls
+
+      // Accessing method properties should trigger activity updates
+      const methodRef = activeStorage.getSessionItem;
+      expect(methodRef).toBeDefined();
+      expect(timeoutSpy).toHaveBeenCalledTimes(1);
+      expect(timeoutSpy).toHaveBeenCalledWith(
+        expect.any(Function),
+        storageSettings.activityTimeoutMinutes! * 60 * 1000,
+      );
+    });
+
+    it("should not trigger activity updates when calling destroySession", () => {
+      storageSettings.activityTimeoutMinutes = 5;
+      setActiveStorage(sessionManager);
+      const activeStorage = sessionManagerActivityProxy(sessionManager);
+
+      const timeoutSpy = vi.spyOn(globalThis, "setTimeout");
+      timeoutSpy.mockClear();
+
+      // destroySession should not trigger activity updates
+      activeStorage.destroySession();
+      expect(timeoutSpy).not.toHaveBeenCalled();
+    });
+
+    it("should handle pre-warning callback errors gracefully", async () => {
+      storageSettings.activityTimeoutMinutes = 0.1; // 6 seconds
+      storageSettings.activityTimeoutPreWarningMinutes = 0.05; // 3 seconds
+
+      // Mock callback to throw error
+      const throwingCallback = vi.fn().mockImplementation((type) => {
+        if (type === TimeoutActivityType.preWarning) {
+          throw new Error("Pre-warning callback error");
+        }
+      });
+      storageSettings.onActivityTimeout = throwingCallback;
+
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
+
+      // Trigger activity to start timer
+      await activeStorage.getSessionItem(StorageKeys.accessToken);
+
+      // Advance to pre-warning time
+      await vi.advanceTimersByTimeAsync(
+        storageSettings.activityTimeoutPreWarningMinutes! * 60 * 1000 + 100,
+      );
+
+      // Should handle the error gracefully
+      expect(throwingCallback).toHaveBeenCalledWith(
+        TimeoutActivityType.preWarning,
+      );
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "[activityTimeout] onActivityTimeout(preWarning) threw:",
+        expect.any(Error),
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 });
