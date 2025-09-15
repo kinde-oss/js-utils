@@ -1,4 +1,9 @@
-import { IssuerRouteTypes, OrgCode, PromptTypes, type LoginOptions } from "../types";
+import {
+  IssuerRouteTypes,
+  OrgCode,
+  PromptTypes,
+  type LoginOptions,
+} from "../types";
 import { generateAuthUrl } from "./generateAuthUrl";
 
 export interface SwitchOrgParams {
