@@ -23,6 +23,7 @@ interface ExchangeAuthCodeParams {
   urlParams: URLSearchParams;
   domain: string;
   clientId: string;
+  clientSecret?: string;
   redirectURL: string;
   autoRefresh?: boolean;
   onRefresh?: (data: RefreshTokenResult) => void;
@@ -66,6 +67,7 @@ export const exchangeAuthCode = async ({
   urlParams,
   domain,
   clientId,
+  clientSecret,
   redirectURL,
   autoRefresh = false,
   onRefresh,
@@ -135,17 +137,23 @@ export const exchangeAuthCode = async ({
         }
       : {};
 
+  const body = new URLSearchParams({
+    client_id: clientId,
+    code,
+    code_verifier: codeVerifier,
+    grant_type: "authorization_code",
+    redirect_uri: redirectURL,
+  });
+
+  if (clientSecret) {
+    body.append("client_secret", clientSecret);
+  }
+
   const fetchOptions: RequestInit = {
     method: "POST",
     ...credentialsHeader,
     headers: new Headers(headers),
-    body: new URLSearchParams({
-      client_id: clientId,
-      code,
-      code_verifier: codeVerifier,
-      grant_type: "authorization_code",
-      redirect_uri: redirectURL,
-    }),
+    body,
   };
 
   let response;

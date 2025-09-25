@@ -490,6 +490,50 @@ describe("exchangeAuthCode", () => {
     });
   });
 
+  it("should handle client secret correctly", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(StorageKeys.state, "test");
+    await store.setSessionItem(StorageKeys.codeVerifier, "verifier");
+    const urlParams = new URLSearchParams();
+    urlParams.append("state", "test");
+    urlParams.append("code", "test");
+    mockStorage.getItem.mockImplementation((key) => {
+      if (key === StorageKeys.state) return "test";
+      if (key === StorageKeys.codeVerifier) return "verifier";
+      return null;
+    });
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({}),
+    } as Response);
+
+    await exchangeAuthCode({
+      urlParams,
+      domain: "test.com",
+      clientId: "test",
+      redirectURL: "test.com",
+      clientSecret: "secret",
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "test.com/oauth2/token",
+      expect.objectContaining({
+        body: expect.any(URLSearchParams),
+      }),
+    );
+
+    const fetchCall = vi.mocked(global.fetch).mock.calls[0];
+    const actualBody = fetchCall[1]?.body as URLSearchParams;
+
+    expect(actualBody.get("client_id")).toBe("test");
+    expect(actualBody.get("code")).toBe("test");
+    expect(actualBody.get("code_verifier")).toBe("verifier");
+    expect(actualBody.get("grant_type")).toBe("authorization_code");
+    expect(actualBody.get("redirect_uri")).toBe("test.com");
+    expect(actualBody.get("client_secret")).toBe("secret");
+  });
+
   it("should handle auto refresh correctly", async () => {
     const store = new MemoryStorage();
 
