@@ -34,6 +34,7 @@ describe("index exports", () => {
       "StorageKeys",
       "RefreshType",
       "PortalPage",
+      "SessionBase",
       "ProfilePage",
 
       // utils
