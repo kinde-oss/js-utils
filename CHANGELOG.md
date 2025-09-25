@@ -1,6 +1,42 @@
 # Changelog
 
 
+## 0.23.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.23.0...main)
+
+### 🚀 Enhancements
+
+- Setup switch org method and tests ([f0b72fe](https://github.com/kinde-oss/js-utils/commit/f0b72fe))
+- Add secret to exchangeAuthCode. ([12ec101](https://github.com/kinde-oss/js-utils/commit/12ec101))
+- Export sessionBase ([fa3f245](https://github.com/kinde-oss/js-utils/commit/fa3f245))
+
+### 🩹 Fixes
+
+- Resolve activity tracker infinite timeout loops ([a738431](https://github.com/kinde-oss/js-utils/commit/a738431))
+- Run prettier ([4b8048d](https://github.com/kinde-oss/js-utils/commit/4b8048d))
+- Address coderabbitai nitpicks ([9405b60](https://github.com/kinde-oss/js-utils/commit/9405b60))
+- Address coderabbitai nitpicks for tests ([1ee93a8](https://github.com/kinde-oss/js-utils/commit/1ee93a8))
+- Update return type for correct expected output. ([51b4e2f](https://github.com/kinde-oss/js-utils/commit/51b4e2f))
+- Use type orgCode in SwitchOrgParams interface ([24e1d7a](https://github.com/kinde-oss/js-utils/commit/24e1d7a))
+- Exclude destroySession to prevent infinite loops ([b4278c3](https://github.com/kinde-oss/js-utils/commit/b4278c3))
+
+### 🏡 Chore
+
+- Improve test coverage ([090746f](https://github.com/kinde-oss/js-utils/commit/090746f))
+- Lint fix ([39ec698](https://github.com/kinde-oss/js-utils/commit/39ec698))
+- Workspace update ([28f3b6a](https://github.com/kinde-oss/js-utils/commit/28f3b6a))
+
+### 🤖 CI
+
+- Update build/test workflow ([e8340bf](https://github.com/kinde-oss/js-utils/commit/e8340bf))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+- Alexis ([@pesickaa](https://github.com/pesickaa))
+- Koosha Owji <koosha.owji@gmail.com>
+
 ## 0.22.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.22.0...main)
