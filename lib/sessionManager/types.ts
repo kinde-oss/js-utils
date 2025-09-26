@@ -56,6 +56,14 @@ export abstract class SessionBase<V extends string = StorageKeys>
     );
   }
 
+  async getItems(items: V[]): Awaitable<Record<V, unknown>> {
+    return Promise.all(
+      items.map((item) => {
+        return this.getSessionItem(item);
+      }),
+    );
+  }
+
   async removeItems(...items: V[]): Awaitable<void> {
     await Promise.all(
       items.map((item) => {
