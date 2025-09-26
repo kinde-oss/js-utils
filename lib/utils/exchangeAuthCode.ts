@@ -210,10 +210,12 @@ export const exchangeAuthCode = async ({
     url.search = "";
     return url;
   };
-  const url = cleanUrl(new URL(window.location.toString()));
-  // Replace current state and clear forward history
-  window.history.replaceState(window.history.state, "", url);
 
+  if (typeof window !== "undefined") {
+    const url = cleanUrl(new URL(window.location.toString()));
+    // Replace current state and clear forward history
+    window.history.replaceState(window.history.state, "", url);
+  }
   if (!data.access_token || !data.id_token || !data.refresh_token) {
     return {
       success: false,

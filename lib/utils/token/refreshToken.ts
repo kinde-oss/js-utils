@@ -106,9 +106,11 @@ export const refreshToken = async ({
           error: "No active storage found",
         });
       }
-      setRefreshTimer(data.expires_in, async () => {
-        refreshToken({ domain, clientId, refreshType, onRefresh });
-      });
+      if (typeof window !== "undefined") {
+        setRefreshTimer(data.expires_in, async () => {
+          refreshToken({ domain, clientId, refreshType, onRefresh });
+        });
+      }
 
       if (storage) {
         await secureStore.setSessionItem(
