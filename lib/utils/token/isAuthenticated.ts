@@ -1,16 +1,21 @@
-import { JWTDecoded } from "@kinde/jwt-decoder";
-import { getDecodedToken, refreshToken } from ".";
+import { refreshToken } from ".";
+import { isTokenExpired } from ".";
 
 export interface IsAuthenticatedPropsWithRefreshToken {
   useRefreshToken?: true;
   domain: string;
   clientId: string;
+  /**
+   * Threshold in seconds to expire the token before the actual expiry
+   */
+  expiredThreshold?: number;
 }
 
 export interface IsAuthenticatedPropsWithoutRefreshToken {
   useRefreshToken?: false;
   domain?: never;
   clientId?: never;
+  expiredThreshold?: number;
 }
 
 type IsAuthenticatedProps =
@@ -25,15 +30,9 @@ export const isAuthenticated = async (
   props?: IsAuthenticatedProps,
 ): Promise<boolean> => {
   try {
-    const token = await getDecodedToken<JWTDecoded>("accessToken");
-    if (!token) return false;
-
-    if (!token.exp) {
-      console.error("Token does not have an expiry");
-      return false;
-    }
-
-    const isExpired = token.exp < Math.floor(Date.now() / 1000);
+    const isExpired = await isTokenExpired({
+      threshold: props?.expiredThreshold,
+    });
 
     if (isExpired && props?.useRefreshToken) {
       const refreshResult = await refreshToken({

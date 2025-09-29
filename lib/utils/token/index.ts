@@ -25,6 +25,7 @@ export { getUserOrganizations } from "./getUserOrganizations";
 export { getRoles } from "./getRoles";
 export type { Role } from "./getRoles";
 export { isAuthenticated } from "./isAuthenticated";
+export { isTokenExpired } from "./isTokenExpired";
 export { refreshToken } from "./refreshToken";
 export { getEntitlements } from "./getEntitlements";
 const storage = {

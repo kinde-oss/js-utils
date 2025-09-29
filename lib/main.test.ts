@@ -48,6 +48,7 @@ describe("index exports", () => {
       "sanitizeUrl",
       "exchangeAuthCode",
       "isAuthenticated",
+      "isTokenExpired",
       "refreshToken",
       "checkAuth",
       "isCustomDomain",
