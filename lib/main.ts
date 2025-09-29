@@ -38,6 +38,7 @@ export {
   getUserOrganizations,
   getRoles,
   isAuthenticated,
+  isTokenExpired,
   refreshToken,
   setActiveStorage,
   getActiveStorage,

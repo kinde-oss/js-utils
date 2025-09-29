@@ -83,7 +83,7 @@ describe("isAuthenticated", () => {
 
   it("should return false and log error if an exception occurs", async () => {
     const mockError = new Error("Test error");
-    vi.spyOn(tokenUtils, "getDecodedToken").mockRejectedValue(mockError);
+    vi.spyOn(tokenUtils, "isTokenExpired").mockRejectedValue(mockError);
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const result = await isAuthenticated();
