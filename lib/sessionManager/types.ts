@@ -56,6 +56,15 @@ export abstract class SessionBase<V extends string = StorageKeys>
     );
   }
 
+  async getItems(...items: V[]): Awaitable<Partial<Record<V, unknown>>> {
+    const promises = items.map(async (item) => {
+      const value = await this.getSessionItem(item);
+      return [item, value] as const;
+    });
+    const entries = await Promise.all(promises);
+    return Object.fromEntries(entries) as Partial<Record<V, unknown>>;
+  }
+
   async removeItems(...items: V[]): Awaitable<void> {
     await Promise.all(
       items.map((item) => {
@@ -109,4 +118,10 @@ export interface SessionManager<V extends string = StorageKeys> {
    * @param items
    */
   removeItems(...items: V[]): Awaitable<void>;
+
+  /**
+   * Gets multiple items simultaneously.
+   * @param items
+   */
+  getItems(...items: V[]): Awaitable<Partial<Record<V, unknown>>>;
 }
