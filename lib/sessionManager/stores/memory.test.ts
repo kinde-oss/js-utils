@@ -44,6 +44,21 @@ describe("MemoryStorage standard keys", () => {
     ).toBeNull();
   });
 
+  it("should get many items", async () => {
+    await sessionManager.setItems({
+      [StorageKeys.accessToken]: "accessTokenValue",
+      [StorageKeys.idToken]: "idTokenValue",
+    });
+
+    const result = await sessionManager.getItems(
+      StorageKeys.accessToken,
+      StorageKeys.idToken,
+    );
+
+    expect(result[StorageKeys.accessToken]).toBe("accessTokenValue");
+    expect(result[StorageKeys.idToken]).toBe("idTokenValue");
+  });
+
   it("should set many items", async () => {
     await sessionManager.setItems({
       [StorageKeys.accessToken]: "accessTokenValue",
