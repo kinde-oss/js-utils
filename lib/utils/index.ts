@@ -20,3 +20,5 @@ export {
   updateActivityTimestamp,
   sessionManagerActivityProxy,
 } from "./activityTracking";
+export { isClient } from "./isClient";
+export { isServer } from "./isServer";

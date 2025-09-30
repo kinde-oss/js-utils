@@ -22,6 +22,8 @@ export {
   navigateToKinde,
   updateActivityTimestamp,
   sessionManagerActivityProxy,
+  isClient,
+  isServer,
 } from "./utils";
 
 export {

@@ -59,6 +59,8 @@ describe("index exports", () => {
       "navigateToKinde",
       "updateActivityTimestamp",
       "sessionManagerActivityProxy",
+      "isClient",
+      "isServer",
 
       // session manager
       "MemoryStorage",

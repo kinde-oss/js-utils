@@ -1,3 +1,5 @@
+import { isClient } from "./isClient";
+
 /**
  * Global timer reference for managing refresh timers.
  * Used to store the timeout ID for the current refresh timer.
@@ -37,7 +39,7 @@ let refreshTimer: number | undefined;
  */
 export function setRefreshTimer(timer: number, callback: () => void) {
   clearRefreshTimer();
-  if (typeof window === "undefined") {
+  if (!isClient()) {
     throw new Error("setRefreshTimer requires a browser environment");
   }
   if (timer <= 0) {
@@ -68,8 +70,10 @@ export function setRefreshTimer(timer: number, callback: () => void) {
  * ```
  */
 export function clearRefreshTimer() {
-  if (refreshTimer !== undefined) {
-    window.clearTimeout(refreshTimer);
-    refreshTimer = undefined;
+  if (isClient()) {
+    if (refreshTimer !== undefined) {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = undefined;
+    }
   }
 }

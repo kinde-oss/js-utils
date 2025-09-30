@@ -8,6 +8,7 @@ import { isCustomDomain, sanitizeUrl } from "..";
 import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
 import type { RefreshTokenResult } from "../../main";
 import { RefreshType } from "../../main";
+import { isClient } from "../isClient";
 
 /**
  * refreshes the token
@@ -106,9 +107,11 @@ export const refreshToken = async ({
           error: "No active storage found",
         });
       }
-      setRefreshTimer(data.expires_in, async () => {
-        refreshToken({ domain, clientId, refreshType, onRefresh });
-      });
+      if (isClient()) {
+        setRefreshTimer(data.expires_in, async () => {
+          refreshToken({ domain, clientId, refreshType, onRefresh });
+        });
+      }
 
       if (storage) {
         await secureStore.setSessionItem(
