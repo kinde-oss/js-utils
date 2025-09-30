@@ -8,6 +8,7 @@ import {
 } from "../main";
 import { isCustomDomain } from ".";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
+import { isClient } from "./isClient";
 
 export const frameworkSettings: {
   framework: string;
@@ -211,7 +212,7 @@ export const exchangeAuthCode = async ({
     return url;
   };
 
-  if (typeof window !== "undefined") {
+  if (isClient()) {
     const url = cleanUrl(new URL(window.location.toString()));
     // Replace current state and clear forward history
     window.history.replaceState(window.history.state, "", url);
