@@ -1,6 +1,33 @@
 # Changelog
 
 
+## 0.24.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.24.0...main)
+
+### 🚀 Enhancements
+
+- Store getItems ([009f3fc](https://github.com/kinde-oss/js-utils/commit/009f3fc))
+- Add isTokenExpired method ([96a606b](https://github.com/kinde-oss/js-utils/commit/96a606b))
+- Enhance sanitizeUrl to remove duplicate slashes in a URL ([c6bd3e9](https://github.com/kinde-oss/js-utils/commit/c6bd3e9))
+- CheckAuth when tokens in storage ([4e258ee](https://github.com/kinde-oss/js-utils/commit/4e258ee))
+- Add windowless support to functions ([fad072e](https://github.com/kinde-oss/js-utils/commit/fad072e))
+- Add `isClient`/`isServer` utilities ([f1848a6](https://github.com/kinde-oss/js-utils/commit/f1848a6))
+
+### 🩹 Fixes
+
+- Return partial type ([30c513b](https://github.com/kinde-oss/js-utils/commit/30c513b))
+- Add guard to clearRefreshTimer ([b6ee46d](https://github.com/kinde-oss/js-utils/commit/b6ee46d))
+
+### 💅 Refactors
+
+- Replace window checks with isClient utility in auth and timer functions ([42e400b](https://github.com/kinde-oss/js-utils/commit/42e400b))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+- Bailey Eaton <xYoshify@gmail.com>
+
 ## 0.23.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.23.0...main)
