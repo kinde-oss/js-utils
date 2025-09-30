@@ -70,8 +70,10 @@ export function setRefreshTimer(timer: number, callback: () => void) {
  * ```
  */
 export function clearRefreshTimer() {
-  if (refreshTimer !== undefined) {
-    window.clearTimeout(refreshTimer);
-    refreshTimer = undefined;
+  if (isClient()) {
+    if (refreshTimer !== undefined) {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = undefined;
+    }
   }
 }
