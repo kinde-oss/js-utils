@@ -1,4 +1,4 @@
-import { getActiveStorage, getInsecureStorage } from ".";
+import { getActiveStorage, getClaim, getInsecureStorage } from ".";
 import {
   SessionManager,
   StorageKeys,
@@ -76,30 +76,40 @@ export const refreshToken = async ({
   }
 
   clearRefreshTimer();
-
+  let result: RefreshTokenResult;
   try {
-    const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
-      method: "POST",
-      ...(refreshType === RefreshType.cookie && { credentials: "include" }),
-      headers: {
-        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-      },
-      body: new URLSearchParams({
-        ...(refreshType === RefreshType.refreshToken && {
-          refresh_token: refreshTokenValue,
-        }),
-        grant_type: "refresh_token",
-        client_id: clientId,
-      }).toString(),
-    });
-    if (!response.ok) {
-      return handleResult({
-        success: false,
-        error: "Failed to refresh token",
+    if (storageSettings.onRefreshHandler) {
+      result = await storageSettings.onRefreshHandler(refreshType);
+    } else {
+      const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
+        method: "POST",
+        ...(refreshType === RefreshType.cookie && { credentials: "include" }),
+        headers: {
+          "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        },
+        body: new URLSearchParams({
+          ...(refreshType === RefreshType.refreshToken && {
+            refresh_token: refreshTokenValue,
+          }),
+          grant_type: "refresh_token",
+          client_id: clientId,
+        }).toString(),
       });
+      if (!response.ok) {
+        return handleResult({
+          success: false,
+          error: "Failed to refresh token",
+        });
+      }
+      const data = await response.json();
+      result = {
+        success: true,
+        [StorageKeys.accessToken]: data.access_token,
+        [StorageKeys.idToken]: data.id_token,
+        [StorageKeys.refreshToken]: data.refresh_token,
+      };
     }
-    const data = await response.json();
-    if (data.access_token) {
+    if (result.accessToken) {
       const secureStore = getActiveStorage();
       if (!secureStore) {
         return handleResult({
@@ -107,33 +117,28 @@ export const refreshToken = async ({
           error: "No active storage found",
         });
       }
-      if (isClient()) {
-        setRefreshTimer(data.expires_in, async () => {
-          refreshToken({ domain, clientId, refreshType, onRefresh });
-        });
-      }
 
       if (storage) {
         await secureStore.setSessionItem(
           StorageKeys.accessToken,
-          data.access_token,
+          result.accessToken,
         );
-        if (data.id_token) {
-          await secureStore.setSessionItem(StorageKeys.idToken, data.id_token);
+        if (result.idToken) {
+          await secureStore.setSessionItem(StorageKeys.idToken, result.idToken);
         }
-        if (data.refresh_token) {
+        if (result.refreshToken) {
           await storage.setSessionItem(
             StorageKeys.refreshToken,
-            data.refresh_token,
+            result.refreshToken,
           );
         }
       }
-      return handleResult({
-        success: true,
-        [StorageKeys.accessToken]: data.access_token,
-        [StorageKeys.idToken]: data.id_token,
-        [StorageKeys.refreshToken]: data.refresh_token,
-      });
+      if (isClient()) {
+        setRefreshTimer((await getClaim("exp"))?.value as number, async () => {
+          refreshToken({ domain, clientId, refreshType, onRefresh });
+        });
+      }
+      return handleResult(result);
     }
   } catch (error) {
     return handleResult({
