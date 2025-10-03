@@ -1,4 +1,4 @@
-import { getActiveStorage, getInsecureStorage } from ".";
+import { getActiveStorage, getClaim, getInsecureStorage } from ".";
 import {
   SessionManager,
   StorageKeys,
@@ -76,30 +76,41 @@ export const refreshToken = async ({
   }
 
   clearRefreshTimer();
-
+  let result: RefreshTokenResult;
+  let data;
   try {
-    const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
-      method: "POST",
-      ...(refreshType === RefreshType.cookie && { credentials: "include" }),
-      headers: {
-        "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-      },
-      body: new URLSearchParams({
-        ...(refreshType === RefreshType.refreshToken && {
-          refresh_token: refreshTokenValue,
-        }),
-        grant_type: "refresh_token",
-        client_id: clientId,
-      }).toString(),
-    });
-    if (!response.ok) {
-      return handleResult({
-        success: false,
-        error: "Failed to refresh token",
+    if (storageSettings.onRefreshHandler) {
+      result = await storageSettings.onRefreshHandler(refreshType);
+    } else {
+      const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
+        method: "POST",
+        ...(refreshType === RefreshType.cookie && { credentials: "include" }),
+        headers: {
+          "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        },
+        body: new URLSearchParams({
+          ...(refreshType === RefreshType.refreshToken && {
+            refresh_token: refreshTokenValue,
+          }),
+          grant_type: "refresh_token",
+          client_id: clientId,
+        }).toString(),
       });
+      if (!response.ok) {
+        return handleResult({
+          success: false,
+          error: "Failed to refresh token",
+        });
+      }
+      data = await response.json();
+      result = {
+        success: true,
+        [StorageKeys.accessToken]: data.access_token,
+        [StorageKeys.idToken]: data.id_token,
+        [StorageKeys.refreshToken]: data.refresh_token,
+      };
     }
-    const data = await response.json();
-    if (data.access_token) {
+    if (result.accessToken) {
       const secureStore = getActiveStorage();
       if (!secureStore) {
         return handleResult({
@@ -107,33 +118,37 @@ export const refreshToken = async ({
           error: "No active storage found",
         });
       }
-      if (isClient()) {
-        setRefreshTimer(data.expires_in, async () => {
-          refreshToken({ domain, clientId, refreshType, onRefresh });
-        });
-      }
 
+      await secureStore.setSessionItem(
+        StorageKeys.accessToken,
+        result.accessToken,
+      );
+      if (result.idToken) {
+        await secureStore.setSessionItem(StorageKeys.idToken, result.idToken);
+      }
       if (storage) {
-        await secureStore.setSessionItem(
-          StorageKeys.accessToken,
-          data.access_token,
-        );
-        if (data.id_token) {
-          await secureStore.setSessionItem(StorageKeys.idToken, data.id_token);
-        }
-        if (data.refresh_token) {
+        if (result.refreshToken) {
           await storage.setSessionItem(
             StorageKeys.refreshToken,
-            data.refresh_token,
+            result.refreshToken,
           );
         }
       }
-      return handleResult({
-        success: true,
-        [StorageKeys.accessToken]: data.access_token,
-        [StorageKeys.idToken]: data.id_token,
-        [StorageKeys.refreshToken]: data.refresh_token,
-      });
+
+      if (isClient()) {
+        const exp = Number((await getClaim("exp"))?.value);
+        if (Number.isFinite(exp) || data?.expires_in) {
+          let secsToExpiry = 0;
+          if (!data?.expires_in) {
+            const nowSec = Math.floor(Date.now() / 1000);
+            secsToExpiry = Math.max(exp - nowSec, 1);
+          }
+          setRefreshTimer(data?.expires_in || secsToExpiry, async () => {
+            refreshToken({ domain, clientId, refreshType, onRefresh });
+          });
+        }
+      }
+      return handleResult(result);
     }
   } catch (error) {
     return handleResult({
