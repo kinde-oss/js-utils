@@ -40,9 +40,7 @@ export class ExpoSecureStore<
    */
   async destroySession(): Promise<void> {
     const keys = Object.values(StorageKeys);
-    keys.forEach(async (key) => {
-      await this.removeSessionItem(key);
-    });
+    await Promise.all(keys.map((key) => this.removeSessionItem(key)));
 
     this.notifyListeners();
   }

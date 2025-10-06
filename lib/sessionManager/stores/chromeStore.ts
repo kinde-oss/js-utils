@@ -53,6 +53,7 @@ export class ChromeStore<V extends string = StorageKeys>
           });
         },
       );
+      this.notifyListeners();
       return;
     }
     await chrome.storage.local.set({
