@@ -5,6 +5,8 @@
  */
 type Awaitable<T> = Promise<T>;
 
+type StoreListener = () => void | Promise<void>;
+
 export enum StorageKeys {
   accessToken = "accessToken",
   idToken = "idToken",
@@ -36,6 +38,7 @@ export type StorageSettingsType = {
 export abstract class SessionBase<V extends string = StorageKeys>
   implements SessionManager<V>
 {
+  private listeners: Set<StoreListener> = new Set();
   abstract getSessionItem<T = unknown>(
     itemKey: V | StorageKeys,
   ): Awaitable<T | unknown | null>;
@@ -45,6 +48,17 @@ export abstract class SessionBase<V extends string = StorageKeys>
   ): Awaitable<void>;
   abstract removeSessionItem(itemKey: V | StorageKeys): Awaitable<void>;
   abstract destroySession(): Awaitable<void>;
+
+  async notifyListeners() {
+    await Promise.all(Array.from(this.listeners).map((listener) => listener()));
+  }
+
+  subscribe(listener: StoreListener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
 
   async setItems(items: Partial<Record<V, unknown>>): Awaitable<void> {
     await Promise.all(
@@ -124,4 +138,16 @@ export interface SessionManager<V extends string = StorageKeys> {
    * @param items
    */
   getItems(...items: V[]): Awaitable<Partial<Record<V, unknown>>>;
+
+  /**
+   * Subscribes to store changes.
+   * @param listener - Function to call when store changes
+   * @returns Unsubscribe function
+   */
+  subscribe(listener: StoreListener): () => void;
+
+  /**
+   * Notifies listeners of store changes.
+   */
+  notifyListeners(): void;
 }
