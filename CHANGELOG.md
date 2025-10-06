@@ -1,6 +1,18 @@
 # Changelog
 
 
+## 0.25.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.25.0...main)
+
+### 🩹 Fixes
+
+- Empty storage authCheck + tests ([5ecaf66](https://github.com/kinde-oss/js-utils/commit/5ecaf66))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.24.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.24.0...main)
