@@ -39,6 +39,8 @@ export abstract class SessionBase<V extends string = StorageKeys>
   implements SessionManager<V>
 {
   private listeners: Set<StoreListener> = new Set();
+  private notificationScheduled = false;
+
   abstract getSessionItem<T = unknown>(
     itemKey: V | StorageKeys,
   ): Awaitable<T | unknown | null>;
@@ -49,8 +51,27 @@ export abstract class SessionBase<V extends string = StorageKeys>
   abstract removeSessionItem(itemKey: V | StorageKeys): Awaitable<void>;
   abstract destroySession(): Awaitable<void>;
 
-  async notifyListeners() {
-    await Promise.all(Array.from(this.listeners).map((listener) => listener()));
+  notifyListeners(): void {
+    void this.scheduleNotification();
+  }
+
+  private async scheduleNotification(): Promise<void> {
+    if (this.notificationScheduled) {
+      return;
+    }
+
+    this.notificationScheduled = true;
+
+    // queueMicrotask batches notifications in the same execution context
+    await new Promise<void>((resolve) => {
+      queueMicrotask(async () => {
+        await Promise.all(
+          Array.from(this.listeners).map((listener) => listener()),
+        );
+        this.notificationScheduled = false;
+        resolve();
+      });
+    });
   }
 
   subscribe(listener: StoreListener): () => void {
