@@ -54,6 +54,7 @@ export class LocalStorage<V extends string = StorageKeys>
           );
         },
       );
+      this.notifyListeners();
       return;
     }
     localStorage.setItem(

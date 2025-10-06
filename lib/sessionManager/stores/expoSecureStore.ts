@@ -60,13 +60,17 @@ export class ExpoSecureStore<
     await this.removeSessionItem(itemKey);
 
     if (typeof itemValue === "string") {
-      splitString(itemValue, Math.min(storageSettings.maxLength, 2048)).forEach(
-        async (splitValue, index) => {
-          await expoSecureStore!.setItemAsync(
+      const chunks = splitString(
+        itemValue,
+        Math.min(storageSettings.maxLength, 2048),
+      );
+      await Promise.all(
+        chunks.map((splitValue, index) =>
+          expoSecureStore!.setItemAsync(
             `${storageSettings.keyPrefix}${itemKey}${index}`,
             splitValue,
-          );
-        },
+          ),
+        ),
       );
       this.notifyListeners();
       return;
