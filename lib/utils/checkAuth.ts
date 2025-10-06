@@ -45,15 +45,15 @@ export const checkAuth = async ({
       StorageKeys.refreshToken,
     );
 
-    if (await isTokenExpired({ threshold: 10 })) {
-      return await refreshToken({
-        domain,
-        clientId,
-        refreshType: RefreshType.refreshToken,
-      });
-    }
-
     if (accessToken && idToken && storedRefreshToken) {
+      if (await isTokenExpired({ threshold: 10 })) {
+        return await refreshToken({
+          domain,
+          clientId,
+          refreshType: RefreshType.refreshToken,
+        });
+      }
+
       return {
         success: true,
         accessToken: accessToken as string,
