@@ -409,7 +409,6 @@ describe("LocalStorage subscription/listening mechanism", () => {
     let listenerCallCount = 0;
 
     const listener = () => {
-      console.log("listener called");
       listenerCallCount++;
     };
 
