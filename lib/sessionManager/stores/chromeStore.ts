@@ -28,6 +28,8 @@ export class ChromeStore<V extends string = StorageKeys>
    */
   async destroySession(): Promise<void> {
     await chrome.storage.local.clear();
+
+    await this.notifyListeners();
   }
 
   /**
@@ -56,6 +58,8 @@ export class ChromeStore<V extends string = StorageKeys>
     await chrome.storage.local.set({
       [`${storageSettings.keyPrefix}${itemKey}0`]: itemValue,
     });
+
+    await this.notifyListeners();
   }
 
   /**
@@ -98,5 +102,7 @@ export class ChromeStore<V extends string = StorageKeys>
       );
       index++;
     }
+
+    await this.notifyListeners();
   }
 }

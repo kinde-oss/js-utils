@@ -43,6 +43,8 @@ export class ExpoSecureStore<
     keys.forEach(async (key) => {
       await this.removeSessionItem(key);
     });
+
+    await this.notifyListeners();
   }
 
   /**
@@ -72,6 +74,8 @@ export class ExpoSecureStore<
     } else {
       throw new Error("Item value must be a string");
     }
+
+    await this.notifyListeners();
   }
 
   /**
@@ -125,5 +129,7 @@ export class ExpoSecureStore<
         `${storageSettings.keyPrefix}${String(itemKey)}${index}`,
       );
     }
+
+    await this.notifyListeners();
   }
 }

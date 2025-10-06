@@ -27,6 +27,8 @@ export class LocalStorage<V extends string = StorageKeys>
     this.internalItems.forEach((key) => {
       this.removeSessionItem(key);
     });
+
+    await this.notifyListeners();
   }
 
   /**
@@ -58,6 +60,8 @@ export class LocalStorage<V extends string = StorageKeys>
       `${storageSettings.keyPrefix}${itemKey}0`,
       itemValue as string,
     );
+
+    await this.notifyListeners();
   }
 
   /**
@@ -104,5 +108,7 @@ export class LocalStorage<V extends string = StorageKeys>
       index++;
     }
     this.internalItems.delete(itemKey);
+
+    await this.notifyListeners();
   }
 }
