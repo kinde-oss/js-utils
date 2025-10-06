@@ -28,7 +28,7 @@ export class LocalStorage<V extends string = StorageKeys>
       this.removeSessionItem(key);
     });
 
-    await this.notifyListeners();
+    this.notifyListeners();
   }
 
   /**
@@ -61,7 +61,7 @@ export class LocalStorage<V extends string = StorageKeys>
       itemValue as string,
     );
 
-    await this.notifyListeners();
+    this.notifyListeners();
   }
 
   /**
@@ -109,6 +109,6 @@ export class LocalStorage<V extends string = StorageKeys>
     }
     this.internalItems.delete(itemKey);
 
-    await this.notifyListeners();
+    this.notifyListeners();
   }
 }

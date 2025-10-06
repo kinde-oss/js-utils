@@ -44,7 +44,7 @@ export class ExpoSecureStore<
       await this.removeSessionItem(key);
     });
 
-    await this.notifyListeners();
+    this.notifyListeners();
   }
 
   /**
@@ -75,7 +75,7 @@ export class ExpoSecureStore<
       throw new Error("Item value must be a string");
     }
 
-    await this.notifyListeners();
+    this.notifyListeners();
   }
 
   /**
@@ -130,6 +130,6 @@ export class ExpoSecureStore<
       );
     }
 
-    await this.notifyListeners();
+    this.notifyListeners();
   }
 }
