@@ -70,12 +70,11 @@ export class ExpoSecureStore<
           );
         },
       );
+      this.notifyListeners();
       return;
     } else {
       throw new Error("Item value must be a string");
     }
-
-    this.notifyListeners();
   }
 
   /**

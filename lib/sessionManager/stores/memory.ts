@@ -41,6 +41,7 @@ export class MemoryStorage<V extends string = StorageKeys>
             splitValue;
         },
       );
+      this.notifyListeners();
       return;
     }
     this.memCache[`${storageSettings.keyPrefix}${String(itemKey)}0`] =
