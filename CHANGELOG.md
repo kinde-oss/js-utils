@@ -1,6 +1,41 @@
 # Changelog
 
 
+## 0.25.1...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.25.1...main)
+
+### 🚀 Enhancements
+
+- Add subscription and notification system for store changes in session manager ([44b8c79](https://github.com/kinde-oss/js-utils/commit/44b8c79))
+- Update mutative functions on all stores to notify listeners ([d504a9c](https://github.com/kinde-oss/js-utils/commit/d504a9c))
+- Implement notification batching to optimize listener notifications ([1eb01cb](https://github.com/kinde-oss/js-utils/commit/1eb01cb))
+- Add onRefreshHandler to custom handle token refreshes ([f05dd69](https://github.com/kinde-oss/js-utils/commit/f05dd69))
+- Tightened the RefreshToken response type ([e1465ff](https://github.com/kinde-oss/js-utils/commit/e1465ff))
+
+### 🩹 Fixes
+
+- Ensure listeners are notified regardless of branch ([1e1ed25](https://github.com/kinde-oss/js-utils/commit/1e1ed25))
+- Await `destroySession` calls so that `notifyListeners` is called after the mutation completes ([83ddf1f](https://github.com/kinde-oss/js-utils/commit/83ddf1f))
+- Ensure all set operations are awaited so that `notifyListeners` is called after values have been set ([0371c5b](https://github.com/kinde-oss/js-utils/commit/0371c5b))
+
+### 💅 Refactors
+
+- Remove await from `notifyListeners` calls ([fd335f9](https://github.com/kinde-oss/js-utils/commit/fd335f9))
+
+### 🏡 Chore
+
+- Remove console logs ([5eff7fe](https://github.com/kinde-oss/js-utils/commit/5eff7fe))
+
+### ✅ Tests
+
+- Add comprehensive subscription and listener tests for `LocalStorage` and `MemoryStorage` ([cdfeffd](https://github.com/kinde-oss/js-utils/commit/cdfeffd))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+- Bailey Eaton <xYoshify@gmail.com>
+
 ## 0.25.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.25.0...main)
