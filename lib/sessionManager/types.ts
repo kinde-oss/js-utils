@@ -1,3 +1,5 @@
+import { RefreshTokenResult, RefreshType } from "../types";
+
 /**
  * This interfaces provides the contract that an session management utility must
  * satisfiy in order to work with this SDK, please vist the example provided in the
@@ -33,6 +35,10 @@ export type StorageSettingsType = {
   onActivityTimeout?: (
     timeoutType: TimeoutActivityType,
   ) => void | Promise<void>;
+  /**
+   *
+   */
+  onRefreshHandler?: (refreshType: RefreshType) => Promise<RefreshTokenResult>;
 };
 
 export abstract class SessionBase<V extends string = StorageKeys>
