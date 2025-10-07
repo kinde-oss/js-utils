@@ -244,13 +244,25 @@ export type PKCEChallengeState = PKCEChallenge & {
   state: string;
 };
 
-export interface RefreshTokenResult {
-  success: boolean;
+export interface RefreshTokenResultError {
+  success: false;
   error?: string;
+  [StorageKeys.accessToken]?: never;
+  [StorageKeys.idToken]?: never;
+  [StorageKeys.refreshToken]?: never;
+}
+
+export interface RefreshTokenResultSuccess {
+  success: true;
+  error?: never;
   [StorageKeys.accessToken]?: string;
   [StorageKeys.idToken]?: string;
   [StorageKeys.refreshToken]?: string;
 }
+
+export type RefreshTokenResult =
+  | RefreshTokenResultError
+  | RefreshTokenResultSuccess;
 
 export enum RefreshType {
   refreshToken,
