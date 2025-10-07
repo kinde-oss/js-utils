@@ -18,6 +18,7 @@ export class MemoryStorage<V extends string = StorageKeys>
    */
   async destroySession(): Promise<void> {
     this.memCache = {};
+    this.notifyListeners();
   }
 
   /**
@@ -40,10 +41,13 @@ export class MemoryStorage<V extends string = StorageKeys>
             splitValue;
         },
       );
+      this.notifyListeners();
       return;
     }
     this.memCache[`${storageSettings.keyPrefix}${String(itemKey)}0`] =
       itemValue;
+
+    this.notifyListeners();
   }
 
   /**
@@ -83,5 +87,7 @@ export class MemoryStorage<V extends string = StorageKeys>
         delete this.memCache[key];
       }
     }
+
+    this.notifyListeners();
   }
 }

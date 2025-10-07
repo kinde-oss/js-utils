@@ -28,6 +28,8 @@ export class ChromeStore<V extends string = StorageKeys>
    */
   async destroySession(): Promise<void> {
     await chrome.storage.local.clear();
+
+    this.notifyListeners();
   }
 
   /**
@@ -44,18 +46,22 @@ export class ChromeStore<V extends string = StorageKeys>
     await this.removeSessionItem(itemKey);
 
     if (typeof itemValue === "string") {
-      splitString(itemValue, storageSettings.maxLength).forEach(
-        async (splitValue, index) => {
-          await chrome.storage.local.set({
+      const chunks = splitString(itemValue, storageSettings.maxLength);
+      await Promise.all(
+        chunks.map((splitValue, index) =>
+          chrome.storage.local.set({
             [`${storageSettings.keyPrefix}${itemKey}${index}`]: splitValue,
-          });
-        },
+          }),
+        ),
       );
+      this.notifyListeners();
       return;
     }
     await chrome.storage.local.set({
       [`${storageSettings.keyPrefix}${itemKey}0`]: itemValue,
     });
+
+    this.notifyListeners();
   }
 
   /**
@@ -98,5 +104,7 @@ export class ChromeStore<V extends string = StorageKeys>
       );
       index++;
     }
+
+    this.notifyListeners();
   }
 }

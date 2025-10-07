@@ -40,9 +40,9 @@ export class ExpoSecureStore<
    */
   async destroySession(): Promise<void> {
     const keys = Object.values(StorageKeys);
-    keys.forEach(async (key) => {
-      await this.removeSessionItem(key);
-    });
+    await Promise.all(keys.map((key) => this.removeSessionItem(key)));
+
+    this.notifyListeners();
   }
 
   /**
@@ -60,14 +60,19 @@ export class ExpoSecureStore<
     await this.removeSessionItem(itemKey);
 
     if (typeof itemValue === "string") {
-      splitString(itemValue, Math.min(storageSettings.maxLength, 2048)).forEach(
-        async (splitValue, index) => {
-          await expoSecureStore!.setItemAsync(
+      const chunks = splitString(
+        itemValue,
+        Math.min(storageSettings.maxLength, 2048),
+      );
+      await Promise.all(
+        chunks.map((splitValue, index) =>
+          expoSecureStore!.setItemAsync(
             `${storageSettings.keyPrefix}${itemKey}${index}`,
             splitValue,
-          );
-        },
+          ),
+        ),
       );
+      this.notifyListeners();
       return;
     } else {
       throw new Error("Item value must be a string");
@@ -125,5 +130,7 @@ export class ExpoSecureStore<
         `${storageSettings.keyPrefix}${String(itemKey)}${index}`,
       );
     }
+
+    this.notifyListeners();
   }
 }

@@ -24,9 +24,11 @@ export class LocalStorage<V extends string = StorageKeys>
    * @returns {void}
    */
   async destroySession(): Promise<void> {
-    this.internalItems.forEach((key) => {
-      this.removeSessionItem(key);
-    });
+    await Promise.all(
+      Array.from(this.internalItems).map((key) => this.removeSessionItem(key)),
+    );
+
+    this.notifyListeners();
   }
 
   /**
@@ -52,12 +54,15 @@ export class LocalStorage<V extends string = StorageKeys>
           );
         },
       );
+      this.notifyListeners();
       return;
     }
     localStorage.setItem(
       `${storageSettings.keyPrefix}${itemKey}0`,
       itemValue as string,
     );
+
+    this.notifyListeners();
   }
 
   /**
@@ -104,5 +109,7 @@ export class LocalStorage<V extends string = StorageKeys>
       index++;
     }
     this.internalItems.delete(itemKey);
+
+    this.notifyListeners();
   }
 }
