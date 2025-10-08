@@ -58,6 +58,9 @@ export abstract class SessionBase<V extends string = StorageKeys>
   abstract destroySession(): Awaitable<void>;
 
   notifyListeners(): void {
+    if (this.listeners.size === 0) {
+      return;
+    }
     void this.scheduleNotification();
   }
 
@@ -68,15 +71,14 @@ export abstract class SessionBase<V extends string = StorageKeys>
 
     this.notificationScheduled = true;
 
-    // queueMicrotask batches notifications in the same execution context
     await new Promise<void>((resolve) => {
-      queueMicrotask(async () => {
+      setTimeout(async () => {
         await Promise.all(
           Array.from(this.listeners).map((listener) => listener()),
         );
         this.notificationScheduled = false;
         resolve();
-      });
+      }, 0);
     });
   }
 

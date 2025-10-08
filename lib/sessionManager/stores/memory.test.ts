@@ -155,8 +155,8 @@ describe("MemoryStorage subscription/listening mechanism", () => {
     sessionManager.subscribe(listener);
     await sessionManager.setSessionItem(StorageKeys.accessToken, "testValue");
 
-    // Wait for microtask queue to flush
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    // Wait for setTimeout to fire
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(listenerCalled).toBe(true);
   });
@@ -172,8 +172,8 @@ describe("MemoryStorage subscription/listening mechanism", () => {
     sessionManager.subscribe(listener);
     await sessionManager.removeSessionItem(StorageKeys.accessToken);
 
-    // Wait for microtask queue to flush
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    // Wait for setTimeout to fire
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(listenerCalled).toBe(true);
   });
@@ -189,8 +189,8 @@ describe("MemoryStorage subscription/listening mechanism", () => {
     sessionManager.subscribe(listener);
     await sessionManager.destroySession();
 
-    // Wait for microtask queue to flush
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    // Wait for setTimeout to fire
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(listenerCalled).toBe(true);
   });
@@ -216,8 +216,8 @@ describe("MemoryStorage subscription/listening mechanism", () => {
 
     await sessionManager.setSessionItem(StorageKeys.accessToken, "testValue");
 
-    // Wait for microtask queue to flush
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    // Wait for setTimeout to fire
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(listener1Called).toBe(true);
     expect(listener2Called).toBe(true);
@@ -239,10 +239,7 @@ describe("MemoryStorage subscription/listening mechanism", () => {
     sessionManager.subscribe(asyncListener);
     await sessionManager.setSessionItem(StorageKeys.accessToken, "asyncTest");
 
-    // Wait for microtask queue to flush
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
-
-    // Wait a bit more for async listener to complete
+    // Wait for setTimeout to fire and async listener to complete
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(asyncListenerCalled).toBe(true);
@@ -267,13 +264,10 @@ describe("MemoryStorage subscription/listening mechanism", () => {
 
     await sessionManager.setSessionItem(StorageKeys.idToken, "mixedTest");
 
-    // Wait for microtask queue to flush
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    // Wait for setTimeout to fire and async listener to complete
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(syncCalled).toBe(true);
-
-    // Wait for async listener
-    await new Promise((resolve) => setTimeout(resolve, 10));
     expect(asyncCalled).toBe(true);
   });
 
@@ -288,7 +282,7 @@ describe("MemoryStorage subscription/listening mechanism", () => {
 
     // First change should trigger listener
     await sessionManager.setSessionItem(StorageKeys.accessToken, "test1");
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(listenerCalled).toBe(true);
 
     // Reset and unsubscribe
@@ -297,7 +291,7 @@ describe("MemoryStorage subscription/listening mechanism", () => {
 
     // Second change should not trigger listener
     await sessionManager.setSessionItem(StorageKeys.accessToken, "test2");
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(listenerCalled).toBe(false);
   });
 
@@ -326,13 +320,11 @@ describe("MemoryStorage subscription/listening mechanism", () => {
 
     await Promise.all([promise1, promise2, promise3]);
 
-    // Wait for microtask queue to flush
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    // Wait for setTimeout to fire
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // Even though we made 3 changes, listener should be called more than once
-    // but less than 3 times due to batching
-    expect(callCount).toBeGreaterThan(0);
-    expect(callCount).toBeLessThanOrEqual(3);
+    // With setTimeout batching, multiple synchronous calls should be batched into one
+    expect(callCount).toBe(1);
   });
 
   it("should allow same listener to be subscribed multiple times", async () => {
@@ -348,8 +340,8 @@ describe("MemoryStorage subscription/listening mechanism", () => {
 
     await sessionManager.setSessionItem(StorageKeys.accessToken, "testValue");
 
-    // Wait for microtask queue to flush
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    // Wait for setTimeout to fire
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Since Set is used, listener should only be called once
     expect(callCount).toBe(1);
@@ -375,8 +367,8 @@ describe("MemoryStorage subscription/listening mechanism", () => {
 
     await sessionManager.setSessionItem(StorageKeys.accessToken, "testValue");
 
-    // Wait for microtask queue to flush
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    // Wait for setTimeout to fire
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(listener1Called).toBe(false);
     expect(listener2Called).toBe(true);
@@ -397,14 +389,14 @@ describe("MemoryStorage subscription/listening mechanism", () => {
       [StorageKeys.refreshToken]: "token3",
     });
 
-    // Wait for microtask queue to flush
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    // Wait for setTimeout to fire
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // Should be called at least once (batching may reduce call count)
-    expect(listenerCallCount).toBeGreaterThan(0);
+    // With batching, setItems should trigger listener only once
+    expect(listenerCallCount).toBe(1);
   });
 
-  it("should not batch multiple calls when operations are separated by microtask boundaries", async () => {
+  it("should not batch multiple calls when operations are separated by setTimeout boundaries", async () => {
     const callLog: string[] = [];
 
     const listener = () => {
@@ -415,17 +407,17 @@ describe("MemoryStorage subscription/listening mechanism", () => {
 
     // Set item
     await sessionManager.setSessionItem(StorageKeys.accessToken, "test1");
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Remove item
     await sessionManager.removeSessionItem(StorageKeys.accessToken);
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Set another item
     await sessionManager.setSessionItem(StorageKeys.idToken, "test2");
-    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Each operation should trigger the listener when awaited between operations
-    expect(callLog.length).toBeGreaterThanOrEqual(3);
+    expect(callLog.length).toBe(3);
   });
 });
