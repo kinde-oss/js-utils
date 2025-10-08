@@ -1,6 +1,23 @@
 # Changelog
 
 
+## 0.26.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.26.0...main)
+
+### 🚀 Enhancements
+
+- Allow backend refresh tokens ([e1adb5f](https://github.com/kinde-oss/js-utils/commit/e1adb5f))
+
+### 🩹 Fixes
+
+- Use `macroTask` queue instead of `microTask` ([ab0d356](https://github.com/kinde-oss/js-utils/commit/ab0d356))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+- Bailey Eaton <xYoshify@gmail.com>
+
 ## 0.25.1...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.25.1...main)
