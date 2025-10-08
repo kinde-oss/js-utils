@@ -17,11 +17,13 @@ import { isClient } from "../isClient";
 export const refreshToken = async ({
   domain,
   clientId,
+  clientSecret,
   refreshType = RefreshType.refreshToken,
   onRefresh,
 }: {
   domain: string;
   clientId: string;
+  clientSecret?: string;
   refreshType?: RefreshType;
   onRefresh?: (data: RefreshTokenResult) => void;
 }): Promise<RefreshTokenResult> => {
@@ -82,19 +84,23 @@ export const refreshToken = async ({
     if (storageSettings.onRefreshHandler) {
       result = await storageSettings.onRefreshHandler(refreshType);
     } else {
+      const body = new URLSearchParams({
+        ...(refreshType === RefreshType.refreshToken && {
+          refresh_token: refreshTokenValue,
+        }),
+        grant_type: "refresh_token",
+        client_id: clientId,
+      });
+      if (clientSecret) {
+        body.append("client_secret", clientSecret);
+      }
       const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
         method: "POST",
         ...(refreshType === RefreshType.cookie && { credentials: "include" }),
         headers: {
           "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
         },
-        body: new URLSearchParams({
-          ...(refreshType === RefreshType.refreshToken && {
-            refresh_token: refreshTokenValue,
-          }),
-          grant_type: "refresh_token",
-          client_id: clientId,
-        }).toString(),
+        body: body.toString(),
       });
       if (!response.ok) {
         return handleResult({

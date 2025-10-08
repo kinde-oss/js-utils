@@ -569,4 +569,51 @@ describe("refreshToken", () => {
       });
     });
   });
+
+  it("should include client_secret in the request body when clientSecret is provided", async () => {
+    const callback = vi.fn();
+
+    const mockResponse = {
+      access_token: "new-access-token",
+      id_token: "new-id-token",
+      refresh_token: "new-refresh-token",
+    };
+
+    // Since mockKindeDomain is a .kinde.com domain, it uses insecure storage
+    const insecureStorage = new MemoryStorage();
+    tokenUtils.setInsecureStorage(insecureStorage);
+    await insecureStorage.setSessionItem(
+      StorageKeys.refreshToken,
+      mockRefreshTokenValue,
+    );
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    } as Response);
+    await tokenUtils.refreshToken({
+      domain: mockKindeDomain,
+      clientId: mockClientId,
+      onRefresh: callback,
+      clientSecret: "mock-client-secret",
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://example.kinde.com/oauth2/token",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        },
+      }),
+    );
+
+    // Then check the body separately
+    const fetchCall = vi.mocked(global.fetch).mock.calls[0];
+    const body = fetchCall[1]?.body as string;
+    expect(body).toContain("refresh_token=mock-refresh-token");
+    expect(body).toContain("grant_type=refresh_token");
+    expect(body).toContain("client_id=test-client-id");
+    expect(body).toContain("client_secret=mock-client-secret");
+  });
 });
