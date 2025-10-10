@@ -87,6 +87,7 @@ describe("index exports", () => {
       "getCurrentOrganization",
       "getDecodedToken",
       "getEntitlements",
+      "getEntitlement",
       "getRawToken",
       "getFlag",
       "getPermission",

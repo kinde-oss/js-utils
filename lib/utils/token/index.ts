@@ -28,6 +28,7 @@ export { isAuthenticated } from "./isAuthenticated";
 export { isTokenExpired } from "./isTokenExpired";
 export { refreshToken } from "./refreshToken";
 export { getEntitlements } from "./getEntitlements";
+export { getEntitlement } from "./getEntitlement";
 const storage = {
   secure: null as SessionManager | null,
   insecure: null as SessionManager | null,
