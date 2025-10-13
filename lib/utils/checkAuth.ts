@@ -5,10 +5,12 @@ import {
   refreshToken,
   RefreshTokenResult,
   RefreshType,
+  setRefreshTimer,
   StorageKeys,
   storageSettings,
 } from "../main";
 import { getCookie } from "./getCookie";
+import { calculateExpiryRealMs } from "./token/isTokenExpired";
 
 const kindeCookieName = "_kbrte";
 
@@ -52,6 +54,17 @@ export const checkAuth = async ({
           clientId,
           refreshType: RefreshType.refreshToken,
         });
+      } else {
+        const expiry = await calculateExpiryRealMs();
+        if (expiry) {
+          setRefreshTimer(expiry, async () => {
+            return await refreshToken({
+              domain,
+              clientId,
+              refreshType: RefreshType.refreshToken,
+            });
+          });
+        }
       }
 
       return {

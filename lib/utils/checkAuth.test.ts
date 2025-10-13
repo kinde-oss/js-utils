@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as CheckAuth from "./checkAuth";
 import * as RefreshToken from "./token/refreshToken";
 import * as GetCookie from "./getCookie";
+import * as setRefreshTimer from "./refreshTimer";
 import { RefreshType } from "../types";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import { clearActiveStorage, setActiveStorage } from "../main";
@@ -166,5 +167,31 @@ describe("checkAuth", () => {
     await CheckAuth.checkAuth({ domain, clientId });
 
     expect(hasTokenExpired.isTokenExpired).not.toHaveBeenCalled();
+  });
+
+  it("should set refresh timer if token is not expired", async () => {
+    vi.spyOn(RefreshToken, "refreshToken").mockResolvedValue({
+      success: true,
+    });
+    vi.spyOn(hasTokenExpired, "isTokenExpired").mockResolvedValue(false);
+    vi.spyOn(GetCookie, "getCookie").mockReturnValue(null);
+    vi.spyOn(setRefreshTimer, "setRefreshTimer");
+    const date = new Date();
+    await storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({ exp: date.getTime() }),
+    );
+    await storage.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({ exp: date.getTime() }),
+    );
+    await storage.setSessionItem(
+      StorageKeys.refreshToken,
+      createMockAccessToken({ exp: date.getTime() }),
+    );
+
+    await CheckAuth.checkAuth({ domain, clientId });
+
+    expect(setRefreshTimer.setRefreshTimer).toHaveBeenCalled();
   });
 });

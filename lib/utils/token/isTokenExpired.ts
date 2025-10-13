@@ -1,6 +1,12 @@
 import { JWTDecoded } from "@kinde/jwt-decoder";
 import { getDecodedToken } from ".";
 
+export const calculateExpiryRealMs = async (): Promise<number | null> => {
+  const token = await getDecodedToken<JWTDecoded>("accessToken");
+  if (!token) return null;
+  return token.exp - Math.floor(Date.now() / 1000);
+};
+
 type IsTokenExpiredProps = {
   /**
    * Threshold in seconds to expire the token before the actual expiry
