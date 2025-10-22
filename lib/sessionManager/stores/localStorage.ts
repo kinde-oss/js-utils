@@ -10,6 +10,7 @@ export class LocalStorage<V extends string = StorageKeys>
   extends SessionBase<V>
   implements SessionManager<V>
 {
+  asyncStore = false;
   constructor() {
     super();
     if (storageSettings.useInsecureForRefreshToken) {
@@ -23,10 +24,8 @@ export class LocalStorage<V extends string = StorageKeys>
    * Clears all items from session store.
    * @returns {void}
    */
-  async destroySession(): Promise<void> {
-    await Promise.all(
-      Array.from(this.internalItems).map((key) => this.removeSessionItem(key)),
-    );
+  destroySession(): void {
+    Array.from(this.internalItems).forEach((key) => this.removeSessionItem(key));
 
     this.notifyListeners();
   }
@@ -37,12 +36,12 @@ export class LocalStorage<V extends string = StorageKeys>
    * @param {unknown} itemValue
    * @returns {void}
    */
-  async setSessionItem(
+  setSessionItem(
     itemKey: V | StorageKeys,
     itemValue: unknown,
-  ): Promise<void> {
+  ): void {
     // clear items first
-    await this.removeSessionItem(itemKey);
+    this.removeSessionItem(itemKey);
     this.internalItems.add(itemKey);
 
     if (typeof itemValue === "string") {
@@ -70,7 +69,7 @@ export class LocalStorage<V extends string = StorageKeys>
    * @param {string} itemKey
    * @returns {unknown | null}
    */
-  async getSessionItem(itemKey: V | StorageKeys): Promise<unknown | null> {
+  getSessionItem(itemKey: V | StorageKeys): unknown | null {
     if (
       localStorage.getItem(`${storageSettings.keyPrefix}${itemKey}0`) === null
     ) {
@@ -94,7 +93,7 @@ export class LocalStorage<V extends string = StorageKeys>
    * @param {V} itemKey
    * @returns {void}
    */
-  async removeSessionItem(itemKey: V | StorageKeys): Promise<void> {
+  removeSessionItem(itemKey: V | StorageKeys): void {
     // Remove all items with the key prefix
     let index = 0;
     while (

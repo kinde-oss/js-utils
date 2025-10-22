@@ -5,7 +5,7 @@ import { RefreshTokenResult, RefreshType } from "../types";
  * satisfiy in order to work with this SDK, please vist the example provided in the
  * README, to understand how this works.
  */
-type Awaitable<T> = Promise<T>;
+type Awaitable<T> = T | Promise<T>;
 
 type StoreListener = () => void | Promise<void>;
 
@@ -44,6 +44,7 @@ export type StorageSettingsType = {
 export abstract class SessionBase<V extends string = StorageKeys>
   implements SessionManager<V>
 {
+  abstract asyncStore: boolean;
   private listeners: Set<StoreListener> = new Set();
   private notificationScheduled = false;
 
@@ -89,7 +90,7 @@ export abstract class SessionBase<V extends string = StorageKeys>
     };
   }
 
-  async setItems(items: Partial<Record<V, unknown>>): Awaitable<void> {
+  async setItems(items: Partial<Record<V, unknown>>): Promise<void> {
     await Promise.all(
       (Object.entries(items) as [V | StorageKeys, unknown][]).map(
         ([key, value]) => {
@@ -99,7 +100,7 @@ export abstract class SessionBase<V extends string = StorageKeys>
     );
   }
 
-  async getItems(...items: V[]): Awaitable<Partial<Record<V, unknown>>> {
+  async getItems(...items: V[]): Promise<Partial<Record<V, unknown>>> {
     const promises = items.map(async (item) => {
       const value = await this.getSessionItem(item);
       return [item, value] as const;
@@ -108,7 +109,7 @@ export abstract class SessionBase<V extends string = StorageKeys>
     return Object.fromEntries(entries) as Partial<Record<V, unknown>>;
   }
 
-  async removeItems(...items: V[]): Awaitable<void> {
+  async removeItems(...items: V[]): Promise<void> {
     await Promise.all(
       items.map((item) => {
         return this.removeSessionItem(item);
@@ -118,6 +119,7 @@ export abstract class SessionBase<V extends string = StorageKeys>
 }
 
 export interface SessionManager<V extends string = StorageKeys> {
+  asyncStore: boolean;
   /**
    *
    * Gets the item for the provided key from the storage.

@@ -215,14 +215,14 @@ describe("Activity Tracking", () => {
 
       await expect(
         activeStorage.setSessionItem(StorageKeys.accessToken, "token"),
-      ).resolves.toBeUndefined();
+      ).toBeUndefined();
       await expect(
         activeStorage.getSessionItem(StorageKeys.accessToken),
-      ).resolves.toBe("token");
+      ).toBe("token");
       await expect(
         activeStorage.removeSessionItem(StorageKeys.accessToken),
-      ).resolves.toBeUndefined();
-      await expect(activeStorage.destroySession()).resolves.toBeUndefined();
+      ).toBeUndefined();
+      await expect(activeStorage.destroySession()).toBeUndefined();
     });
 
     it("should properly bind methods and maintain context", async () => {

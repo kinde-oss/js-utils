@@ -69,3 +69,28 @@ export const getDecodedToken = async <T = JWTDecoded>(
 
   return decodedToken;
 };
+
+export const getDecodedTokenSync = <T = JWTDecoded>(
+  tokenType: "accessToken" | "idToken" = StorageKeys.accessToken,
+): (T & JWTDecoded) | null => {
+  const activeStorage = getActiveStorage();
+  if (!activeStorage) {
+    return null;
+  }
+  if (activeStorage.asyncStore) {
+    throw new Error("Active storage is async-only. Use the async helpers.");
+  }
+  const token = activeStorage.getSessionItem(
+    tokenType === "accessToken" ? StorageKeys.accessToken : StorageKeys.idToken,
+  ) as string | null;
+
+  if (!token) {
+    return null;
+  }
+
+  const decodedToken = jwtDecoder<T & JWTDecoded>(token);
+  if (!decodedToken) {
+    console.warn("No decoded token found");
+  }
+  return decodedToken;
+};

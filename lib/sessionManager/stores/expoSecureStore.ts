@@ -19,6 +19,7 @@ async function waitForExpoSecureStore() {
 export class ExpoSecureStore<
   V extends string = StorageKeys,
 > extends SessionBase<V> {
+  asyncStore = true;
   constructor() {
     super();
     this.loadExpoStore();

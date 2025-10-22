@@ -20,3 +20,23 @@ export const getRawToken = async (
 
   return token;
 };
+
+export const getRawTokenSync = (
+  tokenType: "accessToken" | "idToken" = StorageKeys.accessToken,
+): string | null => {
+  const activeStorage = getActiveStorage();
+
+  if (!activeStorage || activeStorage.asyncStore) {
+    return null;
+  }
+
+  const token = activeStorage.getSessionItem(
+    tokenType === "accessToken" ? StorageKeys.accessToken : StorageKeys.idToken,
+  ) as string | null;
+
+  if (!token) {
+    return null;
+  }
+
+  return token;
+};
