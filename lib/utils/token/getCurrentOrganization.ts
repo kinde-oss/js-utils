@@ -1,4 +1,8 @@
-import { getDecodedToken, getDecodedTokenSync } from "./getDecodedToken";
+import {
+  getDecodedToken,
+  getDecodedTokenSync,
+  JWTDecoded,
+} from "./getDecodedToken";
 
 /**
  *
@@ -15,7 +19,9 @@ export const getCurrentOrganizationSync = (): string | null => {
   return _getCurrentOrganizationCore(decodedToken);
 };
 
-const _getCurrentOrganizationCore = (decodedToken: any): string | null => {
+const _getCurrentOrganizationCore = (
+  decodedToken: JWTDecoded | null,
+): string | null => {
   if (!decodedToken) {
     return null;
   }

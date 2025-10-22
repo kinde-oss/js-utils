@@ -1,6 +1,10 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
-import { setActiveStorage, getUserOrganizations } from ".";
+import {
+  setActiveStorage,
+  getUserOrganizations,
+  getUserOrganizationsSync,
+} from ".";
 import { createMockAccessToken } from "./testUtils";
 
 const storage = new MemoryStorage();
@@ -39,5 +43,19 @@ describe("getUserOrganizations - Hasura", () => {
     const idToken = await getUserOrganizations();
 
     expect(idToken).toStrictEqual(null);
+  });
+});
+
+describe("getUserOrganizationsSync - Hasura", () => {
+  beforeEach(() => {
+    setActiveStorage(storage);
+  });
+  it("When single org", () => {
+    storage.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({ ["x-hasura-org-codes"]: ["org_123456789"] }),
+    );
+    const idToken = getUserOrganizationsSync();
+    expect(idToken).toStrictEqual(["org_123456789"]);
   });
 });

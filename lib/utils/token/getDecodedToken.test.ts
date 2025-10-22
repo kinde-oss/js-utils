@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { getDecodedToken } from "./getDecodedToken";
+import { getDecodedToken, getDecodedTokenSync } from "./getDecodedToken";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
 import { setActiveStorage } from ".";
 import { createMockAccessToken } from "./testUtils";
@@ -47,5 +47,19 @@ describe("getDecodedToken accessToken", () => {
       throw new Error("accessToken is null");
     }
     expect(accessToken.org_code).toBe("org_123456789");
+  });
+});
+
+describe("getDecodedTokenSync", () => {
+  it("return null when no active storage is defined", () => {
+    expect(getDecodedTokenSync("idToken")).toBe(null);
+  });
+
+  it("returns token when set on sync store", () => {
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    storage.setSessionItem(StorageKeys.accessToken, createMockAccessToken());
+    const t = getDecodedTokenSync("accessToken");
+    expect(t?.org_code).toBe("org_123456789");
   });
 });

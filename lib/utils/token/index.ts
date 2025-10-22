@@ -22,6 +22,7 @@ export { getUserProfile } from "./getUserProfile";
 export { getUserProfileSync } from "./getUserProfile";
 export type { UserProfile } from "./getUserProfile";
 export { getPermission } from "./getPermission";
+export { getPermissionSync } from "./getPermission";
 export type { PermissionAccess } from "./getPermission";
 export { getPermissions } from "./getPermissions";
 export { getPermissionsSync } from "./getPermissions";

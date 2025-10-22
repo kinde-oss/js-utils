@@ -22,7 +22,7 @@ export class ChromeStore<V extends string = StorageKeys>
   extends SessionBase<V>
   implements SessionManager<V>
 {
-  asyncStore = true
+  asyncStore = true;
   /**
    * Clears all items from session store.
    * @returns {void}

@@ -84,7 +84,7 @@ describe("index exports", () => {
       "setInsecureStorage",
       "getClaim",
       "getClaimSync",
-      "getClaims",  
+      "getClaims",
       "getClaimsSync",
       "getCurrentOrganization",
       "getCurrentOrganizationSync",

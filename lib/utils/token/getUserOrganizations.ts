@@ -1,5 +1,5 @@
 import { getDecodedToken } from ".";
-import { getDecodedTokenSync } from "./getDecodedToken";
+import { getDecodedTokenSync, JWTDecoded } from "./getDecodedToken";
 
 /**
  * Gets all the code of the organizations the user belongs to.
@@ -15,7 +15,9 @@ export const getUserOrganizationsSync = (): string[] | null => {
   return _getUserOrganizationsCore(token);
 };
 
-const _getUserOrganizationsCore = (token: any): string[] | null => {
+const _getUserOrganizationsCore = (
+  token: JWTDecoded | null,
+): string[] | null => {
   if (!token) {
     return null;
   }

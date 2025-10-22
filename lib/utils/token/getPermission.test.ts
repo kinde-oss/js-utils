@@ -1,9 +1,49 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
-import { setActiveStorage, getPermission } from ".";
+import { setActiveStorage, getPermission, getPermissionSync } from ".";
 import { createMockAccessToken } from "./testUtils";
 
 const storage = new MemoryStorage();
+
+vi.mock("./accountApi/callAccountApi", () => ({
+  callAccountApi: vi.fn(),
+}));
+
+describe("getPermissionSync", () => {
+  beforeEach(() => {
+    storage.destroySession();
+    setActiveStorage(storage);
+  });
+
+  it("returns false when no token", () => {
+    storage.setSessionItem(StorageKeys.accessToken, null);
+    const res = getPermissionSync("perm1");
+    expect(res).toStrictEqual({
+      permissionKey: "perm1",
+      orgCode: null,
+      isGranted: false,
+    });
+  });
+
+  it("reads from token", () => {
+    storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({ org_code: "org_1", permissions: ["perm1"] }),
+    );
+    const res = getPermissionSync("perm1");
+    expect(res).toStrictEqual({
+      permissionKey: "perm1",
+      orgCode: "org_1",
+      isGranted: true,
+    });
+  });
+
+  it("throws on forceApi", () => {
+    expect(() => getPermissionSync("perm1", { forceApi: true })).toThrow(
+      "forceApi cannot be used in sync mode",
+    );
+  });
+});
 
 enum PermissionEnum {
   canEdit = "canEdit",

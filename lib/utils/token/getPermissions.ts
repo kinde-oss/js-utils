@@ -1,5 +1,5 @@
 import { getDecodedToken } from ".";
-import { getDecodedTokenSync } from "./getDecodedToken";
+import { getDecodedTokenSync, JWTDecoded } from "./getDecodedToken";
 import { BaseAccountResponse, GetPermissionsOptions } from "../../types";
 import { callAccountApiPaginated } from "./accountApi/callAccountApi";
 
@@ -15,7 +15,9 @@ export type Permissions<T = string> = {
   permissions: T[];
 };
 
-const _getPermissionsCore = <T = string>(token: any): Permissions<T> => {
+const _getPermissionsCore = <T = string>(
+  token: JWTDecoded | null,
+): Permissions<T> => {
   if (!token) {
     return {
       orgCode: null,

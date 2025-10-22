@@ -42,32 +42,35 @@ type JWTExtraHasura = {
   roles: never;
 };
 
-type JWTDecoded = JWTBase & (JWTExtra | JWTExtraHasura);
+export type JWTDecoded = JWTBase & (JWTExtra | JWTExtraHasura);
+
+const _decodeTokenCore = <T = JWTDecoded>(
+  token: string | null,
+): (T & JWTDecoded) | null => {
+  if (!token) {
+    return null;
+  }
+
+  const decodedToken = jwtDecoder<T & JWTDecoded>(token);
+  if (!decodedToken) {
+    console.warn("No decoded token found");
+  }
+  return decodedToken;
+};
 
 export const getDecodedToken = async <T = JWTDecoded>(
   tokenType: "accessToken" | "idToken" = StorageKeys.accessToken,
 ): Promise<(T & JWTDecoded) | null> => {
   const activeStorage = getActiveStorage();
-
   if (!activeStorage) {
     return null;
   }
 
   const token = (await activeStorage.getSessionItem(
     tokenType === "accessToken" ? StorageKeys.accessToken : StorageKeys.idToken,
-  )) as string;
+  )) as string | null;
 
-  if (!token) {
-    return null;
-  }
-
-  const decodedToken = jwtDecoder<T & JWTDecoded>(token);
-
-  if (!decodedToken) {
-    console.warn("No decoded token found");
-  }
-
-  return decodedToken;
+  return _decodeTokenCore<T>(token);
 };
 
 export const getDecodedTokenSync = <T = JWTDecoded>(
@@ -84,13 +87,5 @@ export const getDecodedTokenSync = <T = JWTDecoded>(
     tokenType === "accessToken" ? StorageKeys.accessToken : StorageKeys.idToken,
   ) as string | null;
 
-  if (!token) {
-    return null;
-  }
-
-  const decodedToken = jwtDecoder<T & JWTDecoded>(token);
-  if (!decodedToken) {
-    console.warn("No decoded token found");
-  }
-  return decodedToken;
+  return _decodeTokenCore<T>(token);
 };

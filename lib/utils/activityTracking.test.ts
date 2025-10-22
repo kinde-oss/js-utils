@@ -216,9 +216,9 @@ describe("Activity Tracking", () => {
       await expect(
         activeStorage.setSessionItem(StorageKeys.accessToken, "token"),
       ).toBeUndefined();
-      await expect(
-        activeStorage.getSessionItem(StorageKeys.accessToken),
-      ).toBe("token");
+      await expect(activeStorage.getSessionItem(StorageKeys.accessToken)).toBe(
+        "token",
+      );
       await expect(
         activeStorage.removeSessionItem(StorageKeys.accessToken),
       ).toBeUndefined();

@@ -1,5 +1,5 @@
 import { getDecodedToken } from ".";
-import { getDecodedTokenSync } from "./getDecodedToken";
+import { getDecodedTokenSync, JWTDecoded } from "./getDecodedToken";
 import { GetPermissionOptions } from "../../types";
 import { callAccountApi } from "./accountApi/callAccountApi";
 
@@ -10,7 +10,7 @@ export type PermissionAccess = {
 };
 
 const _getPermissionCore = (
-  token: any,
+  token: JWTDecoded | null,
   permissionKey: string,
 ): PermissionAccess => {
   if (!token) {

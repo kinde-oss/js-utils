@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { getRawToken } from "./getRawToken";
+import { getRawToken, getRawTokenSync } from "./getRawToken";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
 import { setActiveStorage } from ".";
 import { createMockAccessToken } from "./testUtils";
@@ -54,5 +54,19 @@ describe("getRawToken accessToken", () => {
       throw new Error("accessToken is null");
     }
     expect(accessToken).toBe(mockedToken);
+  });
+});
+
+describe("getRawTokenSync", () => {
+  it("returns null when no active storage is defined", () => {
+    expect(getRawTokenSync("idToken")).toBe(null);
+  });
+
+  it("returns token when set on sync store", () => {
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    const mockedToken = createMockAccessToken({ unique: "sync" });
+    storage.setSessionItem(StorageKeys.accessToken, mockedToken);
+    expect(getRawTokenSync("accessToken")).toBe(mockedToken);
   });
 });

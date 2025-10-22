@@ -1,5 +1,5 @@
 import { getDecodedToken } from ".";
-import { getDecodedTokenSync } from "./getDecodedToken";
+import { getDecodedTokenSync, JWTDecoded } from "./getDecodedToken";
 import {
   type GetFeatureFlagsOptions,
   type AccountFeatureFlagsResult,
@@ -45,7 +45,7 @@ export const getFlagsSync = (
 };
 
 const _getFlagsCore = (
-  claims: any,
+  claims: JWTDecoded | null,
 ): TokenFeatureFlag[] | null => {
   if (!claims) {
     return null;

@@ -25,7 +25,9 @@ export class LocalStorage<V extends string = StorageKeys>
    * @returns {void}
    */
   destroySession(): void {
-    Array.from(this.internalItems).forEach((key) => this.removeSessionItem(key));
+    Array.from(this.internalItems).forEach((key) =>
+      this.removeSessionItem(key),
+    );
 
     this.notifyListeners();
   }
@@ -36,10 +38,7 @@ export class LocalStorage<V extends string = StorageKeys>
    * @param {unknown} itemValue
    * @returns {void}
    */
-  setSessionItem(
-    itemKey: V | StorageKeys,
-    itemValue: unknown,
-  ): void {
+  setSessionItem(itemKey: V | StorageKeys, itemValue: unknown): void {
     // clear items first
     this.removeSessionItem(itemKey);
     this.internalItems.add(itemKey);
