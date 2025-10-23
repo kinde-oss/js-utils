@@ -2,14 +2,9 @@ import { describe, expect, it, beforeEach, vi } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
 import { setActiveStorage, getPermission, getPermissionSync } from ".";
 import { createMockAccessToken } from "./testUtils";
-
-const storage = new MemoryStorage();
-
 import * as callAccountApi from "./accountApi/callAccountApi";
 
-vi.mock("./accountApi/callAccountApi", () => ({
-  callAccountApi: vi.fn(),
-}));
+const storage = new MemoryStorage();
 
 describe("getPermissionSync", () => {
   beforeEach(() => {

@@ -38,6 +38,13 @@ describe("getCurrentOrganizationSync - Hasura", () => {
   beforeEach(() => {
     setActiveStorage(storage);
   });
+
+  it("when no token", () => {
+    storage.removeSessionItem(StorageKeys.accessToken);
+    const orgCode = getCurrentOrganizationSync();
+    expect(orgCode).toStrictEqual(null);
+  });
+
   it("with access", () => {
     storage.setSessionItem(
       StorageKeys.accessToken,

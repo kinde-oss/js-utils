@@ -382,7 +382,7 @@ describe("getRolesSync", () => {
     expect(roles).toStrictEqual([{ id: "1", key: "admin", name: "Admin" }]);
   });
 
-  it("can't forceApi in in sync request", () => {
+  it("can't forceApi in sync request", () => {
     storage.removeSessionItem(StorageKeys.accessToken);
     expect(() => getRolesSync({ forceApi: true })).toThrow(
       "forceApi cannot be used in sync mode",

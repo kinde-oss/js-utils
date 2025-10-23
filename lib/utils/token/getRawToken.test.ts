@@ -63,6 +63,12 @@ describe("getRawTokenSync", () => {
     expect(getRawTokenSync("idToken")).toBe(null);
   });
 
+  it("returns null when token is not set on sync store", () => {
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    expect(getRawTokenSync("idToken")).toBe(null);
+  });
+
   it("returns token when set on sync store", () => {
     const storage = new MemoryStorage();
     setActiveStorage(storage);
