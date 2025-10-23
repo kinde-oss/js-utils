@@ -14,7 +14,7 @@ describe("getCurrentOrganization", () => {
     setActiveStorage(storage);
   });
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeSessionItem(StorageKeys.idToken);
     const idToken = await getCurrentOrganization();
 
     expect(idToken).toStrictEqual(null);

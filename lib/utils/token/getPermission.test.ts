@@ -54,7 +54,7 @@ describe("getPermission", () => {
     setActiveStorage(storage);
   });
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeSessionItem(StorageKeys.idToken);
     const idToken = await getPermission("test");
 
     expect(idToken).toStrictEqual({
@@ -65,7 +65,7 @@ describe("getPermission", () => {
   });
 
   it("when no token with enum", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeSessionItem(StorageKeys.idToken);
     const idToken = await getPermission<PermissionEnum>(PermissionEnum.canEdit);
 
     expect(idToken).toStrictEqual({

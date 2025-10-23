@@ -11,7 +11,7 @@ describe("getUserProfile", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeSessionItem(StorageKeys.idToken);
     const idToken = await getUserProfile();
 
     expect(idToken).toStrictEqual(null);
@@ -89,7 +89,7 @@ describe("getUserProfileSync", () => {
   });
 
   it("when no token", () => {
-    storage.setSessionItem(StorageKeys.idToken, null);
+    storage.removeSessionItem(StorageKeys.idToken);
     const idToken = getUserProfileSync();
 
     expect(idToken).toStrictEqual(null);

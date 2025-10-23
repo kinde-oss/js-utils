@@ -18,7 +18,7 @@ describe("getFlag", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeSessionItem(StorageKeys.idToken);
     const flagValue = await getFlag("test");
     expect(flagValue).toStrictEqual(null);
   });

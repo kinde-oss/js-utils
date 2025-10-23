@@ -22,7 +22,7 @@ describe("getPermissions", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeSessionItem(StorageKeys.idToken);
     const idToken = await getPermissions();
 
     expect(idToken).toStrictEqual({

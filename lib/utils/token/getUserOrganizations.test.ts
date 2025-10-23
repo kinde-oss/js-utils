@@ -56,13 +56,11 @@ describe("getUserOrganizationsSync", () => {
   beforeEach(() => {
     setActiveStorage(storage);
   });
-
   it("when token is null", () => {
     storage.removeSessionItem(StorageKeys.idToken);
     const idToken = getUserOrganizationsSync();
     expect(idToken).toStrictEqual(null);
   });
-
   it("When multiple org", () => {
     storage.setSessionItem(
       StorageKeys.idToken,
@@ -70,5 +68,21 @@ describe("getUserOrganizationsSync", () => {
     );
     const idToken = getUserOrganizationsSync();
     expect(idToken).toStrictEqual(["org_123456789", "org_1234567"]);
+  });
+  it("When single org", () => {
+    storage.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({ org_codes: ["org_123456789"] }),
+    );
+    const idToken = getUserOrganizationsSync();
+    expect(idToken).toStrictEqual(["org_123456789"]);
+  });
+  it("when no orgs", () => {
+    storage.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({ org_codes: null }),
+    );
+    const idToken = getUserOrganizationsSync();
+    expect(idToken).toStrictEqual(null);
   });
 });
