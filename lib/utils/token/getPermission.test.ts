@@ -5,6 +5,8 @@ import { createMockAccessToken } from "./testUtils";
 
 const storage = new MemoryStorage();
 
+import * as callAccountApi from "./accountApi/callAccountApi";
+
 vi.mock("./accountApi/callAccountApi", () => ({
   callAccountApi: vi.fn(),
 }));
@@ -117,6 +119,37 @@ describe("getPermission", () => {
       isGranted: false,
       orgCode: "org_123456789",
       permissionKey: "canEdit",
+    });
+  });
+});
+
+vi.mock("./accountApi/callAccountApi", () => ({
+  callAccountApi: vi.fn(),
+}));
+
+describe("getPermission - forceApi", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setActiveStorage(storage);
+  });
+
+  it("encodes permission key when calling account API", async () => {
+    vi.mocked(callAccountApi.callAccountApi).mockResolvedValue({
+      permissionKey: "view reports/advanced",
+      orgCode: "org_api",
+      isGranted: true,
+    });
+
+    const key = "view reports/advanced";
+    const res = await getPermission(key, { forceApi: true });
+
+    expect(callAccountApi.callAccountApi).toHaveBeenCalledWith(
+      "account_api/v1/permission/view%20reports%2Fadvanced",
+    );
+    expect(res).toStrictEqual({
+      permissionKey: key,
+      orgCode: "org_api",
+      isGranted: true,
     });
   });
 });

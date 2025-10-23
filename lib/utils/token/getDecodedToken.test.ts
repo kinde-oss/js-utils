@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { getDecodedToken, getDecodedTokenSync } from "./getDecodedToken";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
-import { setActiveStorage } from ".";
+import { clearActiveStorage, setActiveStorage } from ".";
 import { createMockAccessToken } from "./testUtils";
 
 describe("getDecodedToken", () => {
@@ -52,6 +52,7 @@ describe("getDecodedToken accessToken", () => {
 
 describe("getDecodedTokenSync", () => {
   it("return null when no active storage is defined", () => {
+    clearActiveStorage();
     expect(getDecodedTokenSync("idToken")).toBe(null);
   });
 

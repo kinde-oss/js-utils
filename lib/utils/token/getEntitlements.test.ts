@@ -30,6 +30,22 @@ const mockEntitlementsAPIResponse = {
   },
 };
 
+const mockEntitlementsAPINoPlansandEntitlementsResponse = {
+  data: {
+    org_code: "org_0195ac80a14e",
+  },
+  metadata: {
+    has_more: false,
+    next_page_starting_after: "entitlement_0195ac80a14e8d71f42b98e75d3c61ad",
+  },
+};
+
+const expectedResponseNoPlansandEntitlements = {
+  orgCode: "org_0195ac80a14e",
+  plans: [],
+  entitlements: [],
+};
+
 const expectedResponse = {
   orgCode: "org_0195ac80a14e",
   plans: [
@@ -72,6 +88,14 @@ describe("getEntitlements", () => {
     fetchMock.mockResponseOnce(JSON.stringify(mockEntitlementsAPIResponse));
     const result = await getEntitlements();
     expect(result).toEqual(expectedResponse);
+  });
+
+  it("returns entitlement data on success", async () => {
+    fetchMock.mockResponseOnce(
+      JSON.stringify(mockEntitlementsAPINoPlansandEntitlementsResponse),
+    );
+    const result = await getEntitlements();
+    expect(result).toEqual(expectedResponseNoPlansandEntitlements);
   });
 
   it("throws if no domain (iss claim)", async () => {
