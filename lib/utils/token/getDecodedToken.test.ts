@@ -62,4 +62,13 @@ describe("getDecodedTokenSync", () => {
     const t = getDecodedTokenSync("accessToken");
     expect(t?.org_code).toBe("org_123456789");
   });
+
+  it("using an async storage in sync mode throws an error", () => {
+    const storage = new MemoryStorage();
+    storage.asyncStore = true;
+    setActiveStorage(storage);
+    expect(() => getDecodedTokenSync("accessToken")).toThrow(
+      "Active storage is async-only. Use the async helpers.",
+    );
+  });
 });

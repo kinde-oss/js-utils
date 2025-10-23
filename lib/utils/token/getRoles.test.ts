@@ -381,4 +381,11 @@ describe("getRolesSync", () => {
     const roles = getRolesSync();
     expect(roles).toStrictEqual([{ id: "1", key: "admin", name: "Admin" }]);
   });
+
+  it("can't forceApi in in sync request", () => {
+    storage.setSessionItem(StorageKeys.accessToken, null);
+    expect(() => getRolesSync({ forceApi: true })).toThrow(
+      "forceApi cannot be used in sync mode",
+    );
+  });
 });
