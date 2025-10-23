@@ -167,7 +167,7 @@ describe("getPermissionsSync", () => {
   });
 
   it("when no token returns empty", () => {
-    storage.setSessionItem(StorageKeys.accessToken, null);
+    storage.removeSessionItem(StorageKeys.accessToken);
     expect(getPermissionsSync()).toStrictEqual({
       orgCode: null,
       permissions: [],

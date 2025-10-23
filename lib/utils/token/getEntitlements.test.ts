@@ -30,7 +30,7 @@ const mockEntitlementsAPIResponse = {
   },
 };
 
-const mockEntitlementsAPINoPlansandEntitlementsResponse = {
+const mockEntitlementsAPINoPlansAndEntitlementsResponse = {
   data: {
     org_code: "org_0195ac80a14e",
   },
@@ -40,7 +40,7 @@ const mockEntitlementsAPINoPlansandEntitlementsResponse = {
   },
 };
 
-const expectedResponseNoPlansandEntitlements = {
+const expectedResponseNoPlansAndEntitlements = {
   orgCode: "org_0195ac80a14e",
   plans: [],
   entitlements: [],
@@ -90,12 +90,12 @@ describe("getEntitlements", () => {
     expect(result).toEqual(expectedResponse);
   });
 
-  it("returns entitlement data on success", async () => {
+  it("returns empty arrays when API response has no plans or entitlements", async () => {
     fetchMock.mockResponseOnce(
-      JSON.stringify(mockEntitlementsAPINoPlansandEntitlementsResponse),
+      JSON.stringify(mockEntitlementsAPINoPlansAndEntitlementsResponse),
     );
     const result = await getEntitlements();
-    expect(result).toEqual(expectedResponseNoPlansandEntitlements);
+    expect(result).toEqual(expectedResponseNoPlansAndEntitlements);
   });
 
   it("throws if no domain (iss claim)", async () => {

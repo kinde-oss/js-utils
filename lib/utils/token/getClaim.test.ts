@@ -11,7 +11,7 @@ describe("getClaim", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.accessToken, null);
+    await storage.removeSessionItem(StorageKeys.accessToken);
     const value = await getClaim("test");
     expect(value).toStrictEqual(null);
   });
@@ -35,7 +35,7 @@ describe("getClaimSync", () => {
   });
 
   it("when no token", () => {
-    storage.setSessionItem(StorageKeys.accessToken, null);
+    storage.removeSessionItem(StorageKeys.accessToken);
     const value = getClaimSync("test");
     expect(value).toStrictEqual(null);
   });

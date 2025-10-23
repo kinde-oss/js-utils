@@ -11,7 +11,7 @@ describe("getFlag - Hasura", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.accessToken, null);
+    await storage.removeSessionItem(StorageKeys.accessToken);
     const idToken = await getFlag("test");
 
     expect(idToken).toStrictEqual(null);

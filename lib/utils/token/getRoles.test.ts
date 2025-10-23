@@ -367,7 +367,7 @@ describe("getRolesSync", () => {
   });
 
   it("returns [] when no token", () => {
-    storage.setSessionItem(StorageKeys.accessToken, null);
+    storage.removeSessionItem(StorageKeys.accessToken);
     expect(getRolesSync()).toStrictEqual([]);
   });
 
@@ -383,7 +383,7 @@ describe("getRolesSync", () => {
   });
 
   it("can't forceApi in in sync request", () => {
-    storage.setSessionItem(StorageKeys.accessToken, null);
+    storage.removeSessionItem(StorageKeys.accessToken);
     expect(() => getRolesSync({ forceApi: true })).toThrow(
       "forceApi cannot be used in sync mode",
     );

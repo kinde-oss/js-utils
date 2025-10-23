@@ -18,7 +18,7 @@ describe("getFlags", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.accessToken, null);
+    await storage.removeSessionItem(StorageKeys.accessToken);
     const flags = await getFlags();
     expect(flags).toStrictEqual(null);
   });
@@ -344,7 +344,7 @@ describe("getFlagsSync", () => {
   });
 
   it("when no token", () => {
-    storage.setSessionItem(StorageKeys.accessToken, null);
+    storage.removeSessionItem(StorageKeys.accessToken);
     const flags = getFlagsSync();
     expect(flags).toStrictEqual(null);
   });

@@ -18,7 +18,7 @@ describe("getPermissionSync", () => {
   });
 
   it("returns false when no token", () => {
-    storage.setSessionItem(StorageKeys.accessToken, null);
+    storage.removeSessionItem(StorageKeys.accessToken);
     const res = getPermissionSync("perm1");
     expect(res).toStrictEqual({
       permissionKey: "perm1",
@@ -56,7 +56,9 @@ describe("getPermission", () => {
     setActiveStorage(storage);
   });
   it("when no token", async () => {
-    await storage.removeSessionItem(StorageKeys.idToken);
+    storage.removeSessionItem(StorageKeys.idToken);
+    storage.removeSessionItem(StorageKeys.accessToken);
+
     const idToken = await getPermission("test");
 
     expect(idToken).toStrictEqual({
@@ -67,7 +69,8 @@ describe("getPermission", () => {
   });
 
   it("when no token with enum", async () => {
-    await storage.removeSessionItem(StorageKeys.idToken);
+    storage.removeSessionItem(StorageKeys.idToken);
+    storage.removeSessionItem(StorageKeys.accessToken);
     const idToken = await getPermission<PermissionEnum>(PermissionEnum.canEdit);
 
     expect(idToken).toStrictEqual({

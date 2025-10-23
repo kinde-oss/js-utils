@@ -20,7 +20,7 @@ describe("has", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.accessToken, null);
+    storage.removeSessionItem(StorageKeys.accessToken);
 
     try {
       const result = await has({ roles: ["admin"], permissions: ["canEdit"] });
