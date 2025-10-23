@@ -60,5 +60,9 @@ export const getRolesSync = (options?: GetRolesOptions): Role[] => {
   }
 
   const token = getDecodedTokenSync();
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
   return _getRolesCore(token);
 };

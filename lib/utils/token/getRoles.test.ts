@@ -368,7 +368,7 @@ describe("getRolesSync", () => {
 
   it("returns [] when no token", () => {
     storage.removeSessionItem(StorageKeys.accessToken);
-    expect(getRolesSync()).toStrictEqual([]);
+    expect(() => getRolesSync()).to.throw("Authentication token not found.");
   });
 
   it("returns roles from token", () => {
