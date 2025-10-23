@@ -20,10 +20,11 @@ const _getPermissionCore = (
       isGranted: false,
     };
   }
-  const permissions = token.permissions || [];
+  const permissions = token.permissions || token["x-hasura-permissions"] || [];
+  const orgCode = token.org_code || token["x-hasura-org-code"] || null;
   return {
     permissionKey,
-    orgCode: token.org_code,
+    orgCode,
     isGranted: !!permissions.includes(permissionKey),
   };
 };

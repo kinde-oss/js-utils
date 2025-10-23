@@ -26,10 +26,14 @@ export const getRawTokenSync = (
 ): string | null => {
   const activeStorage = getActiveStorage();
 
-  if (!activeStorage || activeStorage.asyncStore) {
+  if (!activeStorage) {
     return null;
   }
-
+  
+  if (activeStorage.asyncStore) {
+    throw new Error("Active storage is async-only. Use the async helpers.");
+  }
+  
   const token = activeStorage.getSessionItem(
     tokenType === "accessToken" ? StorageKeys.accessToken : StorageKeys.idToken,
   ) as string | null;

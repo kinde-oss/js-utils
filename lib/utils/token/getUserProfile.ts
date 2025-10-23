@@ -37,8 +37,8 @@ const _getUserProfileCore = <T>(
   } as UserProfile & T;
 };
 
-export const getUserProfile = async <T>(): Promise<
-  (UserProfile & T) | null
+export const getUserProfile = async (): Promise<
+  (UserProfile) | null
 > => {
   const idToken = await getClaims<{
     sub: string;
@@ -47,10 +47,10 @@ export const getUserProfile = async <T>(): Promise<
     email: string;
     picture: string;
   }>("idToken");
-  return _getUserProfileCore<T>(idToken);
+  return _getUserProfileCore(idToken)
 };
 
-export const getUserProfileSync = <T>(): (UserProfile & T) | null => {
+export const getUserProfileSync = (): (UserProfile) | null => {
   const idToken = getClaimsSync<{
     sub: string;
     given_name: string;
@@ -58,5 +58,5 @@ export const getUserProfileSync = <T>(): (UserProfile & T) | null => {
     email: string;
     picture: string;
   }>("idToken");
-  return _getUserProfileCore<T>(idToken);
+  return _getUserProfileCore(idToken);
 };

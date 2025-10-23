@@ -38,10 +38,9 @@ describe("getCurrentOrganizationSync", () => {
   it("when no token", () => {
     storage.removeSessionItem(StorageKeys.idToken);
     storage.removeSessionItem(StorageKeys.accessToken);
-    const idToken = getCurrentOrganizationSync();
+    const orgCode = getCurrentOrganizationSync();
 
-    console.log("idToken", idToken);
-    expect(idToken).toStrictEqual(null);
+    expect(orgCode).toStrictEqual(null);
   });
 
   it("with access", () => {

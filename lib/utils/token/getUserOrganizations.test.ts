@@ -60,7 +60,6 @@ describe("getUserOrganizationsSync", () => {
   it("when token is null", () => {
     storage.removeSessionItem(StorageKeys.idToken);
     const idToken = getUserOrganizationsSync();
-    console.log("idToken", idToken);
     expect(idToken).toStrictEqual(null);
   });
 
