@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
-import { setActiveStorage, getFlag } from ".";
+import { setActiveStorage, getFlag, getFlagSync } from ".";
 import { createMockAccessToken } from "./testUtils";
 import * as callAccountApi from "./accountApi/callAccountApi";
 
@@ -18,7 +18,7 @@ describe("getFlag", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeSessionItem(StorageKeys.idToken);
     const flagValue = await getFlag("test");
     expect(flagValue).toStrictEqual(null);
   });
@@ -218,5 +218,49 @@ describe("getFlag", () => {
         "API Error",
       );
     });
+  });
+});
+
+describe("getFlagSync", () => {
+  beforeEach(() => {
+    setActiveStorage(storage);
+    vi.clearAllMocks();
+  });
+
+  it("when no token", () => {
+    storage.removeSessionItem(StorageKeys.idToken);
+    storage.removeSessionItem(StorageKeys.accessToken);
+    const flagValue = getFlagSync("test");
+    expect(flagValue).toStrictEqual(null);
+  });
+
+  it("when no flags", () => {
+    storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        feature_flags: null,
+      }),
+    );
+    const flagValue = getFlagSync("test");
+    expect(flagValue).toStrictEqual(null);
+  });
+
+  it("boolean true", () => {
+    storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        feature_flags: {
+          test: { v: true, t: "b" },
+        },
+      }),
+    );
+    const flagValue = getFlagSync<boolean>("test");
+    expect(flagValue).toStrictEqual(true);
+  });
+
+  it("throws on forceApi", () => {
+    expect(() => getFlagSync("x", { forceApi: true })).toThrow(
+      "forceApi cannot be used in sync mode",
+    );
   });
 });

@@ -1,4 +1,5 @@
 import { getDecodedToken } from ".";
+import { getDecodedTokenSync, JWTDecoded } from "./getDecodedToken";
 import {
   type GetFeatureFlagsOptions,
   type AccountFeatureFlagsResult,
@@ -29,17 +30,30 @@ export const getFlags = async (
   }
 
   const claims = await getDecodedToken();
+  return _getFlagsCore(claims);
+};
 
+export const getFlagsSync = (
+  options?: GetFeatureFlagsOptions,
+): TokenFeatureFlag[] | null => {
+  if (options?.forceApi) {
+    throw new Error("forceApi cannot be used in sync mode");
+  }
+
+  const claims = getDecodedTokenSync();
+  return _getFlagsCore(claims);
+};
+
+const _getFlagsCore = (
+  claims: JWTDecoded | null,
+): TokenFeatureFlag[] | null => {
   if (!claims) {
     return null;
   }
-
   const flags = claims.feature_flags || claims["x-hasura-feature-flags"];
-
   if (!flags) {
     return null;
   }
-
   return Object.entries(flags).map(([key, value]) => ({
     key,
     value: value.v,

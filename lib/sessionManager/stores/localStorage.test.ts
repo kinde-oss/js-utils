@@ -288,7 +288,7 @@ describe("LocalStorage subscription/listening mechanism", () => {
     await sessionManager.setSessionItem(StorageKeys.idToken, "mixedTest");
 
     // Wait for setTimeout to fire and async listener to complete
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(syncCalled).toBe(true);
     expect(asyncCalled).toBe(true);

@@ -576,4 +576,46 @@ describe("exchangeAuthCode", () => {
       "refresh",
     );
   });
+
+  it("returns error when persisting tokens to secure storage fails", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.codeVerifier]: "verifier",
+    });
+
+    const urlParams = new URLSearchParams();
+    urlParams.append("code", "hello");
+    urlParams.append("state", "state");
+    urlParams.append("client_id", "test");
+
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "access_token",
+        refresh_token: "refresh_token",
+        id_token: "id_token",
+      }),
+    );
+
+    const setItemsSpy = vi
+      .spyOn(store, "setItems")
+      .mockRejectedValue(new Error("Persist failed"));
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+
+    expect(setItemsSpy).toHaveBeenCalled();
+    expect(result).toStrictEqual({
+      success: false,
+      error: expect.stringContaining(
+        "Failed to persist tokens: Error: Persist failed",
+      ),
+    });
+  });
 });

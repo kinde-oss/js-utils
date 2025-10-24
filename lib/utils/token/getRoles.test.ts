@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
-import { setActiveStorage } from ".";
+import { getRolesSync, setActiveStorage } from ".";
 import { createMockAccessToken } from "./testUtils";
 import { getRoles } from ".";
 import createFetchMock from "vitest-fetch-mock";
@@ -358,5 +358,34 @@ describe("getRoles", () => {
 
     getClaimSpy.mockRestore();
     getDecodedTokenSpy.mockRestore();
+  });
+});
+
+describe("getRolesSync", () => {
+  beforeEach(() => {
+    setActiveStorage(storage);
+  });
+
+  it("returns [] when no token", () => {
+    storage.removeSessionItem(StorageKeys.accessToken);
+    expect(() => getRolesSync()).to.throw("Authentication token not found.");
+  });
+
+  it("returns roles from token", () => {
+    storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        roles: [{ id: "1", key: "admin", name: "Admin" }],
+      }),
+    );
+    const roles = getRolesSync();
+    expect(roles).toStrictEqual([{ id: "1", key: "admin", name: "Admin" }]);
+  });
+
+  it("can't forceApi in sync request", () => {
+    storage.removeSessionItem(StorageKeys.accessToken);
+    expect(() => getRolesSync({ forceApi: true })).toThrow(
+      "forceApi cannot be used in sync mode",
+    );
   });
 });

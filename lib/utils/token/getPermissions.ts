@@ -1,4 +1,5 @@
 import { getDecodedToken } from ".";
+import { getDecodedTokenSync, JWTDecoded } from "./getDecodedToken";
 import { BaseAccountResponse, GetPermissionsOptions } from "../../types";
 import { callAccountApiPaginated } from "./accountApi/callAccountApi";
 
@@ -12,6 +13,24 @@ type AccountPermissionsResult = BaseAccountResponse & {
 export type Permissions<T = string> = {
   orgCode: string | null;
   permissions: T[];
+};
+
+const _getPermissionsCore = <T = string>(
+  token: JWTDecoded | null,
+): Permissions<T> => {
+  if (!token) {
+    return {
+      orgCode: null,
+      permissions: [],
+    };
+  }
+  const permissions = token.permissions || token["x-hasura-permissions"] || [];
+  const orgCode = token.org_code || token["x-hasura-org-code"];
+
+  return {
+    orgCode,
+    permissions: permissions as T[],
+  };
 };
 /**
  * Get all permissions
@@ -33,18 +52,16 @@ export const getPermissions = async <T = string>(
   }
 
   const token = await getDecodedToken();
+  return _getPermissionsCore<T>(token);
+};
 
-  if (!token) {
-    return {
-      orgCode: null,
-      permissions: [],
-    };
+export const getPermissionsSync = <T = string>(
+  options?: GetPermissionsOptions,
+): Permissions<T> => {
+  if (options?.forceApi) {
+    throw new Error("forceApi cannot be used in sync mode");
   }
-  const permissions = token.permissions || token["x-hasura-permissions"] || [];
-  const orgCode = token.org_code || token["x-hasura-org-code"];
 
-  return {
-    orgCode,
-    permissions: permissions as T[],
-  };
+  const token = getDecodedTokenSync();
+  return _getPermissionsCore<T>(token);
 };

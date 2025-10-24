@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
-import { setActiveStorage, getFlags } from ".";
+import { setActiveStorage, getFlags, getFlagsSync } from ".";
 import { createMockAccessToken } from "./testUtils";
 import * as callAccountApi from "./accountApi/callAccountApi";
 
@@ -18,7 +18,7 @@ describe("getFlags", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.accessToken, null);
+    await storage.removeSessionItem(StorageKeys.accessToken);
     const flags = await getFlags();
     expect(flags).toStrictEqual(null);
   });
@@ -335,5 +335,38 @@ describe("getFlags", () => {
       const flags = await getFlags({ forceApi: true });
       expect(flags).toStrictEqual([]);
     });
+  });
+});
+
+describe("getFlagsSync", () => {
+  beforeEach(() => {
+    setActiveStorage(storage);
+  });
+
+  it("when no token", () => {
+    storage.removeSessionItem(StorageKeys.accessToken);
+    const flags = getFlagsSync();
+    expect(flags).toStrictEqual(null);
+  });
+
+  it("single boolean flag", () => {
+    storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({
+        feature_flags: {
+          darkMode: { v: true, t: "boolean" },
+        },
+      }),
+    );
+    const flags = getFlagsSync();
+    expect(flags).toStrictEqual([
+      { key: "darkMode", value: true, type: "boolean" },
+    ]);
+  });
+
+  it("throws on forceApi", () => {
+    expect(() => getFlagsSync({ forceApi: true })).toThrow(
+      "forceApi cannot be used in sync mode",
+    );
   });
 });

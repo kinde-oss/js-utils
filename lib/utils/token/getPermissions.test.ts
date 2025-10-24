@@ -1,8 +1,7 @@
-import { vi, describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
-import { setActiveStorage } from ".";
+import { setActiveStorage, getPermissions, getPermissionsSync } from ".";
 import { createMockAccessToken } from "./testUtils";
-import { getPermissions } from ".";
 import createFetchMock from "vitest-fetch-mock";
 
 enum PermissionEnum {
@@ -23,7 +22,7 @@ describe("getPermissions", () => {
   });
 
   it("when no token", async () => {
-    await storage.setSessionItem(StorageKeys.idToken, null);
+    await storage.removeSessionItem(StorageKeys.idToken);
     const idToken = await getPermissions();
 
     expect(idToken).toStrictEqual({
@@ -159,5 +158,34 @@ describe("getPermissions", () => {
       orgCode: "org_0195ac80a14e",
       permissions: ["view_reports", "view_bills"],
     });
+  });
+});
+
+describe("getPermissionsSync", () => {
+  beforeEach(() => {
+    setActiveStorage(storage);
+  });
+
+  it("when no token returns empty", () => {
+    storage.removeSessionItem(StorageKeys.accessToken);
+    expect(getPermissionsSync()).toStrictEqual({
+      orgCode: null,
+      permissions: [],
+    });
+  });
+
+  it("reads from token", () => {
+    storage.setSessionItem(
+      StorageKeys.accessToken,
+      createMockAccessToken({ org_code: "org_1", permissions: ["p1", "p2"] }),
+    );
+    const res = getPermissionsSync();
+    expect(res).toStrictEqual({ orgCode: "org_1", permissions: ["p1", "p2"] });
+  });
+
+  it("throws on forceApi", () => {
+    expect(() => getPermissionsSync({ forceApi: true })).toThrow(
+      "forceApi cannot be used in sync mode",
+    );
   });
 });

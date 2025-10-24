@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { getRawToken } from "./getRawToken";
+import { getRawToken, getRawTokenSync } from "./getRawToken";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
-import { setActiveStorage } from ".";
+import { clearActiveStorage, setActiveStorage } from ".";
 import { createMockAccessToken } from "./testUtils";
 
 describe("getRawToken", () => {
@@ -54,5 +54,35 @@ describe("getRawToken accessToken", () => {
       throw new Error("accessToken is null");
     }
     expect(accessToken).toBe(mockedToken);
+  });
+});
+
+describe("getRawTokenSync", () => {
+  it("returns null when no active storage is defined", () => {
+    clearActiveStorage();
+    expect(getRawTokenSync("idToken")).toBe(null);
+  });
+
+  it("returns null when token is not set on sync store", () => {
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    expect(getRawTokenSync("idToken")).toBe(null);
+  });
+
+  it("returns token when set on sync store", () => {
+    const storage = new MemoryStorage();
+    setActiveStorage(storage);
+    const mockedToken = createMockAccessToken({ unique: "sync" });
+    storage.setSessionItem(StorageKeys.accessToken, mockedToken);
+    expect(getRawTokenSync("accessToken")).toBe(mockedToken);
+  });
+
+  it("using an async storage in sync mode throws an error", () => {
+    const storage = new MemoryStorage();
+    storage.asyncStore = true;
+    setActiveStorage(storage);
+    expect(() => getRawTokenSync()).toThrow(
+      "Active storage is async-only. Use the async helpers.",
+    );
   });
 });

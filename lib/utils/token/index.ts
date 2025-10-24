@@ -8,21 +8,29 @@ export {
   hasFeatureFlags,
   hasBillingEntitlements,
 } from "./has";
-export { getClaim } from "./getClaim";
-export { getClaims } from "./getClaims";
+export { getClaim, getClaimSync } from "./getClaim";
+export { getClaims, getClaimsSync } from "./getClaims";
 export { getCurrentOrganization } from "./getCurrentOrganization";
-export { getDecodedToken } from "./getDecodedToken";
-export { getRawToken } from "./getRawToken";
+export { getCurrentOrganizationSync } from "./getCurrentOrganization";
+export { getDecodedToken, getDecodedTokenSync } from "./getDecodedToken";
+export { getRawToken, getRawTokenSync } from "./getRawToken";
 export { getFlag } from "./getFlag";
+export { getFlagSync } from "./getFlag";
 export { getFlags } from "./getFlags";
+export { getFlagsSync } from "./getFlags";
 export { getUserProfile } from "./getUserProfile";
+export { getUserProfileSync } from "./getUserProfile";
 export type { UserProfile } from "./getUserProfile";
 export { getPermission } from "./getPermission";
+export { getPermissionSync } from "./getPermission";
 export type { PermissionAccess } from "./getPermission";
 export { getPermissions } from "./getPermissions";
+export { getPermissionsSync } from "./getPermissions";
 export type { Permissions } from "./getPermissions";
 export { getUserOrganizations } from "./getUserOrganizations";
+export { getUserOrganizationsSync } from "./getUserOrganizations";
 export { getRoles } from "./getRoles";
+export { getRolesSync } from "./getRoles";
 export type { Role } from "./getRoles";
 export { isAuthenticated } from "./isAuthenticated";
 export { isTokenExpired } from "./isTokenExpired";

@@ -1,4 +1,5 @@
 import { getClaim, getDecodedToken } from ".";
+import { getDecodedTokenSync } from "./getDecodedToken";
 import { BaseAccountResponse, GetRolesOptions } from "../../types";
 import { callAccountApiPaginated } from "./accountApi/callAccountApi";
 
@@ -9,6 +10,24 @@ type AccountRolesResult = BaseAccountResponse & {
     org_code: string;
     roles: { id: string; name: string; key: string }[];
   };
+};
+
+type TokenWithRoles = {
+  roles?: Role[];
+  "x-hasura-roles"?: Role[];
+} | null;
+
+const _getRolesCore = (token: TokenWithRoles): Role[] => {
+  if (!token) {
+    return [];
+  }
+  if (!token.roles && !token["x-hasura-roles"]) {
+    console.warn(
+      "No roles found in token, ensure roles have been included in the token customisation within the application settings",
+    );
+    return [];
+  }
+  return (token.roles || token["x-hasura-roles"]) as Role[];
 };
 
 /**
@@ -32,17 +51,18 @@ export const getRoles = async (options?: GetRolesOptions): Promise<Role[]> => {
   }
 
   const token = await getDecodedToken();
+  return _getRolesCore(token);
+};
+
+export const getRolesSync = (options?: GetRolesOptions): Role[] => {
+  if (options?.forceApi) {
+    throw new Error("forceApi cannot be used in sync mode");
+  }
+
+  const token = getDecodedTokenSync();
 
   if (!token) {
-    return [];
+    throw new Error("Authentication token not found.");
   }
-
-  if (!token.roles && !token["x-hasura-roles"]) {
-    console.warn(
-      "No roles found in token, ensure roles have been included in the token customisation within the application settings",
-    );
-    return [];
-  }
-
-  return token.roles || token["x-hasura-roles"];
+  return _getRolesCore(token);
 };

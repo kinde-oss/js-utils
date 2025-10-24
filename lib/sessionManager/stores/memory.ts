@@ -10,13 +10,14 @@ export class MemoryStorage<V extends string = StorageKeys>
   extends SessionBase<V>
   implements SessionManager<V>
 {
+  asyncStore = false;
   private memCache: Record<string, unknown> = {};
 
   /**
    * Clears all items from session store.
    * @returns {void}
    */
-  async destroySession(): Promise<void> {
+  destroySession(): void {
     this.memCache = {};
     this.notifyListeners();
   }
@@ -27,12 +28,9 @@ export class MemoryStorage<V extends string = StorageKeys>
    * @param {unknown} itemValue
    * @returns {void}
    */
-  async setSessionItem(
-    itemKey: V | StorageKeys,
-    itemValue: unknown,
-  ): Promise<void> {
+  setSessionItem(itemKey: V | StorageKeys, itemValue: unknown): void {
     // clear items first
-    await this.removeSessionItem(itemKey);
+    this.removeSessionItem(itemKey);
 
     if (typeof itemValue === "string") {
       splitString(itemValue, storageSettings.maxLength).forEach(
@@ -55,7 +53,7 @@ export class MemoryStorage<V extends string = StorageKeys>
    * @param {string} itemKey
    * @returns {unknown | null}
    */
-  async getSessionItem(itemKey: V | StorageKeys): Promise<unknown | null> {
+  getSessionItem(itemKey: V | StorageKeys): unknown | null {
     if (
       this.memCache[`${storageSettings.keyPrefix}${String(itemKey)}0`] ===
       undefined
@@ -80,7 +78,7 @@ export class MemoryStorage<V extends string = StorageKeys>
    * @param {string} itemKey
    * @returns {void}
    */
-  async removeSessionItem(itemKey: V | StorageKeys): Promise<void> {
+  removeSessionItem(itemKey: V | StorageKeys): void {
     // Remove all items with the key prefix
     for (const key in this.memCache) {
       if (key.startsWith(`${storageSettings.keyPrefix}${String(itemKey)}`)) {

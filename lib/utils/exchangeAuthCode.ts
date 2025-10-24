@@ -187,11 +187,19 @@ export const exchangeAuthCode = async ({
 
   const secureStore = getActiveStorage();
   if (secureStore) {
-    secureStore.setItems({
-      [StorageKeys.accessToken]: data.access_token,
-      [StorageKeys.idToken]: data.id_token,
-      [StorageKeys.refreshToken]: data.refresh_token,
-    });
+    try {
+      await secureStore.setItems({
+        [StorageKeys.accessToken]: data.access_token,
+        [StorageKeys.idToken]: data.id_token,
+        [StorageKeys.refreshToken]: data.refresh_token,
+      });
+    } catch (error) {
+      console.error("Failed to persist tokens to secure storage:", error);
+      return {
+        success: false,
+        error: `Failed to persist tokens: ${error}`,
+      };
+    }
   }
 
   if (storageSettings.useInsecureForRefreshToken || !isCustomDomain(domain)) {
