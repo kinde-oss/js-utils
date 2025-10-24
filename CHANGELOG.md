@@ -1,6 +1,32 @@
 # Changelog
 
 
+## 0.27.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.27.0...main)
+
+### 🚀 Enhancements
+
+- GetEntitlement ([30c1742](https://github.com/kinde-oss/js-utils/commit/30c1742))
+- Add support for sync helpers ([ac7d47c](https://github.com/kinde-oss/js-utils/commit/ac7d47c))
+
+### 🏡 Chore
+
+- PR updates ([597b90b](https://github.com/kinde-oss/js-utils/commit/597b90b))
+- PR feedback ([f241065](https://github.com/kinde-oss/js-utils/commit/f241065))
+
+### ✅ Tests
+
+- Add tests for sync claims ([259da46](https://github.com/kinde-oss/js-utils/commit/259da46))
+- Add test coverage ([c79b540](https://github.com/kinde-oss/js-utils/commit/c79b540))
+- Use removeSession item in tests ([6d9ea20](https://github.com/kinde-oss/js-utils/commit/6d9ea20))
+- Updates to test coverage ([48b25f6](https://github.com/kinde-oss/js-utils/commit/48b25f6))
+- Fix getRoles tests ([f2d8e30](https://github.com/kinde-oss/js-utils/commit/f2d8e30))
+
+### ❤️ Contributors
+
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.26.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.26.0...main)
