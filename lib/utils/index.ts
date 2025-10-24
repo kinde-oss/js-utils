@@ -9,6 +9,12 @@ export {
   frameworkSettings,
   generateKindeSDKHeader,
 } from "./exchangeAuthCode";
+export { getCookieOptions } from "./getCookieOptions";
+export type {
+  CookieEnv,
+  CookieOptions,
+  CookieOptionValue,
+} from "./getCookieOptions";
 export { checkAuth } from "./checkAuth";
 export { isCustomDomain } from "./isCustomDomain";
 export { setRefreshTimer, clearRefreshTimer } from "./refreshTimer";
