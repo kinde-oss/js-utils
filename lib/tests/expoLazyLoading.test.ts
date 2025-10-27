@@ -73,7 +73,7 @@ describe("ExpoSecureStore lazy loading", () => {
 
   it("should dynamically import ExpoSecureStore when accessed", async () => {
     // Setup a mock class (function constructor) that will be returned by our dynamic import
-    function MockStore(this: any) {
+    function MockStore(this: mainExports.SessionManager<StorageKeys>) {
       this.getSessionItem = vi.fn().mockResolvedValue("mock-value");
       this.setSessionItem = vi.fn().mockResolvedValue(undefined);
       this.removeSessionItem = vi.fn().mockResolvedValue(undefined);
@@ -102,7 +102,8 @@ describe("ExpoSecureStore lazy loading", () => {
     expect(moduleExport).toEqual({ ExpoSecureStore: MockStore });
 
     // Create an instance to verify it works
-    const instance = new (MockStore as unknown as new () => any)();
+    const instance =
+      new (MockStore as unknown as new () => mainExports.SessionManager<StorageKeys>)();
     expect(instance).toBeDefined();
 
     // Test a method to make sure it works
