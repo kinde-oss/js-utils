@@ -5,7 +5,7 @@ import { getClaims } from "./getClaims";
  *
  * @param keyName key to get from the token
  * @param {("accessToken"|"idToken")} [tokenType="accessToken"] - Type of token to get claims from
- * @returns { Promise<string | number | string[] | { id: string; name: string }[] | null> }
+ * @returns { Promise<{ name: keyof T; value: string | number | string[] | { id: string; name: string }[] } | null> }
  */
 export const getClaim = async <T = JWTDecoded, V = string | number | string[] | { id: string; name: string }[]>(
   keyName: keyof T,
