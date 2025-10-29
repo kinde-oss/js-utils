@@ -1,6 +1,30 @@
 # Changelog
 
 
+## 0.28.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.28.0...main)
+
+### 🚀 Enhancements
+
+- Pass captured tokens to onActivityTimeout callback ([40e53e0](https://github.com/kinde-oss/js-utils/commit/40e53e0))
+
+### 💅 Refactors
+
+- Use getItems for more efficient token capture ([ea52cad](https://github.com/kinde-oss/js-utils/commit/ea52cad))
+
+### 🏡 Chore
+
+- Lock file maintainance ([77adef2](https://github.com/kinde-oss/js-utils/commit/77adef2))
+- Fix vitest ([4f8f54e](https://github.com/kinde-oss/js-utils/commit/4f8f54e))
+- **test:** Lint fixes ([f6eac49](https://github.com/kinde-oss/js-utils/commit/f6eac49))
+- Simplifying timeoutToken type definition ([9379861](https://github.com/kinde-oss/js-utils/commit/9379861))
+
+### ❤️ Contributors
+
+- Koosha Owji <koosha.owji@gmail.com>
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+
 ## 0.27.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.27.0...main)
