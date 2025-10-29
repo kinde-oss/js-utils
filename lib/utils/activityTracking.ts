@@ -52,34 +52,33 @@ export const updateActivityTimestamp = (): void => {
       };
 
       try {
-        tokens.accessToken = (await sessionManager.getSessionItem<string>(
+        const items = await sessionManager.getItems(
           StorageKeys.accessToken,
-        )) as string | null;
-      } catch (error) {
-        console.error("Failed to capture access token:", error);
-      }
-
-      try {
-        tokens.idToken = (await sessionManager.getSessionItem<string>(
           StorageKeys.idToken,
-        )) as string | null;
+          StorageKeys.refreshToken,
+        );
+        tokens.accessToken = (items[StorageKeys.accessToken] as string) ?? null;
+        tokens.idToken = (items[StorageKeys.idToken] as string) ?? null;
+        tokens.refreshToken =
+          (items[StorageKeys.refreshToken] as string) ?? null;
       } catch (error) {
-        console.error("Failed to capture id token:", error);
+        console.error("Failed to capture tokens:", error);
       }
 
       const insecureStorage = getInsecureStorage();
-      try {
-        if (insecureStorage && insecureStorage !== sessionManager) {
-          tokens.refreshToken = (await insecureStorage.getSessionItem<string>(
+      if (insecureStorage && insecureStorage !== sessionManager) {
+        try {
+          const items = await insecureStorage.getItems(
             StorageKeys.refreshToken,
-          )) as string | null;
-        } else {
-          tokens.refreshToken = (await sessionManager.getSessionItem<string>(
-            StorageKeys.refreshToken,
-          )) as string | null;
+          );
+          tokens.refreshToken =
+            (items[StorageKeys.refreshToken] as string) ?? null;
+        } catch (error) {
+          console.error(
+            "Failed to capture refresh token from insecure storage:",
+            error,
+          );
         }
-      } catch (error) {
-        console.error("Failed to capture refresh token:", error);
       }
 
       isCapturingTokens = false;
