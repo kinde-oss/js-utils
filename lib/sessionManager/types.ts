@@ -24,9 +24,9 @@ export enum TimeoutActivityType {
 }
 
 export type TimeoutTokenData = {
-  accessToken?: string | null;
-  idToken?: string | null;
-  refreshToken?: string | null;
+  accessToken: string | null;
+  idToken: string | null;
+  refreshToken: string | null;
 };
 
 export type StorageSettingsType = {
