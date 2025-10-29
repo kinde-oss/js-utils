@@ -83,6 +83,7 @@ export {
   LocalStorage,
   StorageKeys,
   SessionBase,
+  TimeoutActivityType,
 } from "./sessionManager";
 
 // This export provides an implementation of SessionManager<V>
@@ -101,4 +102,4 @@ export const ExpoSecureStore: {
   },
 };
 
-export type { SessionManager } from "./sessionManager";
+export type { SessionManager, TimeoutTokenData } from "./sessionManager";

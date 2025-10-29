@@ -23,6 +23,12 @@ export enum TimeoutActivityType {
   timeout = "timeout",
 }
 
+export type TimeoutTokenData = {
+  accessToken: string | null;
+  idToken: string | null;
+  refreshToken: string | null;
+};
+
 export type StorageSettingsType = {
   keyPrefix: string;
   maxLength: number;
@@ -34,6 +40,7 @@ export type StorageSettingsType = {
   activityTimeoutPreWarningMinutes?: number;
   onActivityTimeout?: (
     timeoutType: TimeoutActivityType,
+    tokens?: TimeoutTokenData,
   ) => void | Promise<void>;
   /**
    *

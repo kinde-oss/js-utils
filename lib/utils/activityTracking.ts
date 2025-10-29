@@ -4,12 +4,16 @@ import {
   StorageKeys,
   TimeoutActivityType,
   type SessionManager,
+  type TimeoutTokenData,
 } from "../sessionManager/types.js";
 
 let activityPreWarnTimer: NodeJS.Timeout | null = null;
 let activityTimer: NodeJS.Timeout | null = null;
+let isCapturingTokens = false;
 
 export const updateActivityTimestamp = (): void => {
+  if (isCapturingTokens) return;
+
   const sessionManager = getActiveStorage() ?? getInsecureStorage();
   if (!sessionManager) {
     throw new Error("Session manager not found");
@@ -39,12 +43,51 @@ export const updateActivityTimestamp = (): void => {
 
   activityTimer = setTimeout(
     async () => {
+      isCapturingTokens = true;
+
+      const tokens: TimeoutTokenData = {
+        accessToken: null,
+        idToken: null,
+        refreshToken: null,
+      };
+
+      try {
+        const items = await sessionManager.getItems(
+          StorageKeys.accessToken,
+          StorageKeys.idToken,
+          StorageKeys.refreshToken,
+        );
+        tokens.accessToken = (items[StorageKeys.accessToken] as string) ?? null;
+        tokens.idToken = (items[StorageKeys.idToken] as string) ?? null;
+        tokens.refreshToken =
+          (items[StorageKeys.refreshToken] as string) ?? null;
+      } catch (error) {
+        console.error("Failed to capture tokens:", error);
+      }
+
+      const insecureStorage = getInsecureStorage();
+      if (insecureStorage && insecureStorage !== sessionManager) {
+        try {
+          const items = await insecureStorage.getItems(
+            StorageKeys.refreshToken,
+          );
+          tokens.refreshToken =
+            (items[StorageKeys.refreshToken] as string) ?? null;
+        } catch (error) {
+          console.error(
+            "Failed to capture refresh token from insecure storage:",
+            error,
+          );
+        }
+      }
+
+      isCapturingTokens = false;
+
       try {
         await sessionManager.destroySession();
       } catch (error) {
         console.error("Failed to destroy secure session:", error);
       }
-      const insecureStorage = getInsecureStorage();
       if (insecureStorage && insecureStorage !== sessionManager) {
         try {
           await insecureStorage.destroySession();
@@ -52,10 +95,13 @@ export const updateActivityTimestamp = (): void => {
           console.error("Failed to destroy insecure session:", error);
         }
       }
+
       try {
-        storageSettings.onActivityTimeout?.(TimeoutActivityType.timeout);
+        storageSettings.onActivityTimeout?.(
+          TimeoutActivityType.timeout,
+          tokens,
+        );
       } catch (err) {
-        // Shield callers from exceptions in user callbacks
         console.error(
           "[activityTimeout] onActivityTimeout(timeout) threw:",
           err,
