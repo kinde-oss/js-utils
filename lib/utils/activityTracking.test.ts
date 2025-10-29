@@ -41,6 +41,7 @@ describe("Activity Tracking", () => {
     storageSettings.onActivityTimeout = mockOnActivityTimeout;
 
     clearActiveStorage();
+    clearInsecureStorage();
     vi.clearAllMocks();
     vi.clearAllTimers();
     vi.useFakeTimers();
@@ -53,6 +54,7 @@ describe("Activity Tracking", () => {
     storageSettings.keyPrefix = originalKeyPrefix;
     storageSettings.onActivityTimeout = originalOnActivityTimeout;
     clearActiveStorage();
+    clearInsecureStorage();
     vi.clearAllTimers();
     vi.useRealTimers();
   });
@@ -80,6 +82,7 @@ describe("Activity Tracking", () => {
 
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
+        expect.any(Object),
       );
       expect(mockOnActivityTimeout).toHaveBeenCalledTimes(1);
     });
@@ -103,6 +106,7 @@ describe("Activity Tracking", () => {
       await vi.advanceTimersByTimeAsync(15 * 60 * 1000 + 1000);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
+        expect.any(Object),
       );
     });
 
@@ -120,6 +124,9 @@ describe("Activity Tracking", () => {
       expect(destroySpy).toHaveBeenCalledTimes(1);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
+        expect.objectContaining({
+          accessToken: "token123",
+        }),
       );
     });
 
@@ -146,6 +153,7 @@ describe("Activity Tracking", () => {
       expect(insecureDestroySpy).toHaveBeenCalledTimes(1);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
+        expect.any(Object),
       );
     });
 
@@ -176,6 +184,7 @@ describe("Activity Tracking", () => {
 
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
+        expect.any(Object),
       );
     });
 
@@ -204,6 +213,7 @@ describe("Activity Tracking", () => {
       await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
+        expect.any(Object),
       );
       expect(mockOnActivityTimeout).toHaveBeenCalledTimes(2);
     });
@@ -270,6 +280,7 @@ describe("Activity Tracking", () => {
       await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
+        expect.any(Object),
       );
     });
 
@@ -328,6 +339,7 @@ describe("Activity Tracking", () => {
       await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
+        expect.any(Object),
       );
     });
   });
@@ -368,6 +380,7 @@ describe("Activity Tracking", () => {
       // Timeout should occur exactly once
       expect(mockOnActivityTimeout).toHaveBeenCalledWith(
         TimeoutActivityType.timeout,
+        expect.any(Object),
       );
       expect(mockOnActivityTimeout).toHaveBeenCalledTimes(1);
       expect(destroySessionSpy).toHaveBeenCalledTimes(1);
@@ -460,6 +473,99 @@ describe("Activity Tracking", () => {
       );
 
       consoleSpy.mockRestore();
+    });
+
+    it("should pass tokens to timeout callback", async () => {
+      storageSettings.activityTimeoutMinutes = 30;
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
+
+      // Set up tokens in session
+      await sessionManager.setSessionItem(
+        StorageKeys.accessToken,
+        "access-token-123",
+      );
+      await sessionManager.setSessionItem(StorageKeys.idToken, "id-token-456");
+      await sessionManager.setSessionItem(
+        StorageKeys.refreshToken,
+        "refresh-token-789",
+      );
+
+      // Trigger activity
+      await activeStorage.getSessionItem(StorageKeys.accessToken);
+
+      // Advance to timeout
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
+
+      // Verify callback was called with tokens
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
+        expect.objectContaining({
+          accessToken: "access-token-123",
+          idToken: "id-token-456",
+          refreshToken: "refresh-token-789",
+        }),
+      );
+    });
+
+    it("should pass tokens from insecure storage when used", async () => {
+      storageSettings.activityTimeoutMinutes = 30;
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
+
+      const insecureSessionManager = new MemoryStorage<string>();
+      setInsecureStorage(insecureSessionManager);
+
+      // Set up tokens in both storages
+      await sessionManager.setSessionItem(
+        StorageKeys.accessToken,
+        "access-token-123",
+      );
+      await sessionManager.setSessionItem(StorageKeys.idToken, "id-token-456");
+      await insecureSessionManager.setSessionItem(
+        StorageKeys.refreshToken,
+        "refresh-token-789",
+      );
+
+      // Trigger activity
+      await activeStorage.getSessionItem(StorageKeys.accessToken);
+
+      // Advance to timeout
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
+
+      // Verify callback was called with tokens from both storages
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
+        expect.objectContaining({
+          accessToken: "access-token-123",
+          idToken: "id-token-456",
+          refreshToken: "refresh-token-789",
+        }),
+      );
+    });
+
+    it("should handle missing tokens gracefully", async () => {
+      storageSettings.activityTimeoutMinutes = 30;
+      setActiveStorage(sessionManager);
+      const activeStorage = getActiveStorage()!;
+
+      // Don't set any tokens
+
+      // Trigger activity
+      await activeStorage.getSessionItem(StorageKeys.accessToken);
+
+      // Advance to timeout
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000 + 1000);
+
+      // Verify callback was called with empty tokens object
+      expect(mockOnActivityTimeout).toHaveBeenCalledWith(
+        TimeoutActivityType.timeout,
+        expect.objectContaining({
+          accessToken: null,
+          idToken: null,
+          refreshToken: null,
+        }),
+      );
     });
   });
 });

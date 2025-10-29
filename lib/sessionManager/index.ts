@@ -48,5 +48,5 @@ export { ExpoSecureStore } from "./stores/expoSecureStore.js";
 export { LocalStorage } from "./stores/localStorage.ts";
 
 // Export types directly
-export { StorageKeys, SessionBase } from "./types.ts";
-export type { SessionManager } from "./types.ts";
+export { StorageKeys, SessionBase, TimeoutActivityType } from "./types.ts";
+export type { SessionManager, TimeoutTokenData } from "./types.ts";

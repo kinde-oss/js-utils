@@ -36,6 +36,7 @@ describe("index exports", () => {
       "PortalPage",
       "SessionBase",
       "ProfilePage",
+      "TimeoutActivityType",
 
       // utils
       "base64UrlEncode",
