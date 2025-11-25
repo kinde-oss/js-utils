@@ -1,7 +1,8 @@
-import { generateAuthUrl } from "./generateAuthUrl";
+import { generateAuthUrl, generatePKCEPair } from "./generateAuthUrl";
 import { IssuerRouteTypes, LoginOptions, Scopes } from "../types";
 import { generateRandomString } from "./generateRandomString";
 import { describe, it, expect, vi } from "vitest";
+import { base64UrlEncode } from "./base64UrlEncode";
 vi.stubGlobal("crypto", undefined);
 Object.defineProperty(global, "crypto", {
   value: undefined, // Set to undefined to 'clear' crypto
@@ -45,5 +46,60 @@ describe("generateRandomString - no crypto", () => {
     expect(codeChallenge!.length).toBeGreaterThanOrEqual(27);
     result.url.searchParams.delete("code_challenge");
     expect(result.url.toString()).toBe(expectedUrl);
+  });
+});
+
+describe("generatePKCEPair - no crypto", () => {
+  it("should generate a code verifier of length 52", async () => {
+    const { codeVerifier } = await generatePKCEPair();
+    expect(codeVerifier).toHaveLength(52);
+  });
+
+  it("should generate a URL-safe code challenge (no +, /, or trailing =)", async () => {
+    const { codeChallenge } = await generatePKCEPair();
+    expect(codeChallenge).not.toContain("+");
+    expect(codeChallenge).not.toContain("/");
+    expect(codeChallenge).not.toMatch(/=$/);
+  });
+
+  it("should generate code challenge from direct base64UrlEncode when crypto is not available", async () => {
+    const { codeVerifier, codeChallenge } = await generatePKCEPair();
+
+    // When crypto is not available, codeChallenge should be the direct base64UrlEncoded verifier
+    const expectedChallenge = base64UrlEncode(codeVerifier)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    expect(codeChallenge).toBe(expectedChallenge);
+  });
+
+  it("should return both codeVerifier and codeChallenge", async () => {
+    const result = await generatePKCEPair();
+    expect(result).toHaveProperty("codeVerifier");
+    expect(result).toHaveProperty("codeChallenge");
+    expect(typeof result.codeVerifier).toBe("string");
+    expect(typeof result.codeChallenge).toBe("string");
+    expect(result.codeVerifier.length).toBeGreaterThan(0);
+    expect(result.codeChallenge.length).toBeGreaterThan(0);
+  });
+
+  it("should generate valid base64url characters in code challenge", async () => {
+    const { codeChallenge } = await generatePKCEPair();
+    // Base64URL characters: A-Z, a-z, 0-9, -, _
+    const base64UrlPattern = /^[A-Za-z0-9_-]+$/;
+    expect(codeChallenge).toMatch(base64UrlPattern);
+  });
+
+  it("should generate different code verifiers on each call", async () => {
+    const pair1 = await generatePKCEPair();
+    const pair2 = await generatePKCEPair();
+    expect(pair1.codeVerifier).not.toBe(pair2.codeVerifier);
+  });
+
+  it("should generate different code challenges on each call", async () => {
+    const pair1 = await generatePKCEPair();
+    const pair2 = await generatePKCEPair();
+    expect(pair1.codeChallenge).not.toBe(pair2.codeChallenge);
   });
 });

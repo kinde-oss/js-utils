@@ -4,7 +4,7 @@ import { base64UrlEncode } from "./base64UrlEncode";
 describe("base64UrlEncode", () => {
   it("should encode a simple string", () => {
     const input = "hello";
-    const expectedOutput = "aGVsbG8";
+    const expectedOutput = "aGVsbG8=";
     const result = base64UrlEncode(input);
     expect(result).toBe(expectedOutput);
   });
@@ -25,14 +25,14 @@ describe("base64UrlEncode", () => {
 
   it("should encode a string with padding characters", () => {
     const input = "test";
-    const expectedOutput = "dGVzdA";
+    const expectedOutput = "dGVzdA==";
     const result = base64UrlEncode(input);
     expect(result).toBe(expectedOutput);
   });
 
   it("should encode a string with multiple padding characters", () => {
     const input = "any carnal pleas";
-    const expectedOutput = "YW55IGNhcm5hbCBwbGVhcw";
+    const expectedOutput = "YW55IGNhcm5hbCBwbGVhcw==";
     const result = base64UrlEncode(input);
     expect(result).toBe(expectedOutput);
   });
@@ -44,7 +44,7 @@ describe("base64UrlEncode", () => {
       view[i] = i + 1;
     }
 
-    const expectedOutput = "AQIDBAUGBwg";
+    const expectedOutput = "AQIDBAUGBwg=";
     const result = base64UrlEncode(buffer);
     expect(result).toBe(expectedOutput);
   });

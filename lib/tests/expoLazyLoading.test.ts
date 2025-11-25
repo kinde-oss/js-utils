@@ -188,7 +188,7 @@ describe("Tree shaking with ExpoSecureStore", () => {
 
     // Check if other exports are also working correctly
     expect(mainExports.base64UrlEncode).toBeDefined();
-    expect(mainExports.base64UrlEncode("test")).toBe("dGVzdA");
+    expect(mainExports.base64UrlEncode("test")).toBe("dGVzdA==");
   });
 
   it("should allow tree shaking by using named imports", () => {
@@ -207,6 +207,6 @@ describe("Tree shaking with ExpoSecureStore", () => {
     expect(memory).toBeDefined();
 
     // And the utility function should work
-    expect(base64UrlEncode("test")).toBe("dGVzdA");
+    expect(base64UrlEncode("test")).toBe("dGVzdA==");
   });
 });
