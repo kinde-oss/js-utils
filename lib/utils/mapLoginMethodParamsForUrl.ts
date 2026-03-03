@@ -30,6 +30,8 @@ export const mapLoginMethodParamsForUrl = (
     plan_interest: options.planInterest,
     pricing_table_key: options.pricingTableKey,
     pages_mode: options.pagesMode,
+    invitation_code: options.invitationCode,
+    is_invitation: options.invitationCode ? "true" : undefined,
   };
 
   Object.keys(translate).forEach(
