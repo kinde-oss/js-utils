@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { IssuerRouteTypes, LoginOptions, PromptTypes, Scopes } from "../types";
-import { generateAuthUrl } from "./generateAuthUrl";
+import { generateAuthUrl, generatePKCEPair } from "./generateAuthUrl";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import { setActiveStorage } from "./token";
+import { base64UrlEncode } from "./base64UrlEncode";
 
 describe("generateAuthUrl", () => {
   it("should generate the correct auth URL with required parameters", async () => {
@@ -452,5 +453,102 @@ describe("generateAuthUrl", () => {
     result.url.searchParams.delete("nonce");
     result.url.searchParams.delete("state");
     expect(result.url.toString()).toBe(expectedUrl);
+  });
+});
+
+describe("generatePKCEPair", () => {
+  it("should generate a code verifier of length 52", async () => {
+    const { codeVerifier } = await generatePKCEPair();
+    expect(codeVerifier).toHaveLength(52);
+  });
+
+  it("should generate a URL-safe code challenge (no +, /, or trailing =)", async () => {
+    const { codeChallenge } = await generatePKCEPair();
+    expect(codeChallenge).not.toContain("+");
+    expect(codeChallenge).not.toContain("/");
+    expect(codeChallenge).not.toMatch(/=$/);
+  });
+
+  it("should generate different code verifiers on each call", async () => {
+    const pair1 = await generatePKCEPair();
+    const pair2 = await generatePKCEPair();
+    expect(pair1.codeVerifier).not.toBe(pair2.codeVerifier);
+  });
+
+  it("should generate different code challenges on each call", async () => {
+    const pair1 = await generatePKCEPair();
+    const pair2 = await generatePKCEPair();
+    // Code verifiers should be different (random generation)
+    expect(pair1.codeVerifier).not.toBe(pair2.codeVerifier);
+    // If code verifiers are different, challenges should be different
+    // (unless there's a hash collision, which is extremely unlikely)
+    expect(pair1.codeChallenge).not.toBe(pair2.codeChallenge);
+  });
+
+  it("should generate code challenge correctly based on crypto availability", async () => {
+    const { codeVerifier, codeChallenge } = await generatePKCEPair();
+
+    // Calculate what direct encoding would be
+    const directEncode = base64UrlEncode(codeVerifier)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    // Check if crypto.subtle is available and working (Web Crypto API)
+    const hasWebCrypto =
+      typeof crypto !== "undefined" &&
+      crypto &&
+      crypto.subtle &&
+      typeof crypto.subtle.digest === "function";
+
+    // Test if crypto.subtle.digest actually works
+    let webCryptoWorks = false;
+    if (hasWebCrypto) {
+      try {
+        const testData = new TextEncoder().encode("test");
+        await crypto.subtle.digest("SHA-256", testData.buffer);
+        webCryptoWorks = true;
+      } catch {
+        webCryptoWorks = false;
+      }
+    }
+
+    if (webCryptoWorks) {
+      // When crypto.subtle is available and working, codeChallenge should be the SHA-256 hash
+      // The hash-based challenge should be different from direct encoding
+      expect(codeChallenge).not.toBe(directEncode);
+
+      // The hash-based challenge should be 43 characters (SHA-256 hash = 32 bytes = 43 base64 chars without padding)
+      // But it could be 42 or 43 depending on padding removal
+      expect(codeChallenge.length).toBeGreaterThanOrEqual(42);
+      expect(codeChallenge.length).toBeLessThanOrEqual(43);
+    } else {
+      // If crypto.subtle is not available or not working, it should use direct encoding (fallback)
+      // Direct encoding of 52-char string should be around 69-70 chars, but after URL-safe replacement it varies
+      expect(codeChallenge).toBe(directEncode);
+      expect(codeChallenge.length).toBeGreaterThan(0);
+    }
+
+    // In all cases, the challenge should be URL-safe
+    expect(codeChallenge).not.toContain("+");
+    expect(codeChallenge).not.toContain("/");
+    expect(codeChallenge).not.toMatch(/=$/);
+  });
+
+  it("should return both codeVerifier and codeChallenge", async () => {
+    const result = await generatePKCEPair();
+    expect(result).toHaveProperty("codeVerifier");
+    expect(result).toHaveProperty("codeChallenge");
+    expect(typeof result.codeVerifier).toBe("string");
+    expect(typeof result.codeChallenge).toBe("string");
+    expect(result.codeVerifier.length).toBeGreaterThan(0);
+    expect(result.codeChallenge.length).toBeGreaterThan(0);
+  });
+
+  it("should generate valid base64url characters in code challenge", async () => {
+    const { codeChallenge } = await generatePKCEPair();
+    // Base64URL characters: A-Z, a-z, 0-9, -, _
+    const base64UrlPattern = /^[A-Za-z0-9_-]+$/;
+    expect(codeChallenge).toMatch(base64UrlPattern);
   });
 });
