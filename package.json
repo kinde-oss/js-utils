@@ -51,7 +51,8 @@
     "vite": "^7.0.0",
     "vite-plugin-dts": "^4.0.3",
     "vitest": "^4.0.3",
-    "vitest-fetch-mock": "^0.4.1"
+    "vitest-fetch-mock": "^0.4.1",
+    "@types/express": "^4.17.0"
   },
   "peerDependencies": {
     "expo-secure-store": ">=11.0.0"
