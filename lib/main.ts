@@ -24,7 +24,9 @@ export {
   sessionManagerActivityProxy,
   isClient,
   isServer,
+  getCookieOptions,
 } from "./utils";
+export type { CookieOptions } from "./utils";
 
 export {
   getClaim,
