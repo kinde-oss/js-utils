@@ -95,9 +95,7 @@ export const ExpoSecureStore: {
 } = {
   __esModule: true,
   default: async <V extends string = StorageKeys>() => {
-    const mod = await import(
-       "./sessionManager/stores/expoSecureStore.js"
-    );
+    const mod = await import("./sessionManager/stores/expoSecureStore.js");
     return mod.ExpoSecureStore as typeof mod.ExpoSecureStore<V>;
   },
 };
