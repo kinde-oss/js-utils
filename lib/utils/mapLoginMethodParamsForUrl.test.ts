@@ -139,4 +139,20 @@ describe("mapLoginMethodParamsForUrl", () => {
     const result = mapLoginMethodParamsForUrl(options);
     expect(result).toEqual(expectedOutput);
   });
+
+  it("should map with invitation code", () => {
+    const options: Partial<LoginMethodParams> = {
+      invitationCode: "invitation123",
+    };
+
+    const expectedOutput = {
+      invitation_code: "invitation123",
+      is_invitation: "true",
+      scope: "email profile openid offline",
+      audience: "",
+    };
+
+    const result = mapLoginMethodParamsForUrl(options);
+    expect(result).toEqual(expectedOutput);
+  });
 });
