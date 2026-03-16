@@ -94,9 +94,13 @@ export const refreshToken = async ({
       if (clientSecret) {
         body.append("client_secret", clientSecret);
       }
+      const includeCredentials =
+        refreshType === RefreshType.cookie ||
+        (isCustomDomain(domain) && !storageSettings.useInsecureForRefreshToken);
+
       const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
         method: "POST",
-        ...(refreshType === RefreshType.cookie && { credentials: "include" }),
+        ...(includeCredentials && { credentials: "include" }),
         headers: {
           "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
         },
