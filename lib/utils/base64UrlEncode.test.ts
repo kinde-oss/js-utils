@@ -68,7 +68,8 @@ describe("base64UrlDecode", () => {
   });
 
   it("should decode base64url that atob would reject (URL-safe chars)", () => {
-    const base64url = "eyJraW5kZSI6eyJldmVudCI6ImxvZ2luIn0sInVzZXJfdHlwZSI6ImNsaWVudCIsInJlZGlyZWN0X3VyaSI6Imh0dHA6Ly9sb2NhbGhvc3Q6NzAwMS8_dXNlcl90eXBlPWNsaWVudCIsInV0bSI6Int9In0";
+    const base64url =
+      "eyJraW5kZSI6eyJldmVudCI6ImxvZ2luIn0sInVzZXJfdHlwZSI6ImNsaWVudCIsInJlZGlyZWN0X3VyaSI6Imh0dHA6Ly9sb2NhbGhvc3Q6NzAwMS8_dXNlcl90eXBlPWNsaWVudCIsInV0bSI6Int9In0";
     const decoded = base64UrlDecode(base64url);
     expect(decoded).toContain("redirect_uri");
     expect(decoded).toContain("?user_type=client");
