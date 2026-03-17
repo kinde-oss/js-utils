@@ -40,6 +40,7 @@ describe("index exports", () => {
 
       // utils
       "base64UrlEncode",
+      "base64UrlDecode",
       "extractAuthResults",
       "generateAuthUrl",
       "generatePortalUrl",

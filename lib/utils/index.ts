@@ -1,4 +1,4 @@
-export { base64UrlEncode } from "./base64UrlEncode";
+export { base64UrlEncode, base64UrlDecode } from "./base64UrlEncode";
 export { generateRandomString } from "./generateRandomString";
 export { extractAuthResults } from "./extractAuthResults";
 export { sanitizeUrl } from "./sanitizeUrl";

@@ -199,6 +199,29 @@ describe("generateAuthUrl", () => {
     expect(state).toEqual(testState);
   });
 
+  it("should handle state parameter containing = (URL-encoded so auth URL loads correctly)", async () => {
+    const domain = "https://auth.example.com";
+    const stateWithEquals = "key=value&other=thing";
+    const options: LoginOptions = {
+      clientId: "client123",
+      scope: [Scopes.openid, Scopes.profile],
+      redirectURL: "https://example.com",
+      state: stateWithEquals,
+    };
+
+    const result = await generateAuthUrl(
+      domain,
+      IssuerRouteTypes.login,
+      options,
+    );
+
+    expect(result.state).toBe(stateWithEquals);
+    const stateFromUrl = result.url.searchParams.get("state");
+    expect(stateFromUrl).toBe(stateWithEquals);
+    expect(result.url.toString()).toContain("state=");
+    expect(result.url.searchParams.get("state")).toBe(stateWithEquals);
+  });
+
   it("if disableUrlSanitization is set, should leave the redirect the URL alone", async () => {
     const domain = "https://auth.example.com";
     const options: LoginOptions = {
@@ -488,11 +511,8 @@ describe("generatePKCEPair", () => {
   it("should generate code challenge correctly based on crypto availability", async () => {
     const { codeVerifier, codeChallenge } = await generatePKCEPair();
 
-    // Calculate what direct encoding would be
-    const directEncode = base64UrlEncode(codeVerifier)
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
+    // base64UrlEncode returns base64url (URL-safe); direct encoding matches
+    const directEncode = base64UrlEncode(codeVerifier);
 
     // Check if crypto.subtle is available and working (Web Crypto API)
     const hasWebCrypto =

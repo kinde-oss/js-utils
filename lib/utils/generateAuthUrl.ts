@@ -170,9 +170,6 @@ export async function generatePKCEPair(): Promise<{
   }
   return {
     codeVerifier,
-    codeChallenge: codeChallenge
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, ""),
+    codeChallenge,
   };
 }

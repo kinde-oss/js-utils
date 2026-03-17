@@ -65,11 +65,8 @@ describe("generatePKCEPair - no crypto", () => {
   it("should generate code challenge from direct base64UrlEncode when crypto is not available", async () => {
     const { codeVerifier, codeChallenge } = await generatePKCEPair();
 
-    // When crypto is not available, codeChallenge should be the direct base64UrlEncoded verifier
-    const expectedChallenge = base64UrlEncode(codeVerifier)
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
+    // When crypto is not available, codeChallenge should be the direct base64url-encoded verifier
+    const expectedChallenge = base64UrlEncode(codeVerifier);
 
     expect(codeChallenge).toBe(expectedChallenge);
   });
