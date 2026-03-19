@@ -9,9 +9,9 @@ describe("base64UrlEncode", () => {
     expect(result).toBe(expectedOutput);
   });
 
-  it("should encode a string with special characters (base64url: - and _)", () => {
-    const input = "hello+world/";
-    const expectedOutput = "aGVsbG8rd29ybGQv";
+  it("should replace + and / with - and _", () => {
+    const input = Uint8Array.from([251, 255]).buffer;
+    const expectedOutput = "-_8";
     const result = base64UrlEncode(input);
     expect(result).toBe(expectedOutput);
     expect(result).not.toContain("+");
@@ -62,9 +62,8 @@ describe("base64UrlDecode", () => {
     expect(base64UrlDecode(encoded)).toBe(input);
   });
 
-  it("should decode base64url with - and _ (no padding)", () => {
-    const base64url = "aGVsbG8";
-    expect(base64UrlDecode(base64url)).toBe("hello");
+  it("should decode a base64url value containing -", () => {
+    expect(base64UrlDecode("8J-YgA")).toBe("😀");
   });
 
   it("should decode base64url that atob would reject (URL-safe chars)", () => {
