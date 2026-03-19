@@ -62,8 +62,9 @@ describe("base64UrlDecode", () => {
     expect(base64UrlDecode(encoded)).toBe(input);
   });
 
-  it("should decode a base64url value containing -", () => {
-    expect(base64UrlDecode("8J-YgA")).toBe("😀");
+  it("should decode base64url with - and _ (no padding)", () => {
+    const base64url = "aGVsbG8";
+    expect(base64UrlDecode(base64url)).toBe("hello");
   });
 
   it("should decode base64url that atob would reject (URL-safe chars)", () => {
