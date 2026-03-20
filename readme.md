@@ -19,7 +19,9 @@ pnpm install @kinde/js-utils
 
 ### Methods
 
-`base64UrlEncode` - creates a base64 encoding of a string
+`base64UrlEncode` - creates a base64url encoding of a string (URL-safe, for use in query params e.g. PKCE)
+
+`base64UrlDecode` - decodes a base64url string (e.g. OAuth state from callback URLs); use this instead of `atob()` when the value may be base64url
 
 `sanitizeRedirect` - removes any trailing spaces from end of redirect URL
 

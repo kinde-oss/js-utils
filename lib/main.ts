@@ -4,6 +4,7 @@ export * from "./types";
 
 export {
   base64UrlEncode,
+  base64UrlDecode,
   generateRandomString,
   extractAuthResults,
   sanitizeUrl,
