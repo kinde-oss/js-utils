@@ -1,6 +1,41 @@
 # Changelog
 
 
+## 0.29.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.29.0...main)
+
+### 🚀 Enhancements
+
+- Update base64UrlEncode and generatePKCEPair functions to work with state having specific characters ([e9c2832](https://github.com/kinde-oss/js-utils/commit/e9c2832))
+- Add invitation url params ([c33634d](https://github.com/kinde-oss/js-utils/commit/c33634d))
+
+### 🩹 Fixes
+
+- Restore version ([dd39e8c](https://github.com/kinde-oss/js-utils/commit/dd39e8c))
+- Include credentials on all token refreshes for custom domains ([d8f8170](https://github.com/kinde-oss/js-utils/commit/d8f8170))
+- Address comments about Base64UrlEncode changes and instead have a base64UrlDecode method ([f8171df](https://github.com/kinde-oss/js-utils/commit/f8171df))
+
+### 📖 Documentation
+
+- Add JSDocs ([53cca2b](https://github.com/kinde-oss/js-utils/commit/53cca2b))
+- Update jsdoc for isInvitation ([5d98050](https://github.com/kinde-oss/js-utils/commit/5d98050))
+
+### 🏡 Chore
+
+- Update CODEOWNERS for dependency files ([7bef117](https://github.com/kinde-oss/js-utils/commit/7bef117))
+- Prettier on base64UrlEncode.test.ts ([0cf09ea](https://github.com/kinde-oss/js-utils/commit/0cf09ea))
+- Update test for Uint8Array method verification ([7682fa3](https://github.com/kinde-oss/js-utils/commit/7682fa3))
+- Fix missed test ([fc6a8a7](https://github.com/kinde-oss/js-utils/commit/fc6a8a7))
+- Update readme with base64UrlDecode method ([cbe26d3](https://github.com/kinde-oss/js-utils/commit/cbe26d3))
+
+### ❤️ Contributors
+
+- Alexis <alexispesicka@gmail.com>
+- Jamie Scollay <jamie@scollay.uk>
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+- Andre Selton <andre@kinde.com>
+
 ## 0.28.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.28.0...main)
