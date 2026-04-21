@@ -31,7 +31,7 @@ export async function callAccountApi<T>(route: AccountApiRoute): Promise<T> {
       },
     });
   } catch (error) {
-    throw new Error(`Failed to fetch from ${domain.value}/${route}: ${error}`, {
+    throw new Error(`Failed to fetch from ${domain.value}/${route}`, {
       cause: error,
     });
   }
