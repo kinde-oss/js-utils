@@ -80,7 +80,9 @@ export const generateAuthUrl = async (
     } catch (ex: unknown) {
       const errorDescription =
         ex instanceof Error ? ex.message : "Unknown error";
-      throw new Error(`Error handing reauth state: ${errorDescription}`);
+      throw new Error(`Error handing reauth state: ${errorDescription}`, {
+        cause: ex,
+      });
     }
   }
 
@@ -161,7 +163,7 @@ export async function generatePKCEPair(): Promise<{
 }> {
   const codeVerifier = generateRandomString(52);
   const data = new TextEncoder().encode(codeVerifier);
-  let codeChallenge = "";
+  let codeChallenge: string;
   if (!crypto) {
     codeChallenge = base64UrlEncode(codeVerifier);
   } else {
