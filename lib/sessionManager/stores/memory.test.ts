@@ -265,7 +265,8 @@ describe("MemoryStorage subscription/listening mechanism", () => {
     await sessionManager.setSessionItem(StorageKeys.idToken, "mixedTest");
 
     // Wait for setTimeout to fire and async listener to complete
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    // Using 50ms to account for CI variance in setTimeout(0) scheduling overhead
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(syncCalled).toBe(true);
     expect(asyncCalled).toBe(true);
