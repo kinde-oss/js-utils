@@ -82,4 +82,20 @@ describe("callAccountApi", () => {
       }),
     );
   });
+
+  it("throws error with cause if fetch throws a network error", async () => {
+    const token = createMockAccessToken();
+    await store.setSessionItem(StorageKeys.accessToken, token);
+
+    const networkError = new Error("Network failure");
+    fetchMock.mockRejectOnce(networkError);
+
+    const caughtError = await callAccountApi("account_api/test").catch(
+      (e) => e,
+    );
+    expect(caughtError.message).toContain(
+      "Failed to fetch from https://kinde.com/account_api/test",
+    );
+    expect(caughtError.cause).toBe(networkError);
+  });
 });
