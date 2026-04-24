@@ -80,7 +80,7 @@ export const generateAuthUrl = async (
     } catch (ex: unknown) {
       const errorDescription =
         ex instanceof Error ? ex.message : "Unknown error";
-      throw new Error(`Error handing reauth state: ${errorDescription}`, {
+      throw new Error(`Error handling reauth state: ${errorDescription}`, {
         cause: ex,
       });
     }
