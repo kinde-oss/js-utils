@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { MemoryStorage } from "./memory";
 import { StorageKeys } from "../types";
 
@@ -259,14 +259,14 @@ describe("MemoryStorage subscription/listening mechanism", () => {
       asyncCalled = true;
     };
 
+    vi.useFakeTimers();
     sessionManager.subscribe(syncListener);
     sessionManager.subscribe(asyncListener);
 
     await sessionManager.setSessionItem(StorageKeys.idToken, "mixedTest");
 
-    // Wait for setTimeout to fire and async listener to complete
-    // Using 50ms to account for CI variance in setTimeout(0) scheduling overhead
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
 
     expect(syncCalled).toBe(true);
     expect(asyncCalled).toBe(true);
