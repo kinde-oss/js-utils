@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { MemoryStorage } from "./memory";
 import { StorageKeys } from "../types";
 
@@ -146,6 +146,10 @@ describe("MemoryStorage subscription/listening mechanism", () => {
     sessionManager = new MemoryStorage();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("should call listener when item is set", async () => {
     let listenerCalled = false;
     const listener = () => {
@@ -266,7 +270,6 @@ describe("MemoryStorage subscription/listening mechanism", () => {
     await sessionManager.setSessionItem(StorageKeys.idToken, "mixedTest");
 
     await vi.runAllTimersAsync();
-    vi.useRealTimers();
 
     expect(syncCalled).toBe(true);
     expect(asyncCalled).toBe(true);
