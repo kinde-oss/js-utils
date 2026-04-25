@@ -93,9 +93,12 @@ describe("callAccountApi", () => {
     const caughtError = await callAccountApi("account_api/test").catch(
       (e) => e,
     );
-    expect(caughtError.message).toContain(
+    expect(caughtError).toBeInstanceOf(Error);
+    const actualError = caughtError as Error;
+
+    expect(actualError.message).toContain(
       "Failed to fetch from https://kinde.com/account_api/test",
     );
-    expect(caughtError.cause).toBe(networkError);
+    expect(actualError.cause).toBe(networkError);
   });
 });
