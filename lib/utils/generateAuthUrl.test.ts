@@ -430,7 +430,7 @@ describe("generateAuthUrl", () => {
 
     await expect(
       generateAuthUrl(domain, IssuerRouteTypes.login, options),
-    ).rejects.toThrow(/Error handing reauth state:/);
+    ).rejects.toThrow(/Error handling reauth state:/);
   });
 
   it("invalid reauthState", async () => {
@@ -443,7 +443,7 @@ describe("generateAuthUrl", () => {
     expect(() =>
       generateAuthUrl(domain, IssuerRouteTypes.login, options),
     ).rejects.toThrow(
-      /Error handing reauth state: Expected property name or '}' in JSON/,
+      /Error handling reauth state: Expected property name or '}' in JSON/,
     );
   });
 

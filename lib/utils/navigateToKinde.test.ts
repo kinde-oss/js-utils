@@ -239,6 +239,21 @@ describe("navigateToKinde", () => {
       expect(searchParams.get("error")).toBe("access_denied");
       expect(searchParams.get("error_description")).toBe("User denied access");
     });
+
+    it("should throw 'Popup authentication failed' when the message listener throws", async () => {
+      vi.spyOn(window, "addEventListener").mockImplementationOnce(() => {
+        throw new Error("Listener registration failed");
+      });
+
+      const err = await createPopup({
+        url: "https://auth.example.com",
+      }).catch((e) => e);
+
+      expect(err).toBeInstanceOf(Error);
+      expect(err.message).toContain("Popup authentication failed");
+      expect(err.cause).toBeInstanceOf(Error);
+      expect((err.cause as Error).message).toBe("Listener registration failed");
+    });
   });
 
   describe("waitForPopupClose", () => {
