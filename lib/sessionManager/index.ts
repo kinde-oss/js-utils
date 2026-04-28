@@ -46,6 +46,7 @@ export { MemoryStorage } from "./stores/memory.js";
 export { ChromeStore } from "./stores/chromeStore.js";
 export { ExpoSecureStore } from "./stores/expoSecureStore.js";
 export { LocalStorage } from "./stores/localStorage.ts";
+export { ExpressStore } from "./stores/expressStore.ts";
 
 // Export types directly
 export { StorageKeys, SessionBase, TimeoutActivityType } from "./types.ts";

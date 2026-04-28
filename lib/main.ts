@@ -85,6 +85,7 @@ export {
   StorageKeys,
   SessionBase,
   TimeoutActivityType,
+  ExpressStore,
 } from "./sessionManager";
 
 // This export provides an implementation of SessionManager<V>
