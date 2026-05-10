@@ -20,7 +20,7 @@
 
 - Release v0.30.0 ([0a2f83a](https://github.com/kinde-oss/js-utils/commit/0a2f83a))
 - Update to 0.30.0 ([4e75171](https://github.com/kinde-oss/js-utils/commit/4e75171))
-- Update to 0.30.0" ([88f851a](https://github.com/kinde-oss/js-utils/commit/88f851a))
+- Update to 0.30.0 ([88f851a](https://github.com/kinde-oss/js-utils/commit/88f851a))
 - Merge main and regenerate lockfile ([94801b1](https://github.com/kinde-oss/js-utils/commit/94801b1))
 
 ### ✅ Tests
