@@ -18,7 +18,7 @@ export default defineConfig({
     target: "esnext",
     outDir: "dist",
     emptyOutDir: true,
-    rollupOptions: {
+    rolldownOptions: {
       external: ["expo-secure-store", "/src/tests/**"],
     },
   },
