@@ -618,4 +618,24 @@ describe("exchangeAuthCode", () => {
       ),
     });
   });
+
+  it("sends a sanitized redirect_uri so /token matches the /authorize value", async () => {
+  // Setup: stash valid state + codeVerifier, mock fetch, etc.
+  // (use the same setup helpers as the surrounding tests)
+
+    const urlParams = new URLSearchParams({ state: "abc", code: "xyz" });
+  
+    await exchangeAuthCode({
+      urlParams,
+      domain: "https://example.kinde.com",
+      clientId: "test-client",
+      // Trailing slash here is the key — must be stripped before POST.
+      redirectURL: "https://app.example.com/",
+    });
+  
+    const [, requestInit] = (global.fetch as jest.Mock).mock.calls.at(-1);
+    const body = new URLSearchParams(requestInit.body as string);
+  
+    expect(body.get("redirect_uri")).toBe("https://app.example.com");
+  });
 });
