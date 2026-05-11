@@ -9,6 +9,7 @@ import {
 import { isCustomDomain } from ".";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 import { isClient } from "./isClient";
+import { sanitizeUrl } from "./sanitizeUrl";
 
 export const frameworkSettings: {
   framework: string;
@@ -143,7 +144,7 @@ export const exchangeAuthCode = async ({
     code,
     code_verifier: codeVerifier,
     grant_type: "authorization_code",
-    redirect_uri: redirectURL,
+    redirect_uri: sanitizeUrl(redirectURL),
   });
 
   if (clientSecret) {
