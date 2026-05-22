@@ -50,9 +50,11 @@ exports `storageSettings` which can be used to configure the storage methods.
 
 `ChromeStore` - This holds the data in chrome.store.local for use with Google Chrome extensions.
 
-`ExpoSecureStore` - Secure storage for Expo apps
+`ExpoSecureStore` - Secure storage for Expo apps (for `expo-secure-store@56+`, minimum supported versions are iOS/tvOS 16.4 and macOS 13.4)
 
 `LocalStorage` - For using localStorage Note: do not use for sensitive data
+
+If you need to support older Apple OS versions, use `expo-secure-store@55.x`.
 
 ### Token Helpers
 
