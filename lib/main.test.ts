@@ -49,6 +49,7 @@ describe("index exports", () => {
       "mapLoginMethodParamsForUrl",
       "sanitizeUrl",
       "exchangeAuthCode",
+      "getCookieOptions",
       "isAuthenticated",
       "isTokenExpired",
       "refreshToken",
