@@ -1,6 +1,23 @@
 # Changelog
 
 
+## 0.30.1...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.30.1...main)
+
+### 🩹 Fixes
+
+- Apply prettier formatting to sessionManager/types.ts to fix lint ([2da2ad7](https://github.com/kinde-oss/js-utils/commit/2da2ad7))
+- Correct typo in CHANGELOG.md ([770dc79](https://github.com/kinde-oss/js-utils/commit/770dc79))
+
+### 📖 Documentation
+
+- Add expo-secure-store v56 platform migration note ([8283efe](https://github.com/kinde-oss/js-utils/commit/8283efe))
+
+### ❤️ Contributors
+
+- Victor Eronmosele ([@victoreronmosele](https://github.com/victoreronmosele))
+
 ## 0.30.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.30.0...main)
