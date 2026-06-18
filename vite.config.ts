@@ -29,17 +29,9 @@ export default defineConfig({
   resolve: { alias: { src: resolve(rootDir, "./lib") } },
   plugins: [
     dts({
+      insertTypesEntry: true,
       outDir: "dist",
-      // insertTypesEntry writes an empty dist/main.d.ts when declarations are
-      // emitted under dist/lib/ (vite 8 + vite-plugin-dts). Write the shim in
-      // afterBuild instead.
-      afterBuild: async () => {
-        const { writeFile } = await import("node:fs/promises");
-        await writeFile(
-          resolve(rootDir, "dist/main.d.ts"),
-          "export * from './lib/main'\n",
-        );
-      },
+      entryRoot: "lib",
     }),
     react(),
   ],
