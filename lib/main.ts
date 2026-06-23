@@ -25,6 +25,7 @@ export {
   sessionManagerActivityProxy,
   isClient,
   isServer,
+  switchOrg,
 } from "./utils";
 
 export {

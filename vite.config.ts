@@ -10,7 +10,7 @@ export default defineConfig({
   build: {
     copyPublicDir: false,
     lib: {
-      entry: resolve(__dirname, "lib/main.ts"),
+      entry: resolve(import.meta.dirname, "lib/main.ts"),
       formats: ["es", "cjs"],
       name: "@kinde/js-utils",
       fileName: "js-utils",
@@ -23,7 +23,7 @@ export default defineConfig({
     },
   },
   root: "",
-  resolve: { alias: { src: resolve(__dirname, "./lib") } },
+  resolve: { alias: { src: resolve(import.meta.dirname, "./lib") } },
   plugins: [
     dts({
       outDir: "dist",
@@ -33,7 +33,7 @@ export default defineConfig({
       afterBuild: async () => {
         const { writeFile } = await import("node:fs/promises");
         await writeFile(
-          resolve(__dirname, "dist/main.d.ts"),
+          resolve(import.meta.dirname, "dist/main.d.ts"),
           "export * from './lib/main'\n",
         );
       },

@@ -63,6 +63,7 @@ describe("index exports", () => {
       "sessionManagerActivityProxy",
       "isClient",
       "isServer",
+      "switchOrg",
 
       // session manager
       "MemoryStorage",
