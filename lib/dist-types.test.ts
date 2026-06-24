@@ -1,9 +1,11 @@
 import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import ts from "typescript";
 
-const distDir = resolve(import.meta.dirname, "../dist");
+const rootDir = dirname(fileURLToPath(import.meta.url));
+const distDir = resolve(rootDir, "../dist");
 const mainDts = resolve(distDir, "main.d.ts");
 const libMainDts = resolve(distDir, "lib/main.d.ts");
 

@@ -1,7 +1,10 @@
 import { defineConfig } from "vitest/config";
-import { resolve } from "path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import dts from "vite-plugin-dts";
 import react from "@vitejs/plugin-react";
+
+const rootDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   test: {
@@ -10,7 +13,7 @@ export default defineConfig({
   build: {
     copyPublicDir: false,
     lib: {
-      entry: resolve(import.meta.dirname, "lib/main.ts"),
+      entry: resolve(rootDir, "lib/main.ts"),
       formats: ["es", "cjs"],
       name: "@kinde/js-utils",
       fileName: "js-utils",
@@ -23,7 +26,7 @@ export default defineConfig({
     },
   },
   root: "",
-  resolve: { alias: { src: resolve(import.meta.dirname, "./lib") } },
+  resolve: { alias: { src: resolve(rootDir, "./lib") } },
   plugins: [
     dts({
       outDir: "dist",
@@ -33,7 +36,7 @@ export default defineConfig({
       afterBuild: async () => {
         const { writeFile } = await import("node:fs/promises");
         await writeFile(
-          resolve(import.meta.dirname, "dist/main.d.ts"),
+          resolve(rootDir, "dist/main.d.ts"),
           "export * from './lib/main'\n",
         );
       },
