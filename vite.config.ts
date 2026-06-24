@@ -1,7 +1,10 @@
 import { defineConfig } from "vitest/config";
-import { resolve } from "path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import dts from "vite-plugin-dts";
 import react from "@vitejs/plugin-react";
+
+const rootDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   test: {
@@ -10,7 +13,7 @@ export default defineConfig({
   build: {
     copyPublicDir: false,
     lib: {
-      entry: resolve(__dirname, "lib/main.ts"),
+      entry: resolve(rootDir, "lib/main.ts"),
       formats: ["es", "cjs"],
       name: "@kinde/js-utils",
       fileName: "js-utils",
@@ -23,6 +26,21 @@ export default defineConfig({
     },
   },
   root: "",
-  resolve: { alias: { src: resolve(__dirname, "./lib") } },
-  plugins: [dts({ insertTypesEntry: true, outDir: "dist" }), react()],
+  resolve: { alias: { src: resolve(rootDir, "./lib") } },
+  plugins: [
+    dts({
+      outDir: "dist",
+      // insertTypesEntry writes an empty dist/main.d.ts when declarations are
+      // emitted under dist/lib/ (vite 8 + vite-plugin-dts). Write the shim in
+      // afterBuild instead.
+      afterBuild: async () => {
+        const { writeFile } = await import("node:fs/promises");
+        await writeFile(
+          resolve(rootDir, "dist/main.d.ts"),
+          "export * from './lib/main'\n",
+        );
+      },
+    }),
+    react(),
+  ],
 });
