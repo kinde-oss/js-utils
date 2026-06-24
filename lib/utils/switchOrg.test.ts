@@ -33,11 +33,23 @@ describe("switchOrg", () => {
     }).toThrow("domain is required for switchOrg");
   });
 
+  it("throws when clientId is missing", () => {
+    expect(() => {
+      // @ts-expect-error testing runtime validation
+      switchOrg({
+        domain: "https://auth.example.com",
+        orgCode: "org_123",
+        redirectURL: "https://redirect.example.com",
+      });
+    }).toThrow("clientId is required for switchOrg");
+  });
+
   it("throws when orgCode is missing", () => {
     expect(() => {
       // @ts-expect-error testing runtime validation
       switchOrg({
         domain: "https://auth.example.com",
+        clientId: "client_123",
         redirectURL: "https://redirect.example.com",
       });
     }).toThrow("orgCode is required for switchOrg");
@@ -46,22 +58,28 @@ describe("switchOrg", () => {
   it("throws when redirectURL is missing", () => {
     expect(() => {
       // @ts-expect-error testing runtime validation
-      switchOrg({ domain: "https://auth.example.com", orgCode: "org_123" });
+      switchOrg({
+        domain: "https://auth.example.com",
+        clientId: "client_123",
+        orgCode: "org_123",
+      });
     }).toThrow("redirectURL is required for switchOrg");
   });
 
   it("calls generateAuthUrl with correct args and returns its result", async () => {
     const domain = "https://auth.example.com";
+    const clientId = "client_123";
     const orgCode = "org_123";
     const redirectURL = "https://redirect.example.com";
 
-    const result = await switchOrg({ domain, orgCode, redirectURL });
+    const result = await switchOrg({ domain, clientId, orgCode, redirectURL });
 
     expect(generateAuthUrl).toHaveBeenCalledTimes(1);
     expect(generateAuthUrl).toHaveBeenCalledWith(
       domain,
       IssuerRouteTypes.login,
       expect.objectContaining({
+        clientId,
         prompt: PromptTypes.none,
         orgCode,
         redirectURL,
