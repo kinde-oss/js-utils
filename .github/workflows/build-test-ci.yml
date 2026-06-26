@@ -32,6 +32,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-
       - run: pnpm build
+      - name: Verify published types entry
+        run: |
+          test -f dist/main.d.ts
+          test "$(wc -c < dist/main.d.ts)" -gt 50
+          ! grep -q '^export {}$' dist/main.d.ts
       - run: pnpm test:coverage
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v6.0.2
