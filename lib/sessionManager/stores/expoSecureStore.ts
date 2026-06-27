@@ -1,4 +1,4 @@
-import { storageSettings } from "../storageSettings.js";
+import { storageSettings } from "../index.js";
 import { SessionBase, StorageKeys } from "../types.js";
 import { splitString } from "../../utils/splitString.js";
 

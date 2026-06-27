@@ -34,13 +34,15 @@ describe("@kinde/js-utils/expo entry", () => {
     vi.restoreAllMocks();
   });
 
-  it("exports ExpoSecureStore and related types from the expo entry", async () => {
+  it("exports only ExpoSecureStore from the expo entry", async () => {
     const expoEntry = await import("../expo");
+    const mainEntry = await import("../main");
 
     expect(expoEntry).toHaveProperty("ExpoSecureStore");
     expect(typeof expoEntry.ExpoSecureStore).toBe("function");
-    expect(expoEntry).toHaveProperty("StorageKeys");
-    expect(expoEntry.StorageKeys.accessToken).toBe("accessToken");
+    expect(expoEntry).not.toHaveProperty("StorageKeys");
+    expect(mainEntry).toHaveProperty("StorageKeys");
+    expect(mainEntry.StorageKeys.accessToken).toBe("accessToken");
   });
 
   it("does not export ExpoSecureStore from the main entry", async () => {
