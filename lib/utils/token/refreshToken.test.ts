@@ -570,6 +570,76 @@ describe("refreshToken", () => {
     });
   });
 
+  it("should include credentials when refreshing on a custom domain", async () => {
+    memoryStorage.getSessionItem = vi
+      .fn()
+      .mockResolvedValue(mockRefreshTokenValue);
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ access_token: "new-token" }),
+    } as Response);
+
+    await tokenUtils.refreshToken({
+      domain: mockDomain,
+      clientId: mockClientId,
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        credentials: "include",
+      }),
+    );
+  });
+
+  it("should not include credentials when refreshing on a kinde domain", async () => {
+    const insecureStorage = new MemoryStorage();
+    tokenUtils.setInsecureStorage(insecureStorage);
+    await insecureStorage.setSessionItem(
+      StorageKeys.refreshToken,
+      mockRefreshTokenValue,
+    );
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ access_token: "new-token" }),
+    } as Response);
+
+    await tokenUtils.refreshToken({
+      domain: mockKindeDomain,
+      clientId: mockClientId,
+    });
+
+    const fetchCall = vi.mocked(global.fetch).mock.calls[0];
+    expect(fetchCall[1]).not.toHaveProperty("credentials");
+  });
+
+  it("should not include credentials when useInsecureForRefreshToken is true", async () => {
+    storageSettings.useInsecureForRefreshToken = true;
+
+    const insecureStorage = new MemoryStorage();
+    tokenUtils.setInsecureStorage(insecureStorage);
+    await insecureStorage.setSessionItem(
+      StorageKeys.refreshToken,
+      mockRefreshTokenValue,
+    );
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ access_token: "new-token" }),
+    } as Response);
+
+    await tokenUtils.refreshToken({
+      domain: mockDomain,
+      clientId: mockClientId,
+    });
+
+    const fetchCall = vi.mocked(global.fetch).mock.calls[0];
+    expect(fetchCall[1]).not.toHaveProperty("credentials");
+
+    storageSettings.useInsecureForRefreshToken = false;
+  });
+
   it("should include client_secret in the request body when clientSecret is provided", async () => {
     const callback = vi.fn();
 

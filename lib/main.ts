@@ -4,6 +4,7 @@ export * from "./types";
 
 export {
   base64UrlEncode,
+  base64UrlDecode,
   generateRandomString,
   extractAuthResults,
   sanitizeUrl,
@@ -24,6 +25,7 @@ export {
   sessionManagerActivityProxy,
   isClient,
   isServer,
+  switchOrg,
 } from "./utils";
 
 export {

@@ -31,7 +31,9 @@ export async function callAccountApi<T>(route: AccountApiRoute): Promise<T> {
       },
     });
   } catch (error) {
-    throw new Error(`Failed to fetch from ${domain.value}/${route}: ${error}`);
+    throw new Error(`Failed to fetch from ${domain.value}/${route}`, {
+      cause: error,
+    });
   }
 
   if (!response.ok) {
@@ -47,9 +49,8 @@ export const callAccountApiPaginated = async <T extends BaseAccountResponse>({
 }: {
   url: AccountApiRoute;
 }): Promise<T["data"]> => {
-  let items: T["data"] = [];
   let returnValue = await callAccountApi<T>(url);
-  items = returnValue.data;
+  let items: T["data"] = returnValue.data;
   if (returnValue.metadata?.has_more) {
     let nextPageStartingAfter = returnValue.metadata.next_page_starting_after;
     while (returnValue.metadata.has_more) {

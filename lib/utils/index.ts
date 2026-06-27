@@ -1,4 +1,4 @@
-export { base64UrlEncode } from "./base64UrlEncode";
+export { base64UrlEncode, base64UrlDecode } from "./base64UrlEncode";
 export { generateRandomString } from "./generateRandomString";
 export { extractAuthResults } from "./extractAuthResults";
 export { sanitizeUrl } from "./sanitizeUrl";
@@ -22,3 +22,4 @@ export {
 } from "./activityTracking";
 export { isClient } from "./isClient";
 export { isServer } from "./isServer";
+export { switchOrg } from "./switchOrg";

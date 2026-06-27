@@ -48,9 +48,9 @@ export type StorageSettingsType = {
   onRefreshHandler?: (refreshType: RefreshType) => Promise<RefreshTokenResult>;
 };
 
-export abstract class SessionBase<V extends string = StorageKeys>
-  implements SessionManager<V>
-{
+export abstract class SessionBase<
+  V extends string = StorageKeys,
+> implements SessionManager<V> {
   abstract asyncStore: boolean;
   private listeners: Set<StoreListener> = new Set();
   private notificationScheduled = false;

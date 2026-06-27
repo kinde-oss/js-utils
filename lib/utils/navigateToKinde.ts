@@ -157,7 +157,7 @@ export const createPopup = async ({
   try {
     await waitForMessage();
   } catch (error) {
-    throw new Error("Popup authentication failed: " + error);
+    throw new Error("Popup authentication failed", { cause: error });
   }
   return popup;
 };

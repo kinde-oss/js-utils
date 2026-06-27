@@ -1,6 +1,72 @@
 # Changelog
 
 
+## 0.30.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.30.0...main)
+
+### 🩹 Fixes
+
+- **ts:** Migrate tsconfig for TypeScript 6 ([567810e](https://github.com/kinde-oss/js-utils/commit/567810e))
+- **deps:** Bump lodash to 4.17.23 (security patch - prototype pollution) ([a057a6d](https://github.com/kinde-oss/js-utils/commit/a057a6d))
+- **test:** Increase timeout in flaky memory store listener test ([f181e8f](https://github.com/kinde-oss/js-utils/commit/f181e8f))
+- Remove stringified error from thrown Error messages ([f6e1f25](https://github.com/kinde-oss/js-utils/commit/f6e1f25))
+- **test:** Use fake timers to eliminate flaky real-time wait in mixed listener test ([317150a](https://github.com/kinde-oss/js-utils/commit/317150a))
+- Correct typo 'handing' -> 'handling' in reauth error message ([104ea0c](https://github.com/kinde-oss/js-utils/commit/104ea0c))
+- **test:** Guarantee timer restoration via afterEach to prevent fake timer leak ([17997e3](https://github.com/kinde-oss/js-utils/commit/17997e3))
+- Resolve merge conflict with main, apply Victor's type fix in callAccountApi.test.ts ([7f23dc1](https://github.com/kinde-oss/js-utils/commit/7f23dc1))
+
+### 🏡 Chore
+
+- Release v0.30.0 ([0a2f83a](https://github.com/kinde-oss/js-utils/commit/0a2f83a))
+- Update to 0.30.0 ([4e75171](https://github.com/kinde-oss/js-utils/commit/4e75171))
+- Update to 0.30.0 ([88f851a](https://github.com/kinde-oss/js-utils/commit/88f851a))
+- Merge main and regenerate lockfile ([94801b1](https://github.com/kinde-oss/js-utils/commit/94801b1))
+
+### ✅ Tests
+
+- Add missing coverage for ESLint v10 migration changes ([387ff7d](https://github.com/kinde-oss/js-utils/commit/387ff7d))
+
+### ❤️ Contributors
+
+- Dtoxvanilla1991 <dtoxvanilla@gmail.com>
+- Koosha Owji <koosha.owji@gmail.com>
+
+## 0.29.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.29.0...main)
+
+### 🚀 Enhancements
+
+- Update base64UrlEncode and generatePKCEPair functions to work with state having specific characters ([e9c2832](https://github.com/kinde-oss/js-utils/commit/e9c2832))
+- Add invitation url params ([c33634d](https://github.com/kinde-oss/js-utils/commit/c33634d))
+
+### 🩹 Fixes
+
+- Restore version ([dd39e8c](https://github.com/kinde-oss/js-utils/commit/dd39e8c))
+- Include credentials on all token refreshes for custom domains ([d8f8170](https://github.com/kinde-oss/js-utils/commit/d8f8170))
+- Address comments about Base64UrlEncode changes and instead have a base64UrlDecode method ([f8171df](https://github.com/kinde-oss/js-utils/commit/f8171df))
+
+### 📖 Documentation
+
+- Add JSDocs ([53cca2b](https://github.com/kinde-oss/js-utils/commit/53cca2b))
+- Update jsdoc for isInvitation ([5d98050](https://github.com/kinde-oss/js-utils/commit/5d98050))
+
+### 🏡 Chore
+
+- Update CODEOWNERS for dependency files ([7bef117](https://github.com/kinde-oss/js-utils/commit/7bef117))
+- Prettier on base64UrlEncode.test.ts ([0cf09ea](https://github.com/kinde-oss/js-utils/commit/0cf09ea))
+- Update test for Uint8Array method verification ([7682fa3](https://github.com/kinde-oss/js-utils/commit/7682fa3))
+- Fix missed test ([fc6a8a7](https://github.com/kinde-oss/js-utils/commit/fc6a8a7))
+- Update readme with base64UrlDecode method ([cbe26d3](https://github.com/kinde-oss/js-utils/commit/cbe26d3))
+
+### ❤️ Contributors
+
+- Alexis <alexispesicka@gmail.com>
+- Jamie Scollay <jamie@scollay.uk>
+- Daniel Rivers ([@DanielRivers](https://github.com/DanielRivers))
+- Andre Selton <andre@kinde.com>
+
 ## 0.28.0...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.28.0...main)

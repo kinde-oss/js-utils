@@ -108,6 +108,9 @@ export const generatePortalUrl = async ({
     };
   } catch (error) {
     console.error(error);
-    throw new Error(`Invalid URL format received from API: ${fetchResult.url}`);
+    throw new Error(
+      `Invalid URL format received from API: ${fetchResult.url}`,
+      { cause: error },
+    );
   }
 };
