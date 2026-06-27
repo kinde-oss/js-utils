@@ -17,10 +17,22 @@ describe("index exports", () => {
     });
   });
 
-  it("should export everything from sessionManager", () => {
-    Object.keys(sessionManager).forEach((key) => {
+  it("should export sessionManager items used by main", () => {
+    const mainSessionManagerExports = [
+      "storageSettings",
+      "MemoryStorage",
+      "ChromeStore",
+      "LocalStorage",
+      "StorageKeys",
+      "SessionBase",
+      "TimeoutActivityType",
+    ];
+
+    mainSessionManagerExports.forEach((key) => {
       expect(index).toHaveProperty(key);
     });
+
+    expect(index).not.toHaveProperty("ExpoSecureStore");
   });
 
   it("should not export anything extra", () => {
@@ -70,7 +82,6 @@ describe("index exports", () => {
       "ChromeStore",
       "LocalStorage",
       "storageSettings",
-      "ExpoSecureStore",
 
       // token utils
       "getActiveStorage",
