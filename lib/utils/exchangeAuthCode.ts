@@ -9,6 +9,7 @@ import {
 import { isCustomDomain } from ".";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 import { isClient } from "./isClient";
+import { sanitizeUrl } from "./sanitizeUrl";
 
 export const frameworkSettings: {
   framework: string;
@@ -28,6 +29,7 @@ interface ExchangeAuthCodeParams {
   redirectURL: string;
   autoRefresh?: boolean;
   onRefresh?: (data: RefreshTokenResult) => void;
+  disableUrlSanitization?: boolean;
 }
 
 type ExchangeAuthCodeResultSuccess = {
@@ -72,6 +74,7 @@ export const exchangeAuthCode = async ({
   redirectURL,
   autoRefresh = false,
   onRefresh,
+  disableUrlSanitization = false,
 }: ExchangeAuthCodeParams): Promise<ExchangeAuthCodeResult> => {
   const state = urlParams.get("state");
   const code = urlParams.get("code");
@@ -143,7 +146,9 @@ export const exchangeAuthCode = async ({
     code,
     code_verifier: codeVerifier,
     grant_type: "authorization_code",
-    redirect_uri: redirectURL,
+    redirect_uri: disableUrlSanitization
+      ? redirectURL
+      : sanitizeUrl(redirectURL),
   });
 
   if (clientSecret) {
