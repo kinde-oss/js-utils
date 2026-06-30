@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 describe("Application bundling with tree-shaking", () => {
@@ -23,13 +25,13 @@ describe("Application bundling with tree-shaking", () => {
     expect(storage).toBeDefined();
   });
 
-  it("should only load ExpoSecureStore from the expo entry", async () => {
-    const mainModule = await import("../main");
-    const expoModule = await import("../expo");
+  it("main dist bundle contains no expo-secure-store references", async () => {
+    const mainDistPath = resolve(process.cwd(), "dist/js-utils.js");
+    const mainDist = await readFile(mainDistPath, "utf8");
 
-    expect(mainModule).not.toHaveProperty("ExpoSecureStore");
-    expect(expoModule).toHaveProperty("ExpoSecureStore");
-    expect(typeof expoModule.ExpoSecureStore).toBe("function");
+    expect(mainDist).not.toContain("expo-secure-store");
+    expect(mainDist).not.toContain("expoSecureStore");
+    expect(mainDist).not.toContain("ExpoSecureStore");
   });
 });
 

@@ -22,7 +22,7 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     rolldownOptions: {
-      external: ["expo-secure-store", "/src/tests/**"],
+      external: ["/src/tests/**"],
     },
   },
   root: "",
@@ -32,7 +32,6 @@ export default defineConfig({
       insertTypesEntry: true,
       outDir: "dist",
       entryRoot: "lib",
-      exclude: ["lib/expo.ts", "lib/sessionManager/stores/expoSecureStore.ts"],
     }),
     react(),
   ],

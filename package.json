@@ -17,7 +17,7 @@
   "version": "0.30.1",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && vite build --config vite.expo.config.ts",
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "pretest": "pnpm build",
     "test": "vitest",
@@ -34,12 +34,6 @@
       "import": "./dist/js-utils.js",
       "require": "./dist/js-utils.cjs",
       "default": "./dist/js-utils.js"
-    },
-    "./expo": {
-      "types": "./dist/expo.d.ts",
-      "import": "./dist/expo.js",
-      "require": "./dist/expo.cjs",
-      "default": "./dist/expo.js"
     }
   },
   "sideEffects": false,
@@ -48,7 +42,6 @@
     "@types/chrome": "^0.2.0",
     "@types/node": "^24.0.0",
     "@vitejs/plugin-react": "^6.0.0",
-    "expo-secure-store": "56.0.4",
     "@vitest/coverage-v8": "^4.0.3",
     "eslint": "^10.0.0",
     "globals": "^17.0.0",
@@ -60,14 +53,6 @@
     "vite-plugin-dts": "^4.0.3",
     "vitest": "^4.0.3",
     "vitest-fetch-mock": "^0.4.1"
-  },
-  "peerDependencies": {
-    "expo-secure-store": ">=11.0.0"
-  },
-  "peerDependenciesMeta": {
-    "expo-secure-store": {
-      "optional": true
-    }
   },
   "packageManager": "pnpm@10.34.4+sha512.8768be55200ae3f2226b6527fcca2687e14bc4e5f12d7721a0f25da3df47915177058648db4177baf348120fa0ba2752d8d8d93f6beaf1fe64ae18da8de961af",
   "dependencies": {
