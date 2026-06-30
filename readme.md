@@ -52,7 +52,6 @@ exports `storageSettings` which can be used to configure the storage methods.
 
 `LocalStorage` - For using localStorage Note: do not use for sensitive data
 
-
 ### Token Helpers
 
 Linking in with the activeStorage, a number of token helpers are available.

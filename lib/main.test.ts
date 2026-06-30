@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as index from "./main";
 import * as types from "./types";
 import * as utils from "./utils";
+import * as sessionManager from "./sessionManager";
 
 describe("index exports", () => {
   it("should export everything from types", () => {
@@ -19,7 +20,7 @@ describe("index exports", () => {
   it("should export everything from sessionManager", () => {
     Object.keys(sessionManager).forEach((key) => {
       expect(index).toHaveProperty(key);
-    }); 
+    });
   });
 
   it("should not export anything extra", () => {
