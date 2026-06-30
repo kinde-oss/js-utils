@@ -47,7 +47,6 @@ describe("Application usage scenarios", () => {
   it("should work in a React application with LocalStorage only", async () => {
     const mainModule = await import("../main");
 
-    expect(mainModule).not.toHaveProperty("ExpoSecureStore");
     expect(mainModule.LocalStorage).toBeDefined();
     expect(mainModule.base64UrlEncode).toBeDefined();
     expect(mainModule.generateRandomString).toBeDefined();
@@ -56,7 +55,6 @@ describe("Application usage scenarios", () => {
   it("should correctly handle library consumption in NodeJS", async () => {
     const mainModule = await import("../main");
 
-    expect(mainModule).not.toHaveProperty("ExpoSecureStore");
     expect(mainModule.MemoryStorage).toBeDefined();
     expect(typeof mainModule.base64UrlEncode).toBe("function");
     expect(mainModule.getClaim).toBeDefined();

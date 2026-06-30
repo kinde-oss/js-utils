@@ -52,7 +52,6 @@ exports `storageSettings` which can be used to configure the storage methods.
 
 `LocalStorage` - For using localStorage Note: do not use for sensitive data
 
-For Expo / React Native secure storage, use [`@kinde/expo`](https://github.com/kinde-oss/expo) — `ExpoSecureStore` is provided internally by `KindeAuthProvider`.
 
 ### Token Helpers
 
