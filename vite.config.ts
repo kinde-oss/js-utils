@@ -22,7 +22,7 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     rolldownOptions: {
-      external: ["expo-secure-store", "/src/tests/**"],
+      external: ["/src/tests/**"],
     },
   },
   root: "",
