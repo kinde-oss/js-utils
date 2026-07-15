@@ -1,6 +1,32 @@
 # Changelog
 
 
+## 0.30.2...0.31.0
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.30.2...0.31.0)
+
+### 🚀 Features
+
+- Add export for switchOrg method ([06c7c15](https://github.com/kinde-oss/js-utils/commit/06c7c15))
+
+### 🩹 Fixes
+
+- Fix issue with not exporting types ([06c7c15](https://github.com/kinde-oss/js-utils/commit/06c7c15))
+- Address CRAI comments about vite config and tests not running locally ([969be04](https://github.com/kinde-oss/js-utils/commit/969be04))
+- Address comment about removing engines from package.json ([57e1980](https://github.com/kinde-oss/js-utils/commit/57e1980))
+- Address issue about switchOrg being in public API without clientId, add thrown errors ([4b2df0f](https://github.com/kinde-oss/js-utils/commit/4b2df0f))
+- Set entryRoot and rootDir to lib for d.ts emit ([3491473](https://github.com/kinde-oss/js-utils/commit/3491473))
+
+### 🤖 CI
+
+- Verify dist/main.d.ts is not an empty types stub ([84549a8](https://github.com/kinde-oss/js-utils/commit/84549a8))
+
+### ❤️ Contributors
+
+- Shafal Adhikari <adhikarishafal0@gmail.com>
+- Alexis Pesicka ([@pesickaa](https://github.com/pesickaa))
+- Koosha Owji <koosha.owji@gmail.com>
+
 ## 0.30.1...main
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.30.1...main)
