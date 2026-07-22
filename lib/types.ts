@@ -273,8 +273,7 @@ export interface RefreshTokenResultSuccess {
 }
 
 export type RefreshTokenResult =
-  | RefreshTokenResultError
-  | RefreshTokenResultSuccess;
+  RefreshTokenResultError | RefreshTokenResultSuccess;
 
 export enum RefreshType {
   refreshToken,
@@ -396,8 +395,7 @@ export type KindeBillingEntitlements =
   InternalKindeConfig["billingEntitlements"][number];
 
 export type CustomConditionCallback<T> =
-  | ((item: T) => Promise<boolean>)
-  | ((item: T) => boolean);
+  ((item: T) => Promise<boolean>) | ((item: T) => boolean);
 export type CustomCondition<TKey extends PropertyKey, TValue, TCallbackItem> = {
   [P in TKey]: TValue;
 } & {
