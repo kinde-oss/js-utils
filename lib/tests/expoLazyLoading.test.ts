@@ -102,8 +102,9 @@ describe("ExpoSecureStore lazy loading", () => {
     expect(moduleExport).toEqual({ ExpoSecureStore: MockStore });
 
     // Create an instance to verify it works
-    const instance =
-      new (MockStore as unknown as new () => mainExports.SessionManager<StorageKeys>)();
+    const instance = new (
+      MockStore as unknown as new () => mainExports.SessionManager<StorageKeys>
+    )();
     expect(instance).toBeDefined();
 
     // Test a method to make sure it works
