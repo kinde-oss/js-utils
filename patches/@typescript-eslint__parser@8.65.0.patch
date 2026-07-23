@@ -1,0 +1,27 @@
+diff --git a/dist/index.js b/dist/index.js
+index 121861922f9d40d33a621c3f5f55d221b8a18440..e47f92b8a417f2bd08cc2effc86d01c49d4ddddd 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -34,7 +34,8 @@ var __importStar = (this && this.__importStar) || (function () {
+ })();
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.meta = exports.version = exports.withoutProjectParserOptions = exports.createProgram = exports.clearCaches = exports.parseForESLint = exports.parse = void 0;
+-const ts = __importStar(require("typescript"));
++let ts;
++try { ts = __importStar(require("@typescript/typescript6")); } catch (_) { ts = __importStar(require("@typescript/typescript6")); }
+ // intentionally executing code before rest of the require()s. This will not work with ESM.
+ const [versionMajor, _versionMinor] = ts.versionMajorMinor
+     .split('.')
+diff --git a/dist/parser.js b/dist/parser.js
+index 47da62ad7049c16b9efc121618ad152987ae58d8..45a2a6a7693cc42530b1e139ade7db1849f71a26 100644
+--- a/dist/parser.js
++++ b/dist/parser.js
+@@ -9,7 +9,7 @@ const scope_manager_1 = require("@typescript-eslint/scope-manager");
+ const typescript_estree_1 = require("@typescript-eslint/typescript-estree");
+ const visitor_keys_1 = require("@typescript-eslint/visitor-keys");
+ const debug_1 = __importDefault(require("debug"));
+-const typescript_1 = require("typescript");
++const typescript_1 = require("@typescript/typescript6");
+ const log = (0, debug_1.default)('typescript-eslint:parser:parser');
+ function validateBoolean(value, fallback = false) {
+     if (typeof value !== 'boolean') {

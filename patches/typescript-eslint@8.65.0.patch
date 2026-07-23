@@ -1,0 +1,14 @@
+diff --git a/dist/index.js b/dist/index.js
+index 159719a0fa07f14428db5520cb28eeca3de986d0..015771724f6e19e66e18e21cfec1ba8aea9822e3 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -38,7 +38,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
+ };
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.config = exports.configs = exports.plugin = exports.parser = void 0;
+-const ts = __importStar(require("typescript"));
++let ts;
++try { ts = __importStar(require("@typescript/typescript6")); } catch (_) { ts = __importStar(require("typescript")); }
+ const [versionMajor, _versionMinor] = ts.versionMajorMinor
+     .split('.')
+     .map(Number);

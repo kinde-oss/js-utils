@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
-import ts from "typescript";
+import ts from "@typescript/typescript6";
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(rootDir, "../dist");

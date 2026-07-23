@@ -1,2 +1,15 @@
 onlyBuiltDependencies:
   - esbuild
+
+overrides:
+  "@typescript-eslint/eslint-plugin>typescript": "npm:@typescript/typescript6@^6.0.2"
+  "@typescript-eslint/parser>typescript": "npm:@typescript/typescript6@^6.0.2"
+  "@typescript-eslint/typescript-estree>typescript": "npm:@typescript/typescript6@^6.0.2"
+  "typescript-eslint>typescript": "npm:@typescript/typescript6@^6.0.2"
+patchedDependencies:
+  "@typescript-eslint/eslint-plugin@8.65.0": patches/@typescript-eslint__eslint-plugin@8.65.0.patch
+  "@typescript-eslint/parser@8.65.0": patches/@typescript-eslint__parser@8.65.0.patch
+  "@typescript-eslint/type-utils@8.65.0": patches/@typescript-eslint__type-utils@8.65.0.patch
+  "@typescript-eslint/typescript-estree@8.65.0": patches/@typescript-eslint__typescript-estree@8.65.0.patch
+  ts-api-utils@2.5.0: patches/ts-api-utils@2.5.0.patch
+  typescript-eslint@8.65.0: patches/typescript-eslint@8.65.0.patch
