@@ -20,7 +20,8 @@ describe("Activity Tracking", () => {
   let originalPreWarningMinutes: number | undefined;
   let originalKeyPrefix: string;
   let originalOnActivityTimeout:
-    ((type: TimeoutActivityType) => void) | undefined;
+    | ((type: TimeoutActivityType) => void)
+    | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockOnActivityTimeout: any;
 

@@ -47,7 +47,8 @@ type ExchangeAuthCodeResultError = {
 };
 
 type ExchangeAuthCodeResult =
-  ExchangeAuthCodeResultSuccess | ExchangeAuthCodeResultError;
+  | ExchangeAuthCodeResultSuccess
+  | ExchangeAuthCodeResultError;
 
 const clearTempStore = async () => {
   const activeStorage = getInsecureStorage();

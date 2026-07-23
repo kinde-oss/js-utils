@@ -206,7 +206,11 @@ describe("generatePortalUrl", () => {
     setActiveStorage(storage);
     await storage.setSessionItem(StorageKeys.accessToken, "storedAccessToken");
 
-    fetchMock.mockOnce(JSON.stringify({/* url field missing */}));
+    fetchMock.mockOnce(
+      JSON.stringify({
+        /* url field missing */
+      }),
+    );
 
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
