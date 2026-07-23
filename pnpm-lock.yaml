@@ -12,10 +12,10 @@ overrides:
 
 patchedDependencies:
   '@typescript-eslint/eslint-plugin@8.65.0':
-    hash: fadc9bdd921d066b7c9ddcd92ce90981a46646d340115cc3292047d79fc55ebb
+    hash: 4cbce42fe784b636a7db6c66ac96ac6d46738b22260116c856175692d71f29de
     path: patches/@typescript-eslint__eslint-plugin@8.65.0.patch
   '@typescript-eslint/parser@8.65.0':
-    hash: a77f2a377275be5f211494832a6cec91d9eb72c07f52f73c6b8bdd103d09a5fd
+    hash: a6712e517173218d19be11687416d37c5e5f17846d11feb3c66e4f61689dd296
     path: patches/@typescript-eslint__parser@8.65.0.patch
   '@typescript-eslint/type-utils@8.65.0':
     hash: a5b7f51221c783ba339c6b3119d24b2aedb4973d3da56b2d6a4dac9bfe62cf4c
@@ -6861,10 +6861,10 @@ snapshots:
     dependencies:
       '@types/yargs-parser': 21.0.3
 
-  '@typescript-eslint/eslint-plugin@8.65.0(patch_hash=fadc9bdd921d066b7c9ddcd92ce90981a46646d340115cc3292047d79fc55ebb)(@typescript-eslint/parser@8.65.0(patch_hash=a77f2a377275be5f211494832a6cec91d9eb72c07f52f73c6b8bdd103d09a5fd)(eslint@10.7.0)(typescript@7.0.2))(eslint@10.7.0)(typescript@7.0.2)':
+  '@typescript-eslint/eslint-plugin@8.65.0(patch_hash=4cbce42fe784b636a7db6c66ac96ac6d46738b22260116c856175692d71f29de)(@typescript-eslint/parser@8.65.0(patch_hash=a6712e517173218d19be11687416d37c5e5f17846d11feb3c66e4f61689dd296)(eslint@10.7.0)(typescript@7.0.2))(eslint@10.7.0)(typescript@7.0.2)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
-      '@typescript-eslint/parser': 8.65.0(patch_hash=a77f2a377275be5f211494832a6cec91d9eb72c07f52f73c6b8bdd103d09a5fd)(eslint@10.7.0)(typescript@7.0.2)
+      '@typescript-eslint/parser': 8.65.0(patch_hash=a6712e517173218d19be11687416d37c5e5f17846d11feb3c66e4f61689dd296)(eslint@10.7.0)(typescript@7.0.2)
       '@typescript-eslint/scope-manager': 8.65.0
       '@typescript-eslint/type-utils': 8.65.0(patch_hash=a5b7f51221c783ba339c6b3119d24b2aedb4973d3da56b2d6a4dac9bfe62cf4c)(eslint@10.7.0)(typescript@7.0.2)
       '@typescript-eslint/utils': 8.65.0(eslint@10.7.0)(typescript@7.0.2)
@@ -6877,7 +6877,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/parser@8.65.0(patch_hash=a77f2a377275be5f211494832a6cec91d9eb72c07f52f73c6b8bdd103d09a5fd)(eslint@10.7.0)(typescript@7.0.2)':
+  '@typescript-eslint/parser@8.65.0(patch_hash=a6712e517173218d19be11687416d37c5e5f17846d11feb3c66e4f61689dd296)(eslint@10.7.0)(typescript@7.0.2)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.65.0
       '@typescript-eslint/types': 8.65.0
@@ -9787,8 +9787,8 @@ snapshots:
 
   typescript-eslint@8.65.0(patch_hash=230912f98e99c107bb7c824b0a78965b955dab85eb3530b548a5b78ac148f066)(eslint@10.7.0)(typescript@7.0.2):
     dependencies:
-      '@typescript-eslint/eslint-plugin': 8.65.0(patch_hash=fadc9bdd921d066b7c9ddcd92ce90981a46646d340115cc3292047d79fc55ebb)(@typescript-eslint/parser@8.65.0(patch_hash=a77f2a377275be5f211494832a6cec91d9eb72c07f52f73c6b8bdd103d09a5fd)(eslint@10.7.0)(typescript@7.0.2))(eslint@10.7.0)(typescript@7.0.2)
-      '@typescript-eslint/parser': 8.65.0(patch_hash=a77f2a377275be5f211494832a6cec91d9eb72c07f52f73c6b8bdd103d09a5fd)(eslint@10.7.0)(typescript@7.0.2)
+      '@typescript-eslint/eslint-plugin': 8.65.0(patch_hash=4cbce42fe784b636a7db6c66ac96ac6d46738b22260116c856175692d71f29de)(@typescript-eslint/parser@8.65.0(patch_hash=a6712e517173218d19be11687416d37c5e5f17846d11feb3c66e4f61689dd296)(eslint@10.7.0)(typescript@7.0.2))(eslint@10.7.0)(typescript@7.0.2)
+      '@typescript-eslint/parser': 8.65.0(patch_hash=a6712e517173218d19be11687416d37c5e5f17846d11feb3c66e4f61689dd296)(eslint@10.7.0)(typescript@7.0.2)
       '@typescript-eslint/typescript-estree': 8.65.0(patch_hash=215022bc38b6296066f14b1423df8b6496470f4571339fb56df70c8fa5748932)(typescript@7.0.2)
       '@typescript-eslint/utils': 8.65.0(eslint@10.7.0)(typescript@7.0.2)
       eslint: 10.7.0

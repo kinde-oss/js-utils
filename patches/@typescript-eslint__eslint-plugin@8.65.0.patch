@@ -1,14 +1,13 @@
 diff --git a/dist/index.js b/dist/index.js
-index de6f0f82d1d841795dba6bfcc0ab0be2aaec4134..1595015354283f14b3efe90e1d0d23b8074a9b86 100644
+index de6f0f82d1d841795dba6bfcc0ab0be2aaec4134..383f7f93453c9d810ed08b0c393d4db8c9af6f24 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -36,7 +36,8 @@ var __importStar = (this && this.__importStar) || (function () {
+@@ -36,7 +36,7 @@ var __importStar = (this && this.__importStar) || (function () {
  var __importDefault = (this && this.__importDefault) || function (mod) {
      return (mod && mod.__esModule) ? mod : { "default": mod };
  };
 -const ts = __importStar(require("typescript"));
-+let ts;
-+try { ts = __importStar(require("@typescript/typescript6")); } catch (_) { ts = __importStar(require("@typescript/typescript6")); }
++const ts = __importStar(require("@typescript/typescript6"));
  const [versionMajor, _versionMinor] = ts.versionMajorMinor
      .split('.')
      .map(Number);

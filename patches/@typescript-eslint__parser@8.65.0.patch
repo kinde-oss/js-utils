@@ -1,14 +1,13 @@
 diff --git a/dist/index.js b/dist/index.js
-index 121861922f9d40d33a621c3f5f55d221b8a18440..e47f92b8a417f2bd08cc2effc86d01c49d4ddddd 100644
+index 121861922f9d40d33a621c3f5f55d221b8a18440..98b8f081275c6801e6fb146574438207f67d0c17 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -34,7 +34,8 @@ var __importStar = (this && this.__importStar) || (function () {
+@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
  })();
  Object.defineProperty(exports, "__esModule", { value: true });
  exports.meta = exports.version = exports.withoutProjectParserOptions = exports.createProgram = exports.clearCaches = exports.parseForESLint = exports.parse = void 0;
 -const ts = __importStar(require("typescript"));
-+let ts;
-+try { ts = __importStar(require("@typescript/typescript6")); } catch (_) { ts = __importStar(require("@typescript/typescript6")); }
++const ts = __importStar(require("@typescript/typescript6"));
  // intentionally executing code before rest of the require()s. This will not work with ESM.
  const [versionMajor, _versionMinor] = ts.versionMajorMinor
      .split('.')
