@@ -1,5 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "constraints": {
+    "node": ">=22.13.0"
+  },
   "extends": [
     "config:recommended"
   ],
