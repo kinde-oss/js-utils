@@ -54,7 +54,7 @@
     "vitest": "^4.0.3",
     "vitest-fetch-mock": "^0.4.1"
   },
-  "packageManager": "pnpm@11.14.0",
+  "packageManager": "pnpm@11.17.0",
   "dependencies": {
     "@kinde/jwt-decoder": "^0.2.0"
   }
