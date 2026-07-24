@@ -42,7 +42,6 @@
     "@types/chrome": "^0.2.0",
     "@types/node": "^24.0.0",
     "@vitejs/plugin-react": "^6.0.0",
-    "expo-secure-store": "56.0.4",
     "@vitest/coverage-v8": "^4.0.3",
     "eslint": "^10.0.0",
     "globals": "^17.0.0",
@@ -54,14 +53,6 @@
     "vite-plugin-dts": "^5.0.0",
     "vitest": "^4.0.3",
     "vitest-fetch-mock": "^0.4.1"
-  },
-  "peerDependencies": {
-    "expo-secure-store": ">=11.0.0"
-  },
-  "peerDependenciesMeta": {
-    "expo-secure-store": {
-      "optional": true
-    }
   },
   "packageManager": "pnpm@11.14.0",
   "dependencies": {

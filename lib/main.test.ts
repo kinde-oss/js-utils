@@ -70,7 +70,6 @@ describe("index exports", () => {
       "ChromeStore",
       "LocalStorage",
       "storageSettings",
-      "ExpoSecureStore",
 
       // token utils
       "getActiveStorage",

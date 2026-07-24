@@ -44,7 +44,6 @@ export const storageSettings: StorageSettingsType = {
 // Export session manager related items directly
 export { MemoryStorage } from "./stores/memory.js";
 export { ChromeStore } from "./stores/chromeStore.js";
-export { ExpoSecureStore } from "./stores/expoSecureStore.js";
 export { LocalStorage } from "./stores/localStorage.ts";
 
 // Export types directly
