@@ -1,6 +1,40 @@
 # Changelog
 
 
+## 0.31.0...main
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.31.0...main)
+
+### 🩹 Fixes
+
+- **js-utils:** Remove webpackIgnore from ExpoSecureStore dynamic import ([10a2248](https://github.com/kinde-oss/js-utils/commit/10a2248))
+- **js-utils:** Remove webpackIgnore from ExpoSecureStore dynamic import ([73a02e0](https://github.com/kinde-oss/js-utils/commit/73a02e0))
+- **js-utils:** Split Expo storage into a self-contained @kinde/js-utils/expo entry ([d87ac8f](https://github.com/kinde-oss/js-utils/commit/d87ac8f))
+- Remove sessionManager import from main.test.ts ([5c735a6](https://github.com/kinde-oss/js-utils/commit/5c735a6))
+- Remove duplicate test that is already included in expoEntry ([09e331b](https://github.com/kinde-oss/js-utils/commit/09e331b))
+- Remove ai generated pr description md file ([f00f14c](https://github.com/kinde-oss/js-utils/commit/f00f14c))
+- **js-utils:** Add self-contained @kinde/js-utils/expo entry ([982a4fe](https://github.com/kinde-oss/js-utils/commit/982a4fe))
+- **js-utils:** Remove ExpoSecureStore and expo-secure-store entirely ([6955d91](https://github.com/kinde-oss/js-utils/commit/6955d91))
+- Remove existing tests not required after removing expo secure store from js-utils and update readme ([00f6a87](https://github.com/kinde-oss/js-utils/commit/00f6a87))
+- Added sessionmanager missing import and fixed lint ([68773d1](https://github.com/kinde-oss/js-utils/commit/68773d1))
+
+### 🏡 Chore
+
+- Release v0.31.0 ([f4f0df3](https://github.com/kinde-oss/js-utils/commit/f4f0df3))
+- Run lint fix ([a82ab9b](https://github.com/kinde-oss/js-utils/commit/a82ab9b))
+- Run lint fix ([65c1a0a](https://github.com/kinde-oss/js-utils/commit/65c1a0a))
+- Run lint fix ([f9523c2](https://github.com/kinde-oss/js-utils/commit/f9523c2))
+
+### 🤖 CI
+
+- Align workflows with pnpm 11 requirements ([5f22f32](https://github.com/kinde-oss/js-utils/commit/5f22f32))
+- Drop redundant pnpm pre-post config step ([9391066](https://github.com/kinde-oss/js-utils/commit/9391066))
+
+### ❤️ Contributors
+
+- Koosha Owji <koosha.owji@gmail.com>
+- Shafal Adhikari ([@shafaladhikari](https://github.com/shafaladhikari))
+
 ## 0.30.2...0.31.0
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.30.2...0.31.0)
