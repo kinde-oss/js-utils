@@ -3,22 +3,8 @@
   "constraints": {
     "node": ">=22.13.0"
   },
-  "extends": [
-    "config:recommended"
-  ],
-  "packageRules": [
-    {
-      "groupName": "all non-major dependencies",
-      "groupSlug": "all-minor-patch",
-      "matchPackageNames": [
-        "*"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ]
-    }
-  ],
-  "labels": ["dependencies"],
-  "assignees": ["danielrivers"]
+  "extends": ["config:recommended", ":rebaseStalePrs"],
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "dependencyDashboard": true
 }
