@@ -94,9 +94,12 @@ export const refreshToken = async ({
       if (clientSecret) {
         body.append("client_secret", clientSecret);
       }
-      const includeCredentials =
-        refreshType === RefreshType.cookie ||
-        (isCustomDomain(domain) && !storageSettings.useInsecureForRefreshToken);
+      // Only the cookie flow needs `credentials: "include"`. The body-based
+      // flow already carries the refresh token in `body`, so also sending
+      // cookies here would let the browser attach a stale/duplicate
+      // refresh_token cookie alongside it, causing the token endpoint to
+      // reject the request with "more than one refresh token provided".
+      const includeCredentials = refreshType === RefreshType.cookie;
 
       const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
         method: "POST",

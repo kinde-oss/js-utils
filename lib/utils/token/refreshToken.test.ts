@@ -570,7 +570,27 @@ describe("refreshToken", () => {
     });
   });
 
-  it("should include credentials when refreshing on a custom domain", async () => {
+  it("should include credentials when using cookie refresh type on a custom domain", async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ access_token: "new-token" }),
+    } as Response);
+
+    await tokenUtils.refreshToken({
+      domain: mockDomain,
+      clientId: mockClientId,
+      refreshType: 1, // RefreshType.cookie
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        credentials: "include",
+      }),
+    );
+  });
+
+  it("should not include credentials for the default body-based refresh on a custom domain, to avoid sending the refresh token twice", async () => {
     memoryStorage.getSessionItem = vi
       .fn()
       .mockResolvedValue(mockRefreshTokenValue);
@@ -584,11 +604,10 @@ describe("refreshToken", () => {
       clientId: mockClientId,
     });
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        credentials: "include",
-      }),
+    const fetchCall = vi.mocked(global.fetch).mock.calls[0];
+    expect(fetchCall[1]).not.toHaveProperty("credentials");
+    expect(fetchCall[1]?.body as string).toContain(
+      "refresh_token=mock-refresh-token",
     );
   });
 
