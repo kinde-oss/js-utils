@@ -7,6 +7,7 @@ import {
   storageSettings,
 } from "../main";
 import { isCustomDomain } from ".";
+import { getRefreshType } from "./getRefreshType";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 import { isClient } from "./isClient";
 
@@ -47,7 +48,8 @@ type ExchangeAuthCodeResultError = {
 };
 
 type ExchangeAuthCodeResult =
-  ExchangeAuthCodeResultSuccess | ExchangeAuthCodeResultError;
+  | ExchangeAuthCodeResultSuccess
+  | ExchangeAuthCodeResultError;
 
 const clearTempStore = async () => {
   const activeStorage = getInsecureStorage();
@@ -207,7 +209,12 @@ export const exchangeAuthCode = async ({
 
   if (autoRefresh) {
     setRefreshTimer(data.expires_in, async () => {
-      refreshToken({ domain, clientId, onRefresh });
+      refreshToken({
+        domain,
+        clientId,
+        onRefresh,
+        refreshType: getRefreshType(domain),
+      });
     });
   }
 
