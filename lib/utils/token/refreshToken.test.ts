@@ -8,6 +8,7 @@ import * as tokenUtils from ".";
 import * as refreshTimer from "../refreshTimer";
 import { createMockAccessToken } from "./testUtils";
 import * as isClient from "../isClient";
+import { RefreshType } from "../../main";
 
 describe("refreshToken", () => {
   const mockDomain = "https://example.com";
@@ -579,7 +580,7 @@ describe("refreshToken", () => {
     await tokenUtils.refreshToken({
       domain: mockDomain,
       clientId: mockClientId,
-      refreshType: 1, // RefreshType.cookie
+      refreshType: RefreshType.cookie,
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
