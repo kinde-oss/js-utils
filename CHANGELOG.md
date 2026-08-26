@@ -1,9 +1,9 @@
 # Changelog
 
 
-## 0.31.0...main
+## 0.31.0...0.32.0
 
-[compare changes](https://github.com/kinde-oss/js-utils/compare/0.31.0...main)
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.31.0...0.32.0)
 
 ### 🩹 Fixes
 
