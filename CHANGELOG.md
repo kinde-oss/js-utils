@@ -1,6 +1,21 @@
 # Changelog
 
 
+## 0.32.0...0.32.1
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.32.0...0.32.1)
+
+### 🏡 Chore
+
+- **deps:** Update dependency eslint to v10.9.0 ([6517a6d](https://github.com/kinde-oss/js-utils/commit/6517a6d))
+- **deps:** Update dependency @types/chrome to v0.2.7 ([eb147db](https://github.com/kinde-oss/js-utils/commit/eb147db))
+- **deps:** Update pnpm to v11.23.0 ([f193f5f](https://github.com/kinde-oss/js-utils/commit/f193f5f))
+- **deps:** Update dependency vite to v8.2.2 ([9b16b83](https://github.com/kinde-oss/js-utils/commit/9b16b83))
+
+### ❤️ Contributors
+
+- Yuri Avdijevski ([@dtoxvanilla1991](https://github.com/dtoxvanilla1991))
+
 ## 0.31.0...0.32.0
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.31.0...0.32.0)
