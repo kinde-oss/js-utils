@@ -6,7 +6,7 @@ import {
   StorageKeys,
   storageSettings,
 } from "../main";
-import { isCustomDomain } from ".";
+import { isCustomDomain, sanitizeUrl } from ".";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 import { isClient } from "./isClient";
 
@@ -142,7 +142,7 @@ export const exchangeAuthCode = async ({
     code,
     code_verifier: codeVerifier,
     grant_type: "authorization_code",
-    redirect_uri: redirectURL,
+    redirect_uri: sanitizeUrl(redirectURL),
   });
 
   if (clientSecret) {

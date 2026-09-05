@@ -618,4 +618,44 @@ describe("exchangeAuthCode", () => {
       ),
     });
   });
+
+  it("should sanitize redirect_uri to match authorize request (trailing slash)", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+
+    const state = "state";
+
+    await store.setItems({
+      [StorageKeys.state]: state,
+      [StorageKeys.codeVerifier]: "verifier",
+    });
+
+    const urlParams = new URLSearchParams();
+    urlParams.append("code", "test");
+    urlParams.append("state", state);
+
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "access_token",
+        refresh_token: "refresh_token",
+        id_token: "id_token",
+      }),
+    );
+
+    // Pass redirectURL with trailing slash — should be stripped before POST
+    await exchangeAuthCode({
+      urlParams,
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com/callback/",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const fetchCall = fetchMock.mock.calls[0];
+    const actualBody = fetchCall[1]?.body as URLSearchParams;
+
+    // Sanitized: trailing slash stripped to match what authorize sent
+    expect(actualBody.get("redirect_uri")).toBe("http://test.kinde.com/callback");
+  });
+
 });
