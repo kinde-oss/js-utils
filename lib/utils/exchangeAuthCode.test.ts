@@ -618,4 +618,69 @@ describe("exchangeAuthCode", () => {
       ),
     });
   });
+
+  it("sends a sanitized redirect_uri so /token matches the /authorize value", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+
+    await store.setItems({
+      [StorageKeys.state]: "abc",
+      [StorageKeys.codeVerifier]: "verifier",
+    });
+
+    const urlParams = new URLSearchParams({ state: "abc", code: "xyz" });
+
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "access_token",
+        refresh_token: "refresh_token",
+        id_token: "id_token",
+      }),
+    );
+
+    await exchangeAuthCode({
+      urlParams,
+      domain: "https://example.kinde.com",
+      clientId: "test-client",
+      redirectURL: "https://app.example.com/",
+    });
+
+    const [, requestInit] = fetchMock.mock.calls.at(-1)!;
+    const body = requestInit?.body as URLSearchParams;
+
+    expect(body.get("redirect_uri")).toBe("https://app.example.com");
+  });
+
+  it("preserves raw redirect_uri when disableUrlSanitization is true", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+
+    await store.setItems({
+      [StorageKeys.state]: "abc",
+      [StorageKeys.codeVerifier]: "verifier",
+    });
+
+    const urlParams = new URLSearchParams({ state: "abc", code: "xyz" });
+
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "access_token",
+        refresh_token: "refresh_token",
+        id_token: "id_token",
+      }),
+    );
+
+    await exchangeAuthCode({
+      urlParams,
+      domain: "https://example.kinde.com",
+      clientId: "test-client",
+      redirectURL: "https://app.example.com/",
+      disableUrlSanitization: true,
+    });
+
+    const [, requestInit] = fetchMock.mock.calls.at(-1)!;
+    const body = requestInit?.body as URLSearchParams;
+
+    expect(body.get("redirect_uri")).toBe("https://app.example.com/");
+  });
 });
