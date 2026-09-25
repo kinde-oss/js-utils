@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { isAuthenticated } from ".";
 import * as tokenUtils from ".";
+import { RefreshType } from "../../types";
 
 // Mock the entire token utils module
 vi.mock("..");
@@ -63,6 +64,7 @@ describe("isAuthenticated", () => {
     expect(mockRefreshToken).toHaveBeenCalledWith({
       domain: "test.com",
       clientId: "123",
+      refreshType: RefreshType.refreshToken,
     });
   });
 
