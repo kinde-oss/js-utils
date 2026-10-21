@@ -19,7 +19,8 @@ const PARAM_PATTERN = /([A-Za-z_][\w-]*)\s*=\s*("(?:[^"\\]|\\.)*"|[^\s,]+)/g;
 const unquote = (value: string): string =>
   value.startsWith('"') ? value.slice(1, -1).replace(/\\(.)/g, "$1") : value;
 
-const stripTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
+export const stripTrailingSlash = (value: string): string =>
+  value.replace(/\/+$/, "");
 
 export const parseWwwAuthenticate = (
   header: string | null | undefined,
@@ -46,7 +47,7 @@ export const parseWwwAuthenticate = (
   };
 };
 
-const buildWellKnownUrl = (base: string, suffix: string): string => {
+export const buildWellKnownUrl = (base: string, suffix: string): string => {
   const url = new URL(base);
   const path = stripTrailingSlash(url.pathname);
   return `${url.origin}/.well-known/${suffix}${path}`;
@@ -71,7 +72,7 @@ const fetchProtectedResourceMetadata = async (
   return metadata;
 };
 
-const fetchAuthorizationServerMetadata = async (
+export const fetchAuthorizationServerMetadata = async (
   issuer: string,
   options: FetchOptions,
 ): Promise<AuthorizationServerMetadata> => {

@@ -20,3 +20,26 @@ export type {
 } from "./token";
 
 export type * from "./types";
+
+export { createResourceServerConfig } from "./resource/config";
+export type {
+  ResourceServerConfig,
+  ResourceServerOptions,
+  TokenVerification,
+} from "./resource/config";
+
+export {
+  createProtectedResourceMetadataHandler,
+  createAuthorizationServerMirrorHandler,
+  createUnauthorizedResponse,
+} from "./resource/routes";
+export type { UnauthorizedOptions } from "./resource/routes";
+
+export {
+  verifyAccessToken,
+  authenticateRequest,
+  hasPermission,
+} from "./resource/verify";
+export type { VerifiedToken, AuthenticationResult } from "./resource/verify";
+
+export { adminRevoke } from "./resource/revoke";
