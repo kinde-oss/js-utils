@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { base64UrlEncode } from "../../utils/base64UrlEncode";
 import { parseWwwAuthenticate } from "../discovery";
 import { jsonResponse, mockFetch, serverMetadata } from "../testUtils";
@@ -264,6 +264,32 @@ describe("local verification", () => {
     await verifyAccessToken(await sign(claims), config);
     await verifyAccessToken(await sign(claims), config);
     expect(config.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("rejects tokens that are not yet valid", async () => {
+    const nbf = Math.floor(Date.now() / 1000) + 600;
+    await expect(
+      verifyAccessToken(await sign({ ...claims, nbf }), localConfig()),
+    ).rejects.toMatchObject({ code: "invalid_token" });
+  });
+
+  it("rejects unsupported signing algorithms", async () => {
+    const token = `${base64UrlEncode(JSON.stringify({ alg: "HS256" }))}.e30.sig`;
+    await expect(verifyAccessToken(token, localConfig())).rejects.toMatchObject(
+      { code: "invalid_token" },
+    );
+  });
+
+  it("fails when crypto.subtle is unavailable", async () => {
+    const token = await sign(claims);
+    vi.stubGlobal("crypto", undefined);
+    await expect(verifyAccessToken(token, localConfig())).rejects.toMatchObject(
+      { code: "crypto_unavailable" },
+    );
   });
 
   it("rejects tampered signatures, unknown keys and missing expiry", async () => {
