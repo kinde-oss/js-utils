@@ -37,6 +37,21 @@ describe("parseWwwAuthenticate", () => {
     expect(parseWwwAuthenticate(null)).toBeNull();
   });
 
+  it("handles escaped quotes in values", () => {
+    expect(
+      parseWwwAuthenticate('Bearer error_description="say \\"hi\\""')
+        ?.errorDescription,
+    ).toBe('say "hi"');
+  });
+
+  it("stays fast on pathological input", () => {
+    const start = Date.now();
+    parseWwwAuthenticate(`Bearer ${"A".repeat(100000)}`);
+    parseWwwAuthenticate(`Bearer ${"A ".repeat(50000)}`);
+    parseWwwAuthenticate(`Bearer realm="${"\\".repeat(50000)}`);
+    expect(Date.now() - start).toBeLessThan(1000);
+  });
+
   it("ignores params of other schemes", () => {
     const result = parseWwwAuthenticate(
       'Bearer error="invalid_token", Basic realm="other"',
@@ -64,6 +79,15 @@ describe("discoverAgentAuth", () => {
       serverMetadata.token_endpoint,
     );
     expect(result.scope).toBe("read");
+  });
+
+  it("handles resource urls with many trailing slashes", async () => {
+    const result = await discoverAgentAuth({
+      wwwAuthenticate: "Bearer",
+      resourceUrl: `https://api.example.com/mcp${"/".repeat(50000)}`,
+      fetch: mockFetch(routes),
+    });
+    expect(result.resource).toBe(prm.resource);
   });
 
   it("falls back to the well-known url from resourceUrl", async () => {

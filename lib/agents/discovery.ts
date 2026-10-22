@@ -14,29 +14,84 @@ import type {
   ProtectedResourceMetadata,
 } from "./types";
 
-const PARAM_PATTERN = /([A-Za-z_][\w-]*)\s*=\s*("(?:[^"\\]|\\.)*"|[^\s,]+)/g;
+const stripTrailingSlash = (value: string): string => {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === "/") end--;
+  return value.slice(0, end);
+};
 
-const unquote = (value: string): string =>
-  value.startsWith('"') ? value.slice(1, -1).replace(/\\(.)/g, "$1") : value;
+const isSpace = (char: string): boolean =>
+  char === " " || char === "\t" || char === "\r" || char === "\n";
 
-const stripTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
+const parseChallenges = (
+  header: string,
+): { scheme: string; params: Record<string, string> }[] => {
+  const challenges: { scheme: string; params: Record<string, string> }[] = [];
+  const length = header.length;
+  let i = 0;
+
+  const skipSeparators = () => {
+    while (i < length && (isSpace(header[i]) || header[i] === ",")) i++;
+  };
+  const skipSpaces = () => {
+    while (i < length && isSpace(header[i])) i++;
+  };
+
+  while (i < length) {
+    skipSeparators();
+    if (i >= length) break;
+
+    const tokenStart = i;
+    while (
+      i < length &&
+      !isSpace(header[i]) &&
+      header[i] !== "," &&
+      header[i] !== "="
+    ) {
+      i++;
+    }
+    const token = header.slice(tokenStart, i);
+    skipSpaces();
+
+    if (header[i] !== "=") {
+      if (token) challenges.push({ scheme: token.toLowerCase(), params: {} });
+      else i++;
+      continue;
+    }
+
+    i++;
+    skipSpaces();
+
+    let value = "";
+    if (header[i] === '"') {
+      i++;
+      while (i < length && header[i] !== '"') {
+        if (header[i] === "\\" && i + 1 < length) i++;
+        value += header[i];
+        i++;
+      }
+      i++;
+    } else {
+      const valueStart = i;
+      while (i < length && !isSpace(header[i]) && header[i] !== ",") i++;
+      value = header.slice(valueStart, i);
+    }
+
+    const current = challenges[challenges.length - 1];
+    if (current && token) current.params[token.toLowerCase()] = value;
+  }
+
+  return challenges;
+};
 
 export const parseWwwAuthenticate = (
   header: string | null | undefined,
 ): BearerChallenge | null => {
   if (!header) return null;
-  const bearerIndex = header.search(/(^|[\s,])Bearer(\s|$)/i);
-  if (bearerIndex === -1) return null;
+  const bearer = parseChallenges(header).find((c) => c.scheme === "bearer");
+  if (!bearer) return null;
 
-  const rest = header.slice(bearerIndex).replace(/^[\s,]*Bearer/i, "");
-  const nextScheme = rest.search(/,\s*[A-Za-z][\w-]*\s+[A-Za-z_][\w-]*\s*=/);
-  const section = nextScheme === -1 ? rest : rest.slice(0, nextScheme);
-
-  const params: Record<string, string> = {};
-  for (const match of section.matchAll(PARAM_PATTERN)) {
-    params[match[1].toLowerCase()] = unquote(match[2]);
-  }
-
+  const { params } = bearer;
   return {
     resourceMetadata: params["resource_metadata"],
     scope: params["scope"],
