@@ -64,4 +64,16 @@ describe("buildAuthorizationUrl", () => {
       }),
     ).rejects.toMatchObject({ code: "pkce_unsupported" });
   });
+
+  it("rejects servers that do not advertise PKCE methods", async () => {
+    await expect(
+      buildAuthorizationUrl({
+        ...options,
+        authorizationServer: {
+          ...serverMetadata,
+          code_challenge_methods_supported: undefined,
+        },
+      }),
+    ).rejects.toMatchObject({ code: "pkce_unsupported" });
+  });
 });
