@@ -3,7 +3,7 @@ export type AgentAuthErrorCode =
   | "invalid_url"
   | "invalid_response"
   | "not_unauthorized"
-  | "missing_resource_metadata"
+  | "missing_resource_url"
   | "resource_mismatch"
   | "issuer_mismatch"
   | "no_authorization_server"

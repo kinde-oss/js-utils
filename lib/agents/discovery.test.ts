@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { AgentAuthError } from "./errors";
 import { discoverAgentAuth, parseWwwAuthenticate } from "./discovery";
 import { jsonResponse, mockFetch, serverMetadata } from "./testUtils";
 
@@ -73,7 +72,11 @@ describe("discoverAgentAuth", () => {
           'Bearer resource_metadata="https://api.example.com/meta", scope="read openid"',
       },
     });
-    const result = await discoverAgentAuth({ response, fetch: fetchMock });
+    const result = await discoverAgentAuth({
+      response,
+      resourceUrl: prm.resource,
+      fetch: fetchMock,
+    });
     expect(result.resource).toBe(prm.resource);
     expect(result.authorizationServer.token_endpoint).toBe(
       serverMetadata.token_endpoint,
@@ -171,18 +174,20 @@ describe("discoverAgentAuth", () => {
     await expect(
       discoverAgentAuth({
         response: new Response(null, { status: 200 }),
+        resourceUrl: prm.resource,
         fetch: mockFetch(routes),
       }),
     ).rejects.toMatchObject({ code: "not_unauthorized" });
   });
 
-  it("requires some way to locate the metadata", async () => {
+  it("requires resourceUrl to validate metadata from the challenge", async () => {
     await expect(
       discoverAgentAuth({
-        wwwAuthenticate: "Bearer",
+        wwwAuthenticate:
+          'Bearer resource_metadata="https://api.example.com/.well-known/oauth-protected-resource/mcp"',
         fetch: mockFetch(routes),
-      }),
-    ).rejects.toMatchObject({ code: "missing_resource_metadata" });
+      } as unknown as Parameters<typeof discoverAgentAuth>[0]),
+    ).rejects.toThrow(/missing_resource_url/);
   });
 
   it("rejects resource mismatches", async () => {
@@ -223,6 +228,7 @@ describe("discoverAgentAuth", () => {
     await expect(
       discoverAgentAuth({
         wwwAuthenticate: 'Bearer resource_metadata="https://api.example.com/m"',
+        resourceUrl: prm.resource,
         fetch: mockFetch(() => redirected),
       }),
     ).rejects.toMatchObject({ code: "invalid_url" });
@@ -240,6 +246,7 @@ describe("discoverAgentAuth", () => {
     const result = await discoverAgentAuth({
       wwwAuthenticate:
         'Bearer resource_metadata="https://api.example.com/meta"',
+      resourceUrl: prm.resource,
       fetch: fetchMock,
     });
     expect(result.resource).toBe(prm.resource);
@@ -249,8 +256,9 @@ describe("discoverAgentAuth", () => {
     await expect(
       discoverAgentAuth({
         wwwAuthenticate: 'Bearer resource_metadata="http://api.example.com/m"',
+        resourceUrl: prm.resource,
         fetch: mockFetch(routes),
       }),
-    ).rejects.toBeInstanceOf(AgentAuthError);
+    ).rejects.toMatchObject({ code: "invalid_url" });
   });
 });
