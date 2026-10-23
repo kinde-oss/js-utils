@@ -51,6 +51,22 @@ describe("parseWwwAuthenticate", () => {
     expect(Date.now() - start).toBeLessThan(1000);
   });
 
+  it("keeps the first occurrence of a duplicate param", () => {
+    expect(
+      parseWwwAuthenticate(
+        'Bearer resource_metadata="https://good.example/m", resource_metadata="https://evil.example/m"',
+      )?.resourceMetadata,
+    ).toBe("https://good.example/m");
+  });
+
+  it("parses a Bearer challenge listed after a token68 scheme", () => {
+    expect(
+      parseWwwAuthenticate(
+        'Basic dXNlcjpwYXNz==, Bearer realm="r", error=invalid_token',
+      ),
+    ).toMatchObject({ realm: "r", error: "invalid_token" });
+  });
+
   it("ignores params of other schemes", () => {
     const result = parseWwwAuthenticate(
       'Bearer error="invalid_token", Basic realm="other"',

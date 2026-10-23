@@ -78,7 +78,10 @@ const parseChallenges = (
     }
 
     const current = challenges[challenges.length - 1];
-    if (current && token) current.params[token.toLowerCase()] = value;
+    const name = token.toLowerCase();
+    if (current && name && !Object.hasOwn(current.params, name)) {
+      current.params[name] = value;
+    }
   }
 
   return challenges;
