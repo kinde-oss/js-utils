@@ -57,7 +57,7 @@ export interface ExchangeCodeOptions extends ClientAuth, FetchOptions {
   code: string;
   codeVerifier: string;
   redirectUri: string;
-  resource?: string;
+  resource: string;
 }
 
 export const exchangeCode = async (
@@ -84,7 +84,7 @@ export interface RefreshAccessTokenOptions extends ClientAuth, FetchOptions {
   tokenEndpoint: string;
   refreshToken: string;
   scope?: string;
-  resource?: string;
+  resource: string;
 }
 
 export const refreshAccessToken = async (

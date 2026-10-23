@@ -14,7 +14,7 @@ export interface BuildAuthorizationUrlOptions {
   clientId: string;
   redirectUri: string;
   scope?: string | string[];
-  resource?: string;
+  resource: string;
   state?: string;
 }
 
@@ -48,7 +48,7 @@ export const buildAuthorizationUrl = async (
   url.searchParams.set("code_challenge", codeChallenge);
   url.searchParams.set("code_challenge_method", "S256");
   if (scopes.length) url.searchParams.set("scope", scopes.join(" "));
-  if (resource) url.searchParams.set("resource", resource);
+  url.searchParams.set("resource", resource);
 
   return { url, state, codeVerifier, codeChallenge };
 };

@@ -55,6 +55,7 @@ describe("exchangeCode", () => {
     await exchangeCode({
       tokenEndpoint,
       clientId: "c1",
+      resource: "https://api.example.com/mcp",
       clientSecret: "sec",
       code: "x",
       codeVerifier: "v",
@@ -79,6 +80,7 @@ describe("exchangeCode", () => {
       exchangeCode({
         tokenEndpoint,
         clientId: "c1",
+        resource: "https://api.example.com/mcp",
         code: "x",
         codeVerifier: "v",
         redirectUri: "https://app.example.com/callback",
@@ -92,6 +94,7 @@ describe("exchangeCode", () => {
       exchangeCode({
         tokenEndpoint,
         clientId: "c1",
+        resource: "https://api.example.com/mcp",
         code: "x",
         codeVerifier: "v",
         redirectUri: "https://app.example.com/callback",
@@ -107,6 +110,7 @@ describe("refreshAccessToken", () => {
     const tokens = await refreshAccessToken({
       tokenEndpoint,
       clientId: "c1",
+      resource: "https://api.example.com/mcp",
       refreshToken: "rt1",
       fetch: fetchMock,
     });
@@ -114,6 +118,7 @@ describe("refreshAccessToken", () => {
     const body = new URLSearchParams(fetchMock.mock.calls[0][1].body as string);
     expect(body.get("grant_type")).toBe("refresh_token");
     expect(body.get("refresh_token")).toBe("rt1");
+    expect(body.get("resource")).toBe("https://api.example.com/mcp");
     expect(tokens.refreshToken).toBe("rt1");
   });
 
@@ -121,6 +126,7 @@ describe("refreshAccessToken", () => {
     const tokens = await refreshAccessToken({
       tokenEndpoint,
       clientId: "c1",
+      resource: "https://api.example.com/mcp",
       refreshToken: "rt1",
       fetch: mockFetch(() =>
         jsonResponse({ access_token: "at2", refresh_token: "rt2" }),
@@ -134,6 +140,7 @@ describe("refreshAccessToken", () => {
       refreshAccessToken({
         tokenEndpoint: "http://auth.example.com/token",
         clientId: "c1",
+        resource: "https://api.example.com/mcp",
         refreshToken: "rt",
         fetch: mockFetch(() => jsonResponse({})),
       }),

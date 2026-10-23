@@ -7,6 +7,7 @@ const options = {
   authorizationServer: serverMetadata,
   clientId: "client-1",
   redirectUri: "https://app.example.com/callback",
+  resource: "https://api.example.com/mcp",
 };
 
 describe("buildAuthorizationUrl", () => {
@@ -61,6 +62,7 @@ describe("buildAuthorizationUrl", () => {
         },
         clientId: "c",
         redirectUri: "http://127.0.0.1/cb",
+        resource: "https://api.example.com/mcp",
       }),
     ).rejects.toThrow(/pkce_unsupported/);
   });
