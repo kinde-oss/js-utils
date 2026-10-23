@@ -101,6 +101,58 @@ describe("discoverAgentAuth", () => {
     );
   });
 
+  it("falls back to the root protected-resource metadata", async () => {
+    const fetchMock = mockFetch((url) =>
+      url === "https://api.example.com/.well-known/oauth-protected-resource"
+        ? jsonResponse(prm)
+        : url.includes("oauth-protected-resource")
+          ? new Response("nope", { status: 404 })
+          : routes(url),
+    );
+    const result = await discoverAgentAuth({
+      wwwAuthenticate: "Bearer",
+      resourceUrl: prm.resource,
+      fetch: fetchMock,
+    });
+    expect(result.resourceMetadataUrl).toBe(
+      "https://api.example.com/.well-known/oauth-protected-resource",
+    );
+  });
+
+  it("rejects a root document that describes a different resource", async () => {
+    const fetchMock = mockFetch((url) =>
+      url === "https://api.example.com/.well-known/oauth-protected-resource"
+        ? jsonResponse({ ...prm, resource: "https://api.example.com/other" })
+        : url.includes("oauth-protected-resource")
+          ? new Response("nope", { status: 404 })
+          : routes(url),
+    );
+    await expect(
+      discoverAgentAuth({
+        wwwAuthenticate: "Bearer",
+        resourceUrl: prm.resource,
+        fetch: fetchMock,
+      }),
+    ).rejects.toMatchObject({ code: "resource_mismatch" });
+  });
+
+  it("does not fall back when the challenge provides resource_metadata", async () => {
+    const fetchMock = mockFetch((url) =>
+      url === "https://api.example.com/meta"
+        ? new Response("nope", { status: 404 })
+        : routes(url),
+    );
+    await expect(
+      discoverAgentAuth({
+        wwwAuthenticate:
+          'Bearer resource_metadata="https://api.example.com/meta"',
+        resourceUrl: prm.resource,
+        fetch: fetchMock,
+      }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("falls back to openid-configuration for the document location only", async () => {
     const fetchMock = mockFetch((url) =>
       url === "https://auth.example.com/.well-known/openid-configuration"

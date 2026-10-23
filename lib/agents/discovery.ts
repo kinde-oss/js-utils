@@ -202,21 +202,39 @@ export const discoverAgentAuth = async (
     options.wwwAuthenticate ?? response?.headers.get("www-authenticate");
   const challenge = parseWwwAuthenticate(header);
 
-  let metadataUrl = challenge?.resourceMetadata;
-  if (!metadataUrl) {
-    if (!resourceUrl) {
-      throw new AgentAuthError(
-        "missing_resource_metadata",
-        "No resource_metadata in the challenge and no resourceUrl to derive it from",
-      );
-    }
-    metadataUrl = buildWellKnownUrl(resourceUrl, "oauth-protected-resource");
+  const challengeMetadataUrl = challenge?.resourceMetadata;
+  if (!challengeMetadataUrl && !resourceUrl) {
+    throw new AgentAuthError(
+      "missing_resource_metadata",
+      "No resource_metadata in the challenge and no resourceUrl to derive it from",
+    );
   }
 
-  const resourceMetadata = await fetchProtectedResourceMetadata(
-    metadataUrl,
-    options,
-  );
+  const candidates = challengeMetadataUrl
+    ? [challengeMetadataUrl]
+    : [
+        buildWellKnownUrl(resourceUrl as string, "oauth-protected-resource"),
+        `${new URL(resourceUrl as string).origin}/.well-known/oauth-protected-resource`,
+      ].filter((value, index, all) => all.indexOf(value) === index);
+
+  let metadataUrl = candidates[0];
+  let resourceMetadata: ProtectedResourceMetadata | undefined;
+  let lastError: unknown;
+  for (const candidate of candidates) {
+    try {
+      resourceMetadata = await fetchProtectedResourceMetadata(
+        candidate,
+        options,
+      );
+      metadataUrl = candidate;
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  if (!resourceMetadata) {
+    throw lastError;
+  }
 
   if (
     resourceUrl &&
