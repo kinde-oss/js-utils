@@ -1,5 +1,6 @@
 import { refreshToken } from ".";
 import { isTokenExpired } from ".";
+import { getRefreshType } from "../getRefreshType";
 
 export interface IsAuthenticatedPropsWithRefreshToken {
   useRefreshToken?: true;
@@ -37,6 +38,7 @@ export const isAuthenticated = async (
     if (isExpired && props?.useRefreshToken) {
       const refreshResult = await refreshToken({
         domain: props.domain,
+        refreshType: getRefreshType(props.domain),
         clientId: props.clientId,
       });
       return refreshResult.success;
