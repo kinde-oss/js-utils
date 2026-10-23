@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildClientMetadataDocument } from "./cimd";
+import { assertValidCimdClientId, buildClientMetadataDocument } from "./cimd";
 
 const base = {
   clientId: "https://app.example.com/oauth/client.json",
@@ -67,5 +67,29 @@ describe("buildClientMetadataDocument", () => {
         tokenEndpointAuthMethod: "client_secret_post",
       }),
     ).toThrow();
+  });
+});
+
+describe("assertValidCimdClientId", () => {
+  it.each([
+    "https://a.com/x/%2e%2e/y",
+    "https://a.com/x/%2E/y",
+    "https://a.com/x/%2e./y",
+    "https://a.com/x\\..\\y",
+    "https://a.com\\..\\y",
+    " https://a.com/client.json",
+    "https://a.com/client.json ",
+    "https://a.com/cli\nent.json",
+    "https://a.com/cli\tent.json",
+  ])("rejects %j", (clientId) => {
+    expect(() => assertValidCimdClientId(clientId)).toThrow(
+      /invalid_client_metadata/,
+    );
+  });
+
+  it("accepts a plain https client_id with a path and query", () => {
+    expect(
+      assertValidCimdClientId("https://a.com/oauth/client.json?v=1").href,
+    ).toBe("https://a.com/oauth/client.json?v=1");
   });
 });

@@ -15,7 +15,20 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const invalid = (message: string) =>
   new AgentAuthError("invalid_client_metadata", message);
 
+const hasInvalidCharacters = (value: string): boolean => {
+  for (const char of value) {
+    const code = char.codePointAt(0) as number;
+    if (code <= 0x1f || code === 0x7f || char === "\\" || /\s/.test(char)) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export const assertValidCimdClientId = (clientId: string): URL => {
+  if (hasInvalidCharacters(clientId)) {
+    throw invalid("client_id contains invalid characters");
+  }
   const url = parseUrl(clientId, "client_id");
   if (url.protocol !== "https:") throw invalid("client_id must use https");
   if (url.pathname === "/" || url.pathname === "") {
@@ -26,7 +39,7 @@ export const assertValidCimdClientId = (clientId: string): URL => {
     throw invalid("client_id must not contain credentials");
   }
   const rawPath = clientId.split(/[?#]/)[0].replace(/^https:\/\/[^/]*/i, "");
-  if (rawPath.split("/").some((s) => s === "." || s === "..")) {
+  if (rawPath.split("/").some((s) => /^(\.|%2e){1,2}$/i.test(s))) {
     throw invalid("client_id must not contain dot path segments");
   }
   return url;
