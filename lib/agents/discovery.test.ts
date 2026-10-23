@@ -163,6 +163,36 @@ describe("discoverAgentAuth", () => {
     ).rejects.toMatchObject({ code: "issuer_mismatch" });
   });
 
+  it("rejects a metadata response that was redirected to http", async () => {
+    const redirected = jsonResponse(prm);
+    Object.defineProperty(redirected, "url", {
+      value: "http://api.example.com/meta",
+    });
+    await expect(
+      discoverAgentAuth({
+        wwwAuthenticate: 'Bearer resource_metadata="https://api.example.com/m"',
+        fetch: mockFetch(() => redirected),
+      }),
+    ).rejects.toMatchObject({ code: "invalid_url" });
+  });
+
+  it("accepts a metadata response redirected to another https url", async () => {
+    const fetchMock = mockFetch((url) => {
+      if (url !== "https://api.example.com/meta") return routes(url);
+      const redirected = jsonResponse(prm);
+      Object.defineProperty(redirected, "url", {
+        value: "https://cdn.example.com/meta",
+      });
+      return redirected;
+    });
+    const result = await discoverAgentAuth({
+      wwwAuthenticate:
+        'Bearer resource_metadata="https://api.example.com/meta"',
+      fetch: fetchMock,
+    });
+    expect(result.resource).toBe(prm.resource);
+  });
+
   it("rejects insecure metadata urls", async () => {
     await expect(
       discoverAgentAuth({

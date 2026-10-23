@@ -96,6 +96,7 @@ export const fetchJson = async <T>(
     method: "GET",
     headers: { Accept: "application/json" },
   });
+  if (response.url) assertSecureUrl(response.url, label);
   if (!response.ok) {
     throw await toOAuthError(response, label);
   }
