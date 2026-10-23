@@ -1,6 +1,40 @@
 # Changelog
 
 
+## 0.32.1...0.32.2
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.32.1...0.32.2)
+
+### 🏡 Chore
+
+- **deps:** Update dependency jsdom to v30.1.3 ([2a71909](https://github.com/kinde-oss/js-utils/commit/2a71909))
+- **deps:** Update pnpm to v12.14.0 ([d9e9faf](https://github.com/kinde-oss/js-utils/commit/d9e9faf))
+- **deps:** Update pnpm to v12 ([e8f9c59](https://github.com/kinde-oss/js-utils/commit/e8f9c59))
+- **deps:** Update dependency vite-plugin-dts to v5.1.2 ([8e67396](https://github.com/kinde-oss/js-utils/commit/8e67396))
+- **deps-dev:** Bump vite ([fee9fa1](https://github.com/kinde-oss/js-utils/commit/fee9fa1))
+- **deps:** Update pnpm to v11.28.5 ([a5fb4f4](https://github.com/kinde-oss/js-utils/commit/a5fb4f4))
+- **deps:** Update dependency jsdom to v30.1.2 ([341cb78](https://github.com/kinde-oss/js-utils/commit/341cb78))
+- **deps:** Update dependency globals to v17.13.0 ([619a607](https://github.com/kinde-oss/js-utils/commit/619a607))
+- **deps:** Update dependency eslint to v10.12.0 ([e61a140](https://github.com/kinde-oss/js-utils/commit/e61a140))
+- **deps:** Update dependency @vitejs/plugin-react to v6.1.2 ([5ac7b62](https://github.com/kinde-oss/js-utils/commit/5ac7b62))
+- **deps:** Update dependency @types/node to v24.19.2 ([9fc2b5b](https://github.com/kinde-oss/js-utils/commit/9fc2b5b))
+- **deps:** Update dependency @types/chrome to ^0.3.0 ([d12234d](https://github.com/kinde-oss/js-utils/commit/d12234d))
+- **deps:** Update codecov/codecov-action action to v7.1.1 ([7725c17](https://github.com/kinde-oss/js-utils/commit/7725c17))
+- **deps:** Update dependency prettier to v3.9.10 ([1d74ca7](https://github.com/kinde-oss/js-utils/commit/1d74ca7))
+- **deps:** Update dependency @kinde/jwt-decoder to v0.2.6 ([bb51a3b](https://github.com/kinde-oss/js-utils/commit/bb51a3b))
+- **deps:** Update dependency typescript-eslint to v8.71.2 ([786cecb](https://github.com/kinde-oss/js-utils/commit/786cecb))
+- **deps:** Update dependency typescript-eslint to v8.71.1 ([3fda48f](https://github.com/kinde-oss/js-utils/commit/3fda48f))
+- **deps:** Bump source-map-js ([58789eb](https://github.com/kinde-oss/js-utils/commit/58789eb))
+- **deps:** Update dependency typescript-eslint to v8.71.0 ([20f602e](https://github.com/kinde-oss/js-utils/commit/20f602e))
+- **deps:** Bump undici in the npm_and_yarn group across 1 directory ([1ad388c](https://github.com/kinde-oss/js-utils/commit/1ad388c))
+- **deps:** Update dependency typescript-eslint to v8.70.1 ([422cb4a](https://github.com/kinde-oss/js-utils/commit/422cb4a))
+- **deps:** Update dependency typescript-eslint to v8.70.0 ([d462b5a](https://github.com/kinde-oss/js-utils/commit/d462b5a))
+
+### ❤️ Contributors
+
+- Koosha Owji <koosha.owji@gmail.com>
+- Yuri Avdijevski ([@dtoxvanilla1991](https://github.com/dtoxvanilla1991))
+
 ## 0.32.0...0.32.1
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.32.0...0.32.1)
