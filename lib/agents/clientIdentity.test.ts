@@ -58,6 +58,7 @@ describe("resolveClientIdentity", () => {
     expect(identity).toEqual({ method: "dcr", clientId: "dcr-1" });
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(serverMetadata.registration_endpoint);
+    expect(init.redirect).toBe("error");
     const body = JSON.parse(init.body as string);
     expect(body.token_endpoint_auth_method).toBe("none");
     expect(body.scope).toBeUndefined();

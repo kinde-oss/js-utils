@@ -29,6 +29,7 @@ describe("exchangeCode", () => {
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(tokenEndpoint);
+    expect(init.redirect).toBe("error");
     const body = new URLSearchParams(init.body as string);
     expect(Object.fromEntries(body)).toEqual({
       grant_type: "authorization_code",
@@ -109,6 +110,7 @@ describe("refreshAccessToken", () => {
       refreshToken: "rt1",
       fetch: fetchMock,
     });
+    expect(fetchMock.mock.calls[0][1].redirect).toBe("error");
     const body = new URLSearchParams(fetchMock.mock.calls[0][1].body as string);
     expect(body.get("grant_type")).toBe("refresh_token");
     expect(body.get("refresh_token")).toBe("rt1");
@@ -149,6 +151,7 @@ describe("revokeToken", () => {
       tokenTypeHint: "refresh_token",
       fetch: fetchMock,
     });
+    expect(fetchMock.mock.calls[0][1].redirect).toBe("error");
     const body = new URLSearchParams(fetchMock.mock.calls[0][1].body as string);
     expect(Object.fromEntries(body)).toEqual({
       token: "rt1",

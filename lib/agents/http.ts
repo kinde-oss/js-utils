@@ -113,6 +113,7 @@ export const postForm = async (
   }
   return fetchImpl(url, {
     method: "POST",
+    redirect: "error",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",

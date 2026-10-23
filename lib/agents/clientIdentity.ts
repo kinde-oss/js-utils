@@ -46,6 +46,7 @@ export const registerClient = async (
 
   const response = await resolveFetch(options.fetch)(registrationEndpoint, {
     method: "POST",
+    redirect: "error",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
   });
