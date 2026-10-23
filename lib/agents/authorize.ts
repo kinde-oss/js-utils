@@ -1,5 +1,10 @@
 import { AgentAuthError } from "./errors";
-import { assertNoOpenId, assertSecureUrl, normalizeScope } from "./http";
+import {
+  assertNoOpenId,
+  assertSecureUrl,
+  normalizeScope,
+  parseUrl,
+} from "./http";
 import { generatePkcePair, generateState } from "./pkce";
 import type {
   AuthorizationRequest,
@@ -51,4 +56,49 @@ export const buildAuthorizationUrl = async (
   url.searchParams.set("resource", resource);
 
   return { url, state, codeVerifier, codeChallenge };
+};
+
+export interface ValidateAuthorizationResponseOptions {
+  callbackUrl: string | URL;
+  expectedState: string;
+  authorizationServer: Pick<
+    AuthorizationServerMetadata,
+    "issuer" | "authorization_response_iss_parameter_supported"
+  >;
+}
+
+export const validateAuthorizationResponse = (
+  options: ValidateAuthorizationResponseOptions,
+): { code: string } => {
+  const callbackUrl =
+    typeof options.callbackUrl === "string"
+      ? parseUrl(options.callbackUrl, "callbackUrl")
+      : options.callbackUrl;
+  const params = callbackUrl.searchParams;
+  const { issuer, authorization_response_iss_parameter_supported } =
+    options.authorizationServer;
+
+  if (params.get("state") !== options.expectedState) {
+    throw new AgentAuthError("state_mismatch", "state does not match");
+  }
+
+  const iss = params.get("iss");
+  if (iss !== null || authorization_response_iss_parameter_supported) {
+    if (iss !== issuer) {
+      throw new AgentAuthError("issuer_mismatch", "iss does not match");
+    }
+  }
+
+  const error = params.get("error");
+  if (error) {
+    throw new AgentAuthError(
+      error,
+      params.get("error_description") ?? undefined,
+    );
+  }
+
+  const code = params.get("code");
+  if (!code) throw new AgentAuthError("invalid_response", "Missing code");
+
+  return { code };
 };

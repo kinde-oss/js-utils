@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildAuthorizationUrl } from "./authorize";
+import {
+  buildAuthorizationUrl,
+  validateAuthorizationResponse,
+} from "./authorize";
 import { base64UrlEncode } from "../utils/base64UrlEncode";
 import { serverMetadata } from "./testUtils";
 
@@ -77,5 +80,103 @@ describe("buildAuthorizationUrl", () => {
         },
       }),
     ).rejects.toMatchObject({ code: "pkce_unsupported" });
+  });
+});
+
+describe("validateAuthorizationResponse", () => {
+  const as = {
+    issuer: "https://auth.example.com",
+    authorization_response_iss_parameter_supported: true,
+  };
+  const cb = "http://127.0.0.1/cb";
+
+  it("returns the code when state and iss match", () => {
+    expect(
+      validateAuthorizationResponse({
+        callbackUrl: `${cb}?code=abc&state=s1&iss=https%3A%2F%2Fauth.example.com`,
+        expectedState: "s1",
+        authorizationServer: as,
+      }),
+    ).toEqual({ code: "abc" });
+  });
+
+  it("accepts a URL object", () => {
+    expect(
+      validateAuthorizationResponse({
+        callbackUrl: new URL(`${cb}?code=abc&state=s1`),
+        expectedState: "s1",
+        authorizationServer: { issuer: as.issuer },
+      }),
+    ).toEqual({ code: "abc" });
+  });
+
+  it("rejects a response from another issuer", () => {
+    expect(() =>
+      validateAuthorizationResponse({
+        callbackUrl: `${cb}?code=abc&state=s1&iss=https%3A%2F%2Fevil.example.com`,
+        expectedState: "s1",
+        authorizationServer: as,
+      }),
+    ).toThrow(/issuer_mismatch/);
+  });
+
+  it("rejects a foreign iss even when the server does not advertise it", () => {
+    expect(() =>
+      validateAuthorizationResponse({
+        callbackUrl: `${cb}?code=abc&state=s1&iss=https%3A%2F%2Fevil.example.com`,
+        expectedState: "s1",
+        authorizationServer: { issuer: as.issuer },
+      }),
+    ).toThrow(/issuer_mismatch/);
+  });
+
+  it("requires iss when the server advertises it", () => {
+    expect(() =>
+      validateAuthorizationResponse({
+        callbackUrl: `${cb}?code=abc&state=s1`,
+        expectedState: "s1",
+        authorizationServer: as,
+      }),
+    ).toThrow(/issuer_mismatch/);
+  });
+
+  it("rejects a state mismatch", () => {
+    expect(() =>
+      validateAuthorizationResponse({
+        callbackUrl: `${cb}?code=abc&state=other`,
+        expectedState: "s1",
+        authorizationServer: { issuer: as.issuer },
+      }),
+    ).toThrow(/state_mismatch/);
+  });
+
+  it("rejects a missing state", () => {
+    expect(() =>
+      validateAuthorizationResponse({
+        callbackUrl: `${cb}?code=abc`,
+        expectedState: "s1",
+        authorizationServer: { issuer: as.issuer },
+      }),
+    ).toThrow(/state_mismatch/);
+  });
+
+  it("surfaces authorization errors", () => {
+    expect(() =>
+      validateAuthorizationResponse({
+        callbackUrl: `${cb}?error=access_denied&error_description=no&state=s1`,
+        expectedState: "s1",
+        authorizationServer: { issuer: as.issuer },
+      }),
+    ).toThrow(/access_denied/);
+  });
+
+  it("requires a code", () => {
+    expect(() =>
+      validateAuthorizationResponse({
+        callbackUrl: `${cb}?state=s1`,
+        expectedState: "s1",
+        authorizationServer: { issuer: as.issuer },
+      }),
+    ).toThrow(/invalid_response/);
   });
 });

@@ -11,6 +11,7 @@ export type AgentAuthErrorCode =
   | "no_client_identity"
   | "invalid_client_metadata"
   | "openid_scope_not_allowed"
+  | "state_mismatch"
   | "pkce_unsupported"
   | "crypto_unavailable"
   | "no_revocation_endpoint"

@@ -9,8 +9,14 @@ export type { ResolveClientIdentityOptions } from "./clientIdentity";
 
 export { buildClientMetadataDocument } from "./cimd";
 
-export { buildAuthorizationUrl } from "./authorize";
-export type { BuildAuthorizationUrlOptions } from "./authorize";
+export {
+  buildAuthorizationUrl,
+  validateAuthorizationResponse,
+} from "./authorize";
+export type {
+  BuildAuthorizationUrlOptions,
+  ValidateAuthorizationResponseOptions,
+} from "./authorize";
 
 export { exchangeCode, refreshAccessToken, revokeToken } from "./token";
 export type {
