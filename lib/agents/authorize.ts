@@ -24,10 +24,10 @@ export const buildAuthorizationUrl = async (
   const { authorizationServer, clientId, redirectUri, resource } = options;
 
   const supportedMethods = authorizationServer.code_challenge_methods_supported;
-  if (supportedMethods && !supportedMethods.includes("S256")) {
+  if (!supportedMethods?.includes("S256")) {
     throw new AgentAuthError(
       "pkce_unsupported",
-      "Authorization server does not support S256 PKCE",
+      "Authorization server does not advertise S256 PKCE support",
     );
   }
 

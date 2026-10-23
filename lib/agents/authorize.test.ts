@@ -53,6 +53,18 @@ describe("buildAuthorizationUrl", () => {
     ).rejects.toMatchObject({ code: "openid_scope_not_allowed" });
   });
 
+  it("refuses when the server does not advertise PKCE", async () => {
+    await expect(
+      buildAuthorizationUrl({
+        authorizationServer: {
+          authorization_endpoint: "https://a.example.com/auth",
+        },
+        clientId: "c",
+        redirectUri: "http://127.0.0.1/cb",
+      }),
+    ).rejects.toThrow(/pkce_unsupported/);
+  });
+
   it("requires S256 support when advertised", async () => {
     await expect(
       buildAuthorizationUrl({
