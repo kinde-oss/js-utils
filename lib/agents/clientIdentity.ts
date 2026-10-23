@@ -4,6 +4,7 @@ import {
   assertNoOpenId,
   assertSecureUrl,
   normalizeScope,
+  postJson,
   readJson,
   resolveFetch,
   toOAuthError,
@@ -44,12 +45,11 @@ export const registerClient = async (
     ...(request.logoUri && { logo_uri: request.logoUri }),
   };
 
-  const response = await resolveFetch(options.fetch)(registrationEndpoint, {
-    method: "POST",
-    redirect: "error",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const response = await postJson(
+    resolveFetch(options.fetch),
+    registrationEndpoint,
+    payload,
+  );
 
   if (!response.ok) {
     throw await toOAuthError(response, "Dynamic client registration");

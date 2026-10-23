@@ -121,3 +121,15 @@ export const postForm = async (
     body: body.toString(),
   });
 };
+
+export const postJson = async (
+  fetchImpl: FetchLike,
+  url: string,
+  body: unknown,
+): Promise<Response> =>
+  fetchImpl(url, {
+    method: "POST",
+    redirect: "error",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(body),
+  });
