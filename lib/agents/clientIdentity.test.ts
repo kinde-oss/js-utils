@@ -7,7 +7,10 @@ const registration = {
   redirectUris: ["https://app.example.com/callback"],
 };
 const cimdClientId = "https://app.example.com/client.json";
-const preRegistered = { clientId: "pre-123" };
+const preRegistered = {
+  issuer: serverMetadata.issuer,
+  clientId: "pre-123",
+};
 
 const dcrFetch = () =>
   mockFetch(() => jsonResponse({ client_id: "dcr-1" }, { status: 201 }));
@@ -33,7 +36,7 @@ describe("resolveClientIdentity", () => {
         client_id_metadata_document_supported: false,
       },
       cimdClientId,
-      preRegistered: { clientId: "pre-123", clientSecret: "s" },
+      preRegistered: { ...preRegistered, clientSecret: "s" },
       registration,
       fetch: dcrFetch(),
     });
@@ -41,6 +44,56 @@ describe("resolveClientIdentity", () => {
       method: "preregistered",
       clientId: "pre-123",
       clientSecret: "s",
+    });
+  });
+
+  it("does not use pre-registered credentials issued for another authorization server", async () => {
+    const fetchMock = dcrFetch();
+    const identity = await resolveClientIdentity({
+      authorizationServer: {
+        ...serverMetadata,
+        client_id_metadata_document_supported: false,
+      },
+      preRegistered: {
+        issuer: "https://other.example.com",
+        clientId: "pre-123",
+        clientSecret: "s",
+      },
+      registration,
+      fetch: fetchMock,
+    });
+    expect(identity).toEqual({ method: "dcr", clientId: "dcr-1" });
+    expect(JSON.stringify(identity)).not.toContain("pre-123");
+  });
+
+  it("fails instead of leaking credentials when no other identity is available", async () => {
+    await expect(
+      resolveClientIdentity({
+        authorizationServer: {
+          ...serverMetadata,
+          client_id_metadata_document_supported: false,
+          registration_endpoint: undefined,
+        },
+        preRegistered: {
+          issuer: "https://other.example.com",
+          clientId: "pre-123",
+          clientSecret: "s",
+        },
+      }),
+    ).rejects.toMatchObject({ code: "no_client_identity" });
+  });
+
+  it("matches the pre-registered issuer ignoring a trailing slash", async () => {
+    const identity = await resolveClientIdentity({
+      authorizationServer: {
+        ...serverMetadata,
+        client_id_metadata_document_supported: false,
+      },
+      preRegistered: { ...preRegistered, issuer: `${serverMetadata.issuer}/` },
+    });
+    expect(identity).toMatchObject({
+      method: "preregistered",
+      clientId: "pre-123",
     });
   });
 

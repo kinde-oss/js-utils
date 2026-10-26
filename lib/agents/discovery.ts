@@ -5,6 +5,7 @@ import {
   normalizeScope,
   resolveFetch,
   stripOpenId,
+  stripTrailingSlash,
 } from "./http";
 import type {
   AgentDiscovery,
@@ -13,12 +14,6 @@ import type {
   FetchOptions,
   ProtectedResourceMetadata,
 } from "./types";
-
-const stripTrailingSlash = (value: string): string => {
-  let end = value.length;
-  while (end > 0 && value[end - 1] === "/") end--;
-  return value.slice(0, end);
-};
 
 const isSpace = (char: string): boolean =>
   char === " " || char === "\t" || char === "\r" || char === "\n";

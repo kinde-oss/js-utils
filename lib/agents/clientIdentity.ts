@@ -7,6 +7,7 @@ import {
   postJson,
   readJson,
   resolveFetch,
+  stripTrailingSlash,
   toOAuthError,
 } from "./http";
 import type {
@@ -103,7 +104,11 @@ export const resolveClientIdentity = async (
     return { method: "cimd", clientId: cimdClientId };
   }
 
-  if (preRegistered?.clientId) {
+  if (
+    preRegistered?.clientId &&
+    stripTrailingSlash(preRegistered.issuer) ===
+      stripTrailingSlash(authorizationServer.issuer)
+  ) {
     return {
       method: "preregistered",
       clientId: preRegistered.clientId,
@@ -123,6 +128,6 @@ export const resolveClientIdentity = async (
 
   throw new AgentAuthError(
     "no_client_identity",
-    "No usable client identity: CIMD is unsupported or not configured, no pre-registered client was provided, and dynamic registration is unavailable",
+    "No usable client identity: CIMD is unsupported or not configured, no pre-registered client matches this authorization server, and dynamic registration is unavailable",
   );
 };

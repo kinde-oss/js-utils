@@ -61,6 +61,7 @@ export interface ClientIdentity {
 }
 
 export interface PreRegisteredClient {
+  issuer: string;
   clientId: string;
   clientSecret?: string;
 }

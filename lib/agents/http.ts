@@ -11,6 +11,12 @@ export const resolveFetch = (custom?: FetchLike): FetchLike => {
   return impl;
 };
 
+export const stripTrailingSlash = (value: string): string => {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === "/") end--;
+  return value.slice(0, end);
+};
+
 export const parseUrl = (value: string, label: string): URL => {
   try {
     return new URL(value);
