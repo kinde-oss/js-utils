@@ -220,7 +220,10 @@ describe("discoverAgentAuth", () => {
         resourceUrl: prm.resource,
         fetch: fetchMock,
       }),
-    ).rejects.toMatchObject({ status: 404 });
+    ).rejects.toMatchObject({
+      code: "metadata_unavailable",
+      cause: { status: 404 },
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -299,7 +302,10 @@ describe("discoverAgentAuth", () => {
         resourceUrl: prm.resource,
         fetch: mockFetch(() => redirected),
       }),
-    ).rejects.toMatchObject({ code: "invalid_url" });
+    ).rejects.toMatchObject({
+      code: "metadata_unavailable",
+      cause: { code: "invalid_url" },
+    });
   });
 
   it("accepts a metadata response redirected to another https url", async () => {
@@ -342,6 +348,30 @@ describe("discoverAgentAuth", () => {
         resourceUrl: prm.resource,
         fetch: mockFetch(routes),
       }),
-    ).rejects.toMatchObject({ code: "invalid_url" });
+    ).rejects.toMatchObject({
+      code: "metadata_unavailable",
+      cause: { code: "invalid_url" },
+    });
+  });
+
+  it("keeps every failure when all metadata candidates fail", async () => {
+    const fetchMock = mockFetch((url) =>
+      url === "https://api.example.com/.well-known/oauth-protected-resource/mcp"
+        ? new Response("boom", { status: 500 })
+        : new Response("nope", { status: 404 }),
+    );
+    const error = await discoverAgentAuth({
+      wwwAuthenticate: "Bearer",
+      resourceUrl: prm.resource,
+      fetch: fetchMock,
+    }).catch((e) => e);
+
+    expect(error).toBeInstanceOf(AgentAuthError);
+    expect(error.code).toBe("metadata_unavailable");
+    expect(error.message).toContain(prm.resource);
+    expect(error.cause).toBeInstanceOf(AggregateError);
+    expect(error.cause.errors.map((e: AgentAuthError) => e.status)).toEqual([
+      500, 404,
+    ]);
   });
 });

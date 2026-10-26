@@ -218,7 +218,7 @@ export const discoverAgentAuth = async (
 
   let metadataUrl = candidates[0];
   let resourceMetadata: ProtectedResourceMetadata | undefined;
-  let lastError: unknown;
+  const failures: unknown[] = [];
   for (const candidate of candidates) {
     try {
       resourceMetadata = await fetchProtectedResourceMetadata(
@@ -228,11 +228,24 @@ export const discoverAgentAuth = async (
       metadataUrl = candidate;
       break;
     } catch (error) {
-      lastError = error;
+      failures.push(error);
     }
   }
   if (!resourceMetadata) {
-    throw lastError;
+    throw new AgentAuthError(
+      "metadata_unavailable",
+      `Unable to load protected resource metadata for ${resourceUrl}`,
+      undefined,
+      {
+        cause:
+          failures.length === 1
+            ? failures[0]
+            : new AggregateError(
+                failures,
+                "Every protected resource metadata candidate failed",
+              ),
+      },
+    );
   }
 
   if (
