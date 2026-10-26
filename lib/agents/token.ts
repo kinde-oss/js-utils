@@ -46,7 +46,7 @@ const parseTokenResponse = async (
     ...(refreshToken && { refreshToken }),
     ...(expiresIn !== undefined && {
       expiresIn,
-      expiresAt: Date.now() + expiresIn * 1000,
+      expiresAt: Math.floor(Date.now() / 1000) + expiresIn,
     }),
     ...(data.scope && { scope: data.scope }),
   };

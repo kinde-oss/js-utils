@@ -16,7 +16,7 @@ describe("exchangeCode", () => {
         id_token: "ignored",
       }),
     );
-    const before = Date.now();
+    const before = Math.floor(Date.now() / 1000);
     const tokens = await exchangeCode({
       tokenEndpoint,
       clientId: "c1",
@@ -45,7 +45,7 @@ describe("exchangeCode", () => {
       expiresIn: 60,
       scope: "read",
     });
-    expect(tokens.expiresAt).toBeGreaterThanOrEqual(before + 60000);
+    expect(tokens.expiresAt).toBeGreaterThanOrEqual(before + 60);
     expect(tokens).not.toHaveProperty("idToken");
   });
 
