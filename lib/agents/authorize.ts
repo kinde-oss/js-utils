@@ -54,6 +54,8 @@ export const buildAuthorizationUrl = async (
   url.searchParams.set("code_challenge_method", "S256");
   if (scopes.length) url.searchParams.set("scope", scopes.join(" "));
   url.searchParams.set("resource", resource);
+  url.searchParams.delete("nonce");
+  assertNoOpenId(normalizeScope(url.searchParams.get("scope") ?? undefined));
 
   return { url, state, codeVerifier, codeChallenge };
 };

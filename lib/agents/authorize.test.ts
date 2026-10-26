@@ -70,6 +70,58 @@ describe("buildAuthorizationUrl", () => {
     ).rejects.toThrow(/pkce_unsupported/);
   });
 
+  it("strips a nonce preconfigured on the authorization endpoint", async () => {
+    const result = await buildAuthorizationUrl({
+      ...options,
+      authorizationServer: {
+        ...serverMetadata,
+        authorization_endpoint:
+          "https://auth.example.com/authorize?nonce=preconfigured&audience=api",
+      },
+      scope: "read",
+    });
+    expect(result.url.searchParams.has("nonce")).toBe(false);
+    expect(result.url.searchParams.get("audience")).toBe("api");
+  });
+
+  it("rejects an openid scope preconfigured on the authorization endpoint", async () => {
+    await expect(
+      buildAuthorizationUrl({
+        ...options,
+        authorizationServer: {
+          ...serverMetadata,
+          authorization_endpoint:
+            "https://auth.example.com/authorize?scope=openid&nonce=preconfigured",
+        },
+      }),
+    ).rejects.toMatchObject({ code: "openid_scope_not_allowed" });
+    await expect(
+      buildAuthorizationUrl({
+        ...options,
+        authorizationServer: {
+          ...serverMetadata,
+          authorization_endpoint:
+            "https://auth.example.com/authorize?scope=read+openid",
+        },
+      }),
+    ).rejects.toMatchObject({ code: "openid_scope_not_allowed" });
+  });
+
+  it("overrides a preconfigured scope when scopes are provided", async () => {
+    const result = await buildAuthorizationUrl({
+      ...options,
+      authorizationServer: {
+        ...serverMetadata,
+        authorization_endpoint:
+          "https://auth.example.com/authorize?scope=openid&nonce=preconfigured",
+      },
+      scope: "read",
+    });
+    expect(result.url.searchParams.get("scope")).toBe("read");
+    expect(result.url.searchParams.has("nonce")).toBe(false);
+    expect(result.url.toString()).not.toContain("openid");
+  });
+
   it("requires S256 support when advertised", async () => {
     await expect(
       buildAuthorizationUrl({
