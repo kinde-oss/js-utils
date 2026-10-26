@@ -1,7 +1,13 @@
 import { fetchAuthorizationServerMetadata } from "../discovery";
 import { AgentAuthError } from "../errors";
-import type { ProtectedResourceMetadata } from "../types";
+import type {
+  AuthorizationServerMetadata,
+  ProtectedResourceMetadata,
+} from "../types";
 import type { ResourceServerConfig } from "./config";
+
+const METADATA_MAX_AGE_SECONDS = 3600;
+const METADATA_CACHE_CONTROL = `public, max-age=${METADATA_MAX_AGE_SECONDS}`;
 
 const jsonResponse = (
   body: unknown,
@@ -22,18 +28,36 @@ export const createProtectedResourceMetadataHandler = (
     bearer_methods_supported: ["header"],
     ...(config.scopes.length && { scopes_supported: config.scopes }),
   };
-  return () => jsonResponse(metadata);
+  return () =>
+    jsonResponse(metadata, 200, { "Cache-Control": METADATA_CACHE_CONTROL });
 };
 
-export const createAuthorizationServerMirrorHandler =
-  (config: ResourceServerConfig): (() => Promise<Response>) =>
-  async () => {
-    try {
-      return jsonResponse(
-        await fetchAuthorizationServerMetadata(config.issuer, {
+export const createAuthorizationServerMirrorHandler = (
+  config: ResourceServerConfig,
+): (() => Promise<Response>) => {
+  let cached:
+    | { metadata: Promise<AuthorizationServerMetadata>; expiresAt: number }
+    | undefined;
+
+  return async () => {
+    let entry = cached;
+    if (!entry || entry.expiresAt <= Date.now()) {
+      const created = {
+        metadata: fetchAuthorizationServerMetadata(config.issuer, {
           fetch: config.fetch,
         }),
-      );
+        expiresAt: Date.now() + METADATA_MAX_AGE_SECONDS * 1000,
+      };
+      created.metadata.catch(() => {
+        if (cached === created) cached = undefined;
+      });
+      cached = entry = created;
+    }
+
+    try {
+      return jsonResponse(await entry.metadata, 200, {
+        "Cache-Control": METADATA_CACHE_CONTROL,
+      });
     } catch (error) {
       return jsonResponse(
         {
@@ -45,6 +69,7 @@ export const createAuthorizationServerMirrorHandler =
       );
     }
   };
+};
 
 export interface UnauthorizedOptions {
   error?: string;

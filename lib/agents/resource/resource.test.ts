@@ -88,7 +88,9 @@ describe("routes", () => {
     const handler = createProtectedResourceMetadataHandler(
       introspectionConfig(),
     );
-    expect(await handler().json()).toEqual({
+    const response = handler();
+    expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
+    expect(await response.json()).toEqual({
       resource,
       authorization_servers: [issuer],
       bearer_methods_supported: ["header"],
@@ -101,6 +103,50 @@ describe("routes", () => {
       introspectionConfig(mockFetch(() => jsonResponse(serverMetadata))),
     );
     expect(await (await handler()).json()).toEqual(serverMetadata);
+  });
+
+  it("caches the mirrored metadata and sends Cache-Control", async () => {
+    const fetchMock = mockFetch(() => jsonResponse(serverMetadata));
+    const handler = createAuthorizationServerMirrorHandler(
+      introspectionConfig(fetchMock),
+    );
+    const responses = await Promise.all([handler(), handler()]);
+    await handler();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(responses[0].headers.get("cache-control")).toBe(
+      "public, max-age=3600",
+    );
+  });
+
+  it("refetches after the cache expires", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = mockFetch(() => jsonResponse(serverMetadata));
+      const handler = createAuthorizationServerMirrorHandler(
+        introspectionConfig(fetchMock),
+      );
+      await handler();
+      vi.advanceTimersByTime(3600 * 1000 + 1);
+      await handler();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not cache upstream failures", async () => {
+    let healthy = false;
+    const fetchMock = mockFetch(() =>
+      healthy
+        ? jsonResponse(serverMetadata)
+        : jsonResponse({}, { status: 500 }),
+    );
+    const handler = createAuthorizationServerMirrorHandler(
+      introspectionConfig(fetchMock),
+    );
+    expect((await handler()).status).toBe(502);
+    healthy = true;
+    expect((await handler()).status).toBe(200);
   });
 
   it("returns 502 when the upstream is unavailable", async () => {
