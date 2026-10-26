@@ -78,6 +78,18 @@ describe("resolveClientIdentity", () => {
 });
 
 describe("registerClient", () => {
+  it("rejects openid inside a multi-scope array entry", async () => {
+    const fetchMock = dcrFetch();
+    await expect(
+      registerClient(
+        serverMetadata.registration_endpoint,
+        { ...registration, scope: ["read openid"] },
+        { fetch: fetchMock },
+      ),
+    ).rejects.toMatchObject({ code: "openid_scope_not_allowed" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("rejects openid scope", async () => {
     await expect(
       registerClient(

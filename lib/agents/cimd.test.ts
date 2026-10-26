@@ -62,6 +62,9 @@ describe("buildClientMetadataDocument", () => {
       buildClientMetadataDocument({ ...base, scope: "openid read" }),
     ).toThrow(/openid/);
     expect(() =>
+      buildClientMetadataDocument({ ...base, scope: ["read openid"] }),
+    ).toThrow(/openid/);
+    expect(() =>
       buildClientMetadataDocument({
         ...base,
         tokenEndpointAuthMethod: "client_secret_post",

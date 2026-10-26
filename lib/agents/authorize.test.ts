@@ -41,6 +41,14 @@ describe("buildAuthorizationUrl", () => {
     expect(result.codeVerifier.length).toBeGreaterThanOrEqual(43);
   });
 
+  it("splits array entries on whitespace and dedupes", async () => {
+    const result = await buildAuthorizationUrl({
+      ...options,
+      scope: ["read write", " write  admin "],
+    });
+    expect(result.url.searchParams.get("scope")).toBe("read write admin");
+  });
+
   it("generates unique state and verifier per call", async () => {
     const a = await buildAuthorizationUrl(options);
     const b = await buildAuthorizationUrl(options);
@@ -54,6 +62,12 @@ describe("buildAuthorizationUrl", () => {
     ).rejects.toMatchObject({ code: "openid_scope_not_allowed" });
     await expect(
       buildAuthorizationUrl({ ...options, scope: ["openid"] }),
+    ).rejects.toMatchObject({ code: "openid_scope_not_allowed" });
+    await expect(
+      buildAuthorizationUrl({ ...options, scope: ["read openid"] }),
+    ).rejects.toMatchObject({ code: "openid_scope_not_allowed" });
+    await expect(
+      buildAuthorizationUrl({ ...options, scope: ["read", "write openid"] }),
     ).rejects.toMatchObject({ code: "openid_scope_not_allowed" });
   });
 

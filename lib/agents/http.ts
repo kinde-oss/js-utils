@@ -37,7 +37,9 @@ export const assertSecureUrl = (value: string, label: string): URL => {
 
 export const normalizeScope = (scope?: string | string[]): string[] => {
   if (!scope) return [];
-  const parts = Array.isArray(scope) ? scope : scope.split(/\s+/);
+  const parts = (Array.isArray(scope) ? scope : [scope]).flatMap((s) =>
+    s.split(/\s+/),
+  );
   return [...new Set(parts.map((s) => s.trim()).filter(Boolean))];
 };
 
