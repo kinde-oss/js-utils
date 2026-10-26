@@ -156,6 +156,21 @@ describe("routes", () => {
     expect((await handler()).status).toBe(502);
   });
 
+  it("returns 403 with the scope challenge for insufficient_scope", () => {
+    const response = createUnauthorizedResponse(introspectionConfig(), {
+      error: "insufficient_scope",
+      scope: "mcp:write",
+    });
+    expect(response.status).toBe(403);
+    expect(
+      parseWwwAuthenticate(response.headers.get("www-authenticate")),
+    ).toMatchObject({
+      error: "insufficient_scope",
+      scope: "mcp:write",
+      resourceMetadata: metadataUrl,
+    });
+  });
+
   it("builds a parseable 401 challenge", () => {
     const response = createUnauthorizedResponse(introspectionConfig(), {
       error: "invalid_token",

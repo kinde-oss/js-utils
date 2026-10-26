@@ -111,7 +111,7 @@ export const createUnauthorizedResponse = (
         error_description: options.errorDescription,
       }),
     },
-    401,
+    options.error === "insufficient_scope" ? 403 : 401,
     {
       "WWW-Authenticate": buildWwwAuthenticate(config, options),
       "Cache-Control": "no-store",
