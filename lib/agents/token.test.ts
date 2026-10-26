@@ -135,6 +135,51 @@ describe("refreshAccessToken", () => {
     expect(tokens.refreshToken).toBe("rt2");
   });
 
+  it("sends the normalized scope", async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ access_token: "at2" }));
+    await refreshAccessToken({
+      tokenEndpoint,
+      clientId: "c1",
+      resource: "https://api.example.com/mcp",
+      refreshToken: "rt1",
+      scope: " read  write read ",
+      fetch: fetchMock,
+    });
+    const body = new URLSearchParams(fetchMock.mock.calls[0][1].body as string);
+    expect(body.get("scope")).toBe("read write");
+  });
+
+  it("omits scope when none is given", async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ access_token: "at2" }));
+    await refreshAccessToken({
+      tokenEndpoint,
+      clientId: "c1",
+      resource: "https://api.example.com/mcp",
+      refreshToken: "rt1",
+      fetch: fetchMock,
+    });
+    const body = new URLSearchParams(fetchMock.mock.calls[0][1].body as string);
+    expect(body.has("scope")).toBe(false);
+  });
+
+  it.each(["openid", "read openid", "openid read write"])(
+    "refuses the openid scope %j without calling fetch",
+    async (scope) => {
+      const fetchMock = mockFetch(() => jsonResponse({ access_token: "at2" }));
+      await expect(
+        refreshAccessToken({
+          tokenEndpoint,
+          clientId: "c1",
+          resource: "https://api.example.com/mcp",
+          refreshToken: "rt1",
+          scope,
+          fetch: fetchMock,
+        }),
+      ).rejects.toMatchObject({ code: "openid_scope_not_allowed" });
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
   it("rejects insecure endpoints", async () => {
     await expect(
       refreshAccessToken({

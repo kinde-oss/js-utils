@@ -1,6 +1,8 @@
 import { AgentAuthError } from "./errors";
 import {
+  assertNoOpenId,
   assertSecureUrl,
+  normalizeScope,
   readJson,
   resolveFetch,
   postForm,
@@ -91,6 +93,8 @@ export const refreshAccessToken = async (
   options: RefreshAccessTokenOptions,
 ): Promise<TokenSet> => {
   assertSecureUrl(options.tokenEndpoint, "token_endpoint");
+  const scopes = normalizeScope(options.scope);
+  assertNoOpenId(scopes);
   const response = await postForm(
     resolveFetch(options.fetch),
     options.tokenEndpoint,
@@ -99,7 +103,7 @@ export const refreshAccessToken = async (
       client_id: options.clientId,
       client_secret: options.clientSecret,
       refresh_token: options.refreshToken,
-      scope: options.scope,
+      scope: scopes.length ? scopes.join(" ") : undefined,
       resource: options.resource,
     },
   );
