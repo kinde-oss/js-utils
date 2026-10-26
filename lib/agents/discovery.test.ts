@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { AgentAuthError } from "./errors";
-import { discoverAgentAuth, parseWwwAuthenticate } from "./discovery";
+import {
+  discoverAgentAuth,
+  parseWwwAuthenticate,
+  type DiscoverAgentAuthOptions,
+} from "./discovery";
 import { jsonResponse, mockFetch, serverMetadata } from "./testUtils";
 
 const prm = {
@@ -58,7 +62,11 @@ describe("discoverAgentAuth", () => {
           'Bearer resource_metadata="https://api.example.com/meta", scope="read openid"',
       },
     });
-    const result = await discoverAgentAuth({ response, fetch: fetchMock });
+    const result = await discoverAgentAuth({
+      response,
+      resourceUrl: prm.resource,
+      fetch: fetchMock,
+    });
     expect(result.resource).toBe(prm.resource);
     expect(result.authorizationServer.token_endpoint).toBe(
       serverMetadata.token_endpoint,
@@ -95,18 +103,38 @@ describe("discoverAgentAuth", () => {
     await expect(
       discoverAgentAuth({
         response: new Response(null, { status: 200 }),
+        resourceUrl: prm.resource,
         fetch: mockFetch(routes),
       }),
     ).rejects.toMatchObject({ code: "not_unauthorized" });
   });
 
-  it("requires some way to locate the metadata", async () => {
+  it("requires resourceUrl", async () => {
     await expect(
       discoverAgentAuth({
         wwwAuthenticate: "Bearer",
         fetch: mockFetch(routes),
+      } as unknown as DiscoverAgentAuthOptions),
+    ).rejects.toMatchObject({ code: "invalid_url" });
+  });
+
+  it("rejects a challenge whose metadata describes a different resource", async () => {
+    const response = new Response(null, {
+      status: 401,
+      headers: {
+        "WWW-Authenticate":
+          'Bearer resource_metadata="https://evil.example.com/meta"',
+      },
+    });
+    await expect(
+      discoverAgentAuth({
+        response,
+        resourceUrl: "https://api.example.com/mcp",
+        fetch: mockFetch(() =>
+          jsonResponse({ ...prm, resource: "https://victim.example.com" }),
+        ),
       }),
-    ).rejects.toMatchObject({ code: "missing_resource_metadata" });
+    ).rejects.toMatchObject({ code: "resource_mismatch" });
   });
 
   it("rejects resource mismatches", async () => {
@@ -143,6 +171,7 @@ describe("discoverAgentAuth", () => {
     await expect(
       discoverAgentAuth({
         wwwAuthenticate: 'Bearer resource_metadata="http://api.example.com/m"',
+        resourceUrl: prm.resource,
         fetch: mockFetch(routes),
       }),
     ).rejects.toBeInstanceOf(AgentAuthError);

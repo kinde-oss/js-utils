@@ -131,7 +131,7 @@ export const fetchAuthorizationServerMetadata = async (
 export interface DiscoverAgentAuthOptions extends FetchOptions {
   response?: Pick<Response, "status" | "headers">;
   wwwAuthenticate?: string | null;
-  resourceUrl?: string;
+  resourceUrl: string;
   preferredIssuer?: string;
 }
 
@@ -139,6 +139,13 @@ export const discoverAgentAuth = async (
   options: DiscoverAgentAuthOptions,
 ): Promise<AgentDiscovery> => {
   const { response, resourceUrl, preferredIssuer } = options;
+
+  if (!resourceUrl) {
+    throw new AgentAuthError(
+      "invalid_url",
+      "resourceUrl is required to validate the resource metadata",
+    );
+  }
 
   if (response && response.status !== 401) {
     throw new AgentAuthError(
@@ -152,16 +159,9 @@ export const discoverAgentAuth = async (
     options.wwwAuthenticate ?? response?.headers.get("www-authenticate");
   const challenge = parseWwwAuthenticate(header);
 
-  let metadataUrl = challenge?.resourceMetadata;
-  if (!metadataUrl) {
-    if (!resourceUrl) {
-      throw new AgentAuthError(
-        "missing_resource_metadata",
-        "No resource_metadata in the challenge and no resourceUrl to derive it from",
-      );
-    }
-    metadataUrl = buildWellKnownUrl(resourceUrl, "oauth-protected-resource");
-  }
+  const metadataUrl =
+    challenge?.resourceMetadata ??
+    buildWellKnownUrl(resourceUrl, "oauth-protected-resource");
 
   const resourceMetadata = await fetchProtectedResourceMetadata(
     metadataUrl,
@@ -169,9 +169,8 @@ export const discoverAgentAuth = async (
   );
 
   if (
-    resourceUrl &&
     stripTrailingSlash(resourceMetadata.resource) !==
-      stripTrailingSlash(resourceUrl)
+    stripTrailingSlash(resourceUrl)
   ) {
     throw new AgentAuthError(
       "resource_mismatch",
