@@ -1,4 +1,12 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { base64UrlEncode } from "../../utils/base64UrlEncode";
 import { parseWwwAuthenticate } from "../discovery";
 import { jsonResponse, mockFetch, serverMetadata } from "../testUtils";
@@ -11,6 +19,7 @@ import {
 } from "./routes";
 import {
   authenticateRequest,
+  clearJwksCache,
   hasPermission,
   verifyAccessToken,
 } from "./verify";
@@ -348,8 +357,88 @@ describe("local verification", () => {
     expect(config.fetch).toHaveBeenCalledTimes(1);
   });
 
+  beforeEach(() => {
+    clearJwksCache();
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("shares one JWKS fetch between concurrent requests", async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ keys: [jwk] }));
+    const config = createResourceServerConfig({
+      issuer,
+      resource,
+      verification: "local",
+      fetch: fetchMock,
+    });
+    const token = await sign(claims);
+    await Promise.all(
+      Array.from({ length: 20 }, () => verifyAccessToken(token, config)),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("shares the JWKS cache between configs for the same issuer", async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ keys: [jwk] }));
+    const token = await sign(claims);
+    for (let i = 0; i < 3; i++) {
+      await verifyAccessToken(
+        token,
+        createResourceServerConfig({
+          issuer,
+          resource,
+          verification: "local",
+          fetch: fetchMock,
+        }),
+      );
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("serves stale keys when a refetch fails after the TTL", async () => {
+    vi.useFakeTimers();
+    let healthy = true;
+    const fetchMock = mockFetch(() =>
+      healthy
+        ? jsonResponse({ keys: [jwk] })
+        : jsonResponse({}, { status: 503 }),
+    );
+    const config = createResourceServerConfig({
+      issuer,
+      resource,
+      verification: "local",
+      fetch: fetchMock,
+    });
+    const token = await sign({
+      ...claims,
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+    await verifyAccessToken(token, config);
+
+    healthy = false;
+    vi.advanceTimersByTime(11 * 60 * 1000);
+    await expect(verifyAccessToken(token, config)).resolves.toMatchObject({
+      subject: "kp_1",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await verifyAccessToken(token, config);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws when the first JWKS fetch fails", async () => {
+    const config = createResourceServerConfig({
+      issuer,
+      resource,
+      verification: "local",
+      fetch: mockFetch(() => jsonResponse({}, { status: 503 })),
+    });
+    await expect(
+      verifyAccessToken(await sign(claims), config),
+    ).rejects.toMatchObject({ status: 503 });
   });
 
   it("rejects tokens that are not yet valid", async () => {

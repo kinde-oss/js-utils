@@ -30,10 +30,19 @@ type SigningKey = JsonWebKey & { kid?: string };
 const JWKS_TTL_MS = 10 * 60 * 1000;
 const JWKS_REFETCH_COOLDOWN_MS = 60 * 1000;
 
-const jwksCache = new WeakMap<
-  ResourceServerConfig,
-  { keys: SigningKey[]; fetchedAt: number }
->();
+interface JwksEntry {
+  keys: SigningKey[];
+  fetchedAt: number;
+  retryAfter: number;
+}
+
+const jwksCache = new Map<string, JwksEntry>();
+const pendingJwksFetches = new Map<string, Promise<SigningKey[]>>();
+
+export const clearJwksCache = (): void => {
+  jwksCache.clear();
+  pendingJwksFetches.clear();
+};
 
 const invalidToken = (description: string): AgentAuthError =>
   new AgentAuthError("invalid_token", description, 401);
@@ -97,25 +106,53 @@ const validateClaims = (
   }
 };
 
+const loadSigningKeys = (
+  config: ResourceServerConfig,
+): Promise<SigningKey[]> => {
+  const { jwksUri } = config;
+  let pending = pendingJwksFetches.get(jwksUri);
+  if (!pending) {
+    pending = fetchJson<{ keys?: SigningKey[] }>(
+      resolveFetch(config.fetch),
+      jwksUri,
+      "JWKS request",
+    )
+      .then(({ keys }) => {
+        if (!Array.isArray(keys)) {
+          throw new AgentAuthError("invalid_response", "JWKS has no keys");
+        }
+        const now = Date.now();
+        jwksCache.set(jwksUri, {
+          keys,
+          fetchedAt: now,
+          retryAfter: now + JWKS_REFETCH_COOLDOWN_MS,
+        });
+        return keys;
+      })
+      .finally(() => pendingJwksFetches.delete(jwksUri));
+    pendingJwksFetches.set(jwksUri, pending);
+  }
+  return pending;
+};
+
 const findSigningKey = async (
   config: ResourceServerConfig,
   kid: unknown,
 ): Promise<SigningKey | undefined> => {
-  const cached = jwksCache.get(config);
-  const age = cached ? Date.now() - cached.fetchedAt : Infinity;
-  const hit =
-    cached && age < JWKS_TTL_MS
-      ? cached.keys.find((key) => key.kid === kid)
-      : undefined;
-  if (hit || age < JWKS_REFETCH_COOLDOWN_MS) return hit;
+  const entry = jwksCache.get(config.jwksUri);
+  const hit = entry?.keys.find((key) => key.kid === kid);
+  const now = Date.now();
+  const fresh = entry && now - entry.fetchedAt < JWKS_TTL_MS;
+  if (entry && (now < entry.retryAfter || (fresh && hit))) return hit;
 
-  const { keys } = await fetchJson<{ keys: SigningKey[] }>(
-    resolveFetch(config.fetch),
-    config.jwksUri,
-    "JWKS request",
-  );
-  jwksCache.set(config, { keys, fetchedAt: Date.now() });
-  return keys.find((key) => key.kid === kid);
+  try {
+    const keys = await loadSigningKeys(config);
+    return keys.find((key) => key.kid === kid);
+  } catch (error) {
+    if (!entry) throw error;
+    entry.retryAfter = Date.now() + JWKS_REFETCH_COOLDOWN_MS;
+    return hit;
+  }
 };
 
 const verifyLocally = async (
