@@ -338,6 +338,34 @@ describe("local verification", () => {
     ).rejects.toMatchObject({ code: "invalid_token" });
   });
 
+  it("returns invalid_token for a non-base64url signature", async () => {
+    const [head, body] = (await sign(claims)).split(".");
+    const config = localConfig();
+    await expect(
+      verifyAccessToken(`${head}.${body}.!!!!`, config),
+    ).rejects.toMatchObject({ code: "invalid_token" });
+    const result = await authenticateRequest(
+      bearer(`${head}.${body}.!!!!`),
+      config,
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.response.status).toBe(401);
+  });
+
+  it("returns invalid_token when the signing key cannot be imported", async () => {
+    const config = createResourceServerConfig({
+      issuer,
+      resource,
+      verification: "local",
+      fetch: mockFetch(() =>
+        jsonResponse({ keys: [{ kty: "oct", k: "AAAA", kid: "k1" }] }),
+      ),
+    });
+    await expect(
+      verifyAccessToken(await sign(claims), config),
+    ).rejects.toMatchObject({ code: "invalid_token" });
+  });
+
   it("rejects unsupported signing algorithms", async () => {
     const token = `${base64UrlEncode(JSON.stringify({ alg: "HS256" }))}.e30.sig`;
     await expect(verifyAccessToken(token, localConfig())).rejects.toMatchObject(

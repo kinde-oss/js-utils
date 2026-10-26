@@ -133,19 +133,24 @@ const verifyLocally = async (
   const jwk = await findSigningKey(config, header.kid);
   if (!jwk) throw invalidToken("Unknown signing key");
 
-  const key = await globalThis.crypto.subtle.importKey(
-    "jwk",
-    jwk,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["verify"],
-  );
-  const valid = await globalThis.crypto.subtle.verify(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    decodeBase64UrlBytes(parts[2]),
-    new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
-  );
+  let valid: boolean;
+  try {
+    const key = await globalThis.crypto.subtle.importKey(
+      "jwk",
+      jwk,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["verify"],
+    );
+    valid = await globalThis.crypto.subtle.verify(
+      "RSASSA-PKCS1-v1_5",
+      key,
+      decodeBase64UrlBytes(parts[2]),
+      new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
+    );
+  } catch {
+    throw invalidToken("Invalid token signature");
+  }
   if (!valid) throw invalidToken("Invalid token signature");
 
   const claims = parseJson(parts[1]);
