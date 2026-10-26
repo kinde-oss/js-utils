@@ -85,8 +85,14 @@ const validateClaims = (
   ) {
     throw invalidToken("Token issuer does not match");
   }
-  const audiences = typeof aud === "string" ? [aud] : toStringArray(aud);
-  if (!config.audience.some((expected) => audiences.includes(expected))) {
+  const audiences = (typeof aud === "string" ? [aud] : toStringArray(aud)).map(
+    stripTrailingSlash,
+  );
+  if (
+    !config.audience.some((expected) =>
+      audiences.includes(stripTrailingSlash(expected)),
+    )
+  ) {
     throw invalidToken("Token audience does not match this resource");
   }
 };

@@ -62,7 +62,7 @@ export const createResourceServerConfig = (
     issuer,
     resource,
     scopes: stripOpenId(normalizeScope(options.scopes)),
-    audience: audience.length ? audience : [resource],
+    audience: audience.length ? audience : [options.resource],
     verification,
     clientId: options.clientId,
     clientSecret: options.clientSecret,

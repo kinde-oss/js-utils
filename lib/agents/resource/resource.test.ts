@@ -223,6 +223,27 @@ describe("introspection verification", () => {
     });
   });
 
+  it.each([
+    ["trailing slash in aud", `${resource}/`, resource],
+    ["trailing slash in resource", resource, `${resource}/`],
+    [
+      "mixed-case host used in both",
+      "https://MCP.example.com/mcp",
+      "https://MCP.example.com/mcp",
+    ],
+  ])("matches the audience with %s", async (_name, aud, configuredResource) => {
+    const config = createResourceServerConfig({
+      issuer,
+      resource: configuredResource,
+      clientId: "srv",
+      clientSecret: "secret",
+      fetch: mockFetch(() => jsonResponse({ ...activeClaims, aud: [aud] })),
+    });
+    await expect(verifyAccessToken("tok", config)).resolves.toMatchObject({
+      subject: "kp_1",
+    });
+  });
+
   it("authenticates requests and issues challenges", async () => {
     const config = introspectionConfig(
       mockFetch(() => jsonResponse(activeClaims)),
