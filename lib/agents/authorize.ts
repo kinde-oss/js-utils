@@ -9,6 +9,7 @@ import { generatePkcePair, generateState } from "./pkce";
 import type {
   AuthorizationRequest,
   AuthorizationServerMetadata,
+  CryptoAdapter,
 } from "./types";
 
 export interface BuildAuthorizationUrlOptions {
@@ -21,6 +22,7 @@ export interface BuildAuthorizationUrlOptions {
   scope?: string | string[];
   resource: string;
   state?: string;
+  crypto?: CryptoAdapter;
 }
 
 export const buildAuthorizationUrl = async (
@@ -43,8 +45,10 @@ export const buildAuthorizationUrl = async (
     authorizationServer.authorization_endpoint,
     "authorization_endpoint",
   );
-  const { codeVerifier, codeChallenge } = await generatePkcePair();
-  const state = options.state ?? generateState();
+  const { codeVerifier, codeChallenge } = await generatePkcePair(
+    options.crypto,
+  );
+  const state = options.state ?? generateState(options.crypto);
 
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", clientId);

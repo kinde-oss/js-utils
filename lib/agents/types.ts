@@ -4,6 +4,11 @@ export interface FetchOptions {
   fetch?: FetchLike;
 }
 
+export interface CryptoAdapter {
+  getRandomValues?: (array: Uint8Array) => unknown;
+  sha256?: (data: Uint8Array) => Promise<ArrayBuffer | Uint8Array>;
+}
+
 export interface BearerChallenge {
   resourceMetadata?: string;
   scope?: string;

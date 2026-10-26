@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildAuthorizationUrl,
   validateAuthorizationResponse,
@@ -132,6 +132,88 @@ describe("buildAuthorizationUrl", () => {
         },
       }),
     ).rejects.toMatchObject({ code: "pkce_unsupported" });
+  });
+});
+
+describe("buildAuthorizationUrl crypto adapter", () => {
+  const realCrypto = globalThis.crypto;
+  const digestWithNode = async (data: Uint8Array) =>
+    realCrypto.subtle.digest("SHA-256", data as BufferSource);
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("builds an S256 challenge through the adapter when subtle is unavailable", async () => {
+    vi.stubGlobal("crypto", {
+      getRandomValues: realCrypto.getRandomValues.bind(realCrypto),
+    });
+    const sha256 = vi.fn(
+      async (data: Uint8Array) => new Uint8Array(await digestWithNode(data)),
+    );
+
+    const result = await buildAuthorizationUrl({
+      ...options,
+      crypto: { sha256 },
+    });
+
+    expect(sha256).toHaveBeenCalledTimes(1);
+    expect(result.url.searchParams.get("code_challenge_method")).toBe("S256");
+    const expected = base64UrlEncode(
+      await digestWithNode(new TextEncoder().encode(result.codeVerifier)),
+    );
+    expect(result.url.searchParams.get("code_challenge")).toBe(expected);
+  });
+
+  it("accepts an ArrayBuffer digest from the adapter", async () => {
+    vi.stubGlobal("crypto", {});
+    const result = await buildAuthorizationUrl({
+      ...options,
+      crypto: {
+        getRandomValues: (array) =>
+          realCrypto.getRandomValues(array as Uint8Array<ArrayBuffer>),
+        sha256: digestWithNode,
+      },
+    });
+    const expected = base64UrlEncode(
+      await digestWithNode(new TextEncoder().encode(result.codeVerifier)),
+    );
+    expect(result.url.searchParams.get("code_challenge")).toBe(expected);
+  });
+
+  it("uses the adapter's getRandomValues for the verifier and state", async () => {
+    vi.stubGlobal("crypto", {});
+    const getRandomValues = vi.fn((array: Uint8Array) => {
+      array.fill(7);
+      return array;
+    });
+    const result = await buildAuthorizationUrl({
+      ...options,
+      crypto: { getRandomValues, sha256: digestWithNode },
+    });
+    expect(getRandomValues).toHaveBeenCalledTimes(2);
+    expect(result.codeVerifier).toBe(
+      base64UrlEncode(new Uint8Array(32).fill(7).buffer),
+    );
+    expect(result.state).toBe(
+      base64UrlEncode(new Uint8Array(16).fill(7).buffer),
+    );
+  });
+
+  it("still requires S256 and never falls back to plain", async () => {
+    vi.stubGlobal("crypto", {
+      getRandomValues: realCrypto.getRandomValues.bind(realCrypto),
+    });
+    await expect(buildAuthorizationUrl(options)).rejects.toMatchObject({
+      code: "crypto_unavailable",
+    });
+  });
+
+  it("requires some source of randomness", async () => {
+    vi.stubGlobal("crypto", {});
+    await expect(
+      buildAuthorizationUrl({ ...options, crypto: { sha256: digestWithNode } }),
+    ).rejects.toMatchObject({ code: "crypto_unavailable" });
   });
 });
 
