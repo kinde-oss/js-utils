@@ -266,7 +266,12 @@ export const discoverAgentAuth = async (
     options,
   );
 
-  const scope = stripOpenId(normalizeScope(challenge?.scope)).join(" ");
+  const challengeScopes = stripOpenId(normalizeScope(challenge?.scope));
+  const scope = (
+    challengeScopes.length
+      ? challengeScopes
+      : stripOpenId(normalizeScope(resourceMetadata.scopes_supported))
+  ).join(" ");
 
   return {
     resource: resourceMetadata.resource,

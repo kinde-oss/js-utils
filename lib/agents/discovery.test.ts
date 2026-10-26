@@ -100,6 +100,57 @@ describe("discoverAgentAuth", () => {
     expect(result.scope).toBe("read");
   });
 
+  it("prefers the challenge scope over scopes_supported", async () => {
+    const result = await discoverAgentAuth({
+      wwwAuthenticate: 'Bearer scope="read"',
+      resourceUrl: prm.resource,
+      fetch: mockFetch((url) =>
+        url.includes("oauth-protected-resource")
+          ? jsonResponse({ ...prm, scopes_supported: ["read", "write"] })
+          : routes(url),
+      ),
+    });
+    expect(result.scope).toBe("read");
+  });
+
+  it("falls back to scopes_supported when the challenge has no scope", async () => {
+    const result = await discoverAgentAuth({
+      wwwAuthenticate: "Bearer",
+      resourceUrl: prm.resource,
+      fetch: mockFetch((url) =>
+        url.includes("oauth-protected-resource")
+          ? jsonResponse({
+              ...prm,
+              scopes_supported: ["read", "openid", "write"],
+            })
+          : routes(url),
+      ),
+    });
+    expect(result.scope).toBe("read write");
+  });
+
+  it("falls back to scopes_supported when the challenge scope is only openid", async () => {
+    const result = await discoverAgentAuth({
+      wwwAuthenticate: 'Bearer scope="openid"',
+      resourceUrl: prm.resource,
+      fetch: mockFetch((url) =>
+        url.includes("oauth-protected-resource")
+          ? jsonResponse({ ...prm, scopes_supported: ["read"] })
+          : routes(url),
+      ),
+    });
+    expect(result.scope).toBe("read");
+  });
+
+  it("omits scope when neither the challenge nor the metadata provides one", async () => {
+    const result = await discoverAgentAuth({
+      wwwAuthenticate: "Bearer",
+      resourceUrl: prm.resource,
+      fetch: mockFetch(routes),
+    });
+    expect(result).not.toHaveProperty("scope");
+  });
+
   it("handles resource urls with many trailing slashes", async () => {
     const result = await discoverAgentAuth({
       wwwAuthenticate: "Bearer",
