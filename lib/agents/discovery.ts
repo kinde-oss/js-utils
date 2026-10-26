@@ -206,6 +206,7 @@ export const discoverAgentAuth = async (
       "resourceUrl is required to validate protected resource metadata",
     );
   }
+  assertSecureUrl(resourceUrl, "resourceUrl");
 
   const challengeMetadataUrl = challenge?.resourceMetadata;
   const candidates = challengeMetadataUrl

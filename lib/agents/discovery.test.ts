@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { AgentAuthError } from "./errors";
 import { discoverAgentAuth, parseWwwAuthenticate } from "./discovery";
 import { jsonResponse, mockFetch, serverMetadata } from "./testUtils";
 
@@ -318,6 +319,21 @@ describe("discoverAgentAuth", () => {
     });
     expect(result.resource).toBe(prm.resource);
   });
+
+  it.each(["not a url", "http://api.example.com/mcp", "/relative/path"])(
+    "rejects an invalid resourceUrl %j with an AgentAuthError",
+    async (resourceUrl) => {
+      const fetchMock = mockFetch(routes);
+      const result = discoverAgentAuth({
+        wwwAuthenticate: "Bearer",
+        resourceUrl,
+        fetch: fetchMock,
+      });
+      await expect(result).rejects.toBeInstanceOf(AgentAuthError);
+      await expect(result).rejects.toMatchObject({ code: "invalid_url" });
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
 
   it("rejects insecure metadata urls", async () => {
     await expect(
