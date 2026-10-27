@@ -415,7 +415,7 @@ describe("generateAuthUrl", () => {
       redirectURL: "https://example2.com",
     };
     const domain = "https://auth.example.com";
-    expect(() =>
+    await expect(() =>
       generateAuthUrl(domain, IssuerRouteTypes.login, options),
     ).rejects.toThrow(`Error generating auth URL: Client ID missing`);
   });
@@ -440,7 +440,7 @@ describe("generateAuthUrl", () => {
       reauthState: "e3Rlc3Q6MTIz",
     };
     const domain = "https://auth.example.com";
-    expect(() =>
+    await expect(() =>
       generateAuthUrl(domain, IssuerRouteTypes.login, options),
     ).rejects.toThrow(
       /Error handling reauth state: Expected property name or '}' in JSON/,

@@ -41,11 +41,11 @@ describe("generatePortalUrl", () => {
     fetchMock.resetMocks();
   });
 
-  it("throws error when storage is not set", () => {
+  it("throws error when storage is not set", async () => {
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
 
-    expect(() =>
+    await expect(() =>
       generatePortalUrl({
         domain,
         returnUrl,
@@ -53,14 +53,14 @@ describe("generatePortalUrl", () => {
     ).rejects.toThrowError("generatePortalUrl: Active storage not found");
   });
 
-  it("throws error when Access Token is not set", () => {
+  it("throws error when Access Token is not set", async () => {
     const domain = "https://mykindedomain.com";
     const returnUrl = "http://somereturnurl.com";
 
     const storage = new MemoryStorage();
     setActiveStorage(storage);
 
-    expect(() =>
+    await expect(() =>
       generatePortalUrl({
         domain,
         returnUrl,
@@ -398,7 +398,7 @@ describe("generatePortalUrl", () => {
     const returnUrl = "somecustomschema://192.168.68.61:8081";
     const subNav: PortalPage = PortalPage.profile;
 
-    expect(() =>
+    await expect(() =>
       generatePortalUrl({
         returnUrl,
         subNav,
