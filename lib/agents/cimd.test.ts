@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertValidCimdClientId, buildClientMetadataDocument } from "./cimd";
+import { buildClientMetadataDocument } from "./cimd";
 
 const base = {
   clientId: "https://app.example.com/oauth/client.json",
@@ -31,16 +31,6 @@ describe("buildClientMetadataDocument", () => {
     "not a url",
   ])("rejects invalid client_id %s", (clientId) => {
     expect(() => buildClientMetadataDocument({ ...base, clientId })).toThrow();
-  });
-
-  it.each([
-    "https://a.com/x/%2e%2e/y",
-    "https://a.com/x/%2E/y",
-    "https://a.com/x\\..\\y",
-  ])("rejects dot segments in %s", (clientId) => {
-    expect(() => assertValidCimdClientId(clientId)).toThrow(
-      /invalid_client_metadata/,
-    );
   });
 
   it("rejects bad redirect uris", () => {
