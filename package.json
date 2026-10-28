@@ -34,6 +34,12 @@
       "import": "./dist/js-utils.js",
       "require": "./dist/js-utils.cjs",
       "default": "./dist/js-utils.js"
+    },
+    "./agents": {
+      "types": "./dist/agents/index.d.ts",
+      "import": "./dist/agents.js",
+      "require": "./dist/agents.cjs",
+      "default": "./dist/agents.js"
     }
   },
   "sideEffects": false,
