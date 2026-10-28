@@ -223,6 +223,25 @@ describe("buildAuthorizationUrl crypto adapter", () => {
     });
   });
 
+  it.each([
+    [
+      "returns bytes without filling the buffer",
+      () => new Uint8Array(32).fill(9),
+    ],
+    ["does nothing", () => undefined],
+  ])(
+    "rejects an adapter getRandomValues that %s",
+    async (_name, getRandomValues) => {
+      vi.stubGlobal("crypto", {});
+      await expect(
+        buildAuthorizationUrl({
+          ...options,
+          crypto: { getRandomValues, sha256: digestWithNode },
+        }),
+      ).rejects.toMatchObject({ code: "crypto_unavailable" });
+    },
+  );
+
   it("requires some source of randomness", async () => {
     vi.stubGlobal("crypto", {});
     await expect(

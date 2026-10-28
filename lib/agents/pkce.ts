@@ -9,6 +9,12 @@ const randomBase64Url = (
   const bytes = new Uint8Array(byteLength);
   if (adapter?.getRandomValues) {
     adapter.getRandomValues(bytes);
+    if (bytes.every((byte) => byte === 0)) {
+      throw new AgentAuthError(
+        "crypto_unavailable",
+        "The crypto adapter getRandomValues did not fill the buffer",
+      );
+    }
   } else if (globalThis.crypto?.getRandomValues) {
     globalThis.crypto.getRandomValues(bytes);
   } else {
