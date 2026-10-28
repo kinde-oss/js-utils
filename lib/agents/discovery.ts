@@ -14,17 +14,13 @@ import type {
   ProtectedResourceMetadata,
 } from "./types";
 
-const PARAM_PATTERN =
-  /(?<![\w-])([A-Za-z_][\w-]*)\s*=\s*("(?:[^"\\]|\\.)*"|[^\s,]+)/g;
+const PARAM_PATTERN = /([A-Za-z_][\w-]*)\s*=\s*("(?:[^"\\]|\\.)*"|[^\s,]+)/g;
 
 const unquote = (value: string): string =>
   value.startsWith('"') ? value.slice(1, -1).replace(/\\(.)/g, "$1") : value;
 
-export const stripTrailingSlash = (value: string): string => {
-  let end = value.length;
-  while (end > 0 && value[end - 1] === "/") end--;
-  return value.slice(0, end);
-};
+export const stripTrailingSlash = (value: string): string =>
+  value.replace(/\/+$/, "");
 
 export const parseWwwAuthenticate = (
   header: string | null | undefined,
