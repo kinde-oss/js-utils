@@ -1,0 +1,558 @@
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { base64UrlEncode } from "../../utils/base64UrlEncode";
+import { parseWwwAuthenticate } from "../discovery";
+import { jsonResponse, mockFetch, serverMetadata } from "../testUtils";
+import { createResourceServerConfig } from "./config";
+import { adminRevoke } from "./revoke";
+import {
+  createAuthorizationServerMirrorHandler,
+  createProtectedResourceMetadataHandler,
+  createUnauthorizedResponse,
+} from "./routes";
+import {
+  authenticateRequest,
+  clearJwksCache,
+  hasPermission,
+  verifyAccessToken,
+} from "./verify";
+
+const issuer = "https://auth.example.com";
+const resource = "https://api.example.com/mcp";
+const metadataUrl =
+  "https://api.example.com/.well-known/oauth-protected-resource/mcp";
+
+const introspectionConfig = (fetch?: typeof globalThis.fetch) =>
+  createResourceServerConfig({
+    issuer,
+    resource,
+    clientId: "srv",
+    clientSecret: "secret",
+    scopes: ["read", "openid"],
+    fetch,
+  });
+
+const activeClaims = {
+  active: true,
+  iss: issuer,
+  aud: [resource],
+  sub: "kp_1",
+  client_id: "agent1",
+  scope: "read write",
+  permissions: ["read:data"],
+  exp: Math.floor(Date.now() / 1000) + 600,
+};
+
+const bearer = (token: string) =>
+  new Request(resource, { headers: { Authorization: `Bearer ${token}` } });
+
+const formBody = (init: RequestInit) =>
+  Object.fromEntries(new URLSearchParams(init.body as string));
+
+describe("createResourceServerConfig", () => {
+  it("derives endpoints and defaults", () => {
+    expect(introspectionConfig()).toMatchObject({
+      issuer,
+      resource,
+      scopes: ["read"],
+      audience: [resource],
+      verification: "introspection",
+      resourceMetadataUrl: metadataUrl,
+      resourceMetadataPath: "/.well-known/oauth-protected-resource/mcp",
+      introspectionEndpoint: `${issuer}/oauth2/introspect`,
+      revocationEndpoint: `${issuer}/oauth2/revoke`,
+      jwksUri: `${issuer}/.well-known/jwks`,
+    });
+  });
+
+  it("requires client credentials for introspection only", () => {
+    expect(() => createResourceServerConfig({ issuer, resource })).toThrow(
+      "missing_client_credentials",
+    );
+    expect(() =>
+      createResourceServerConfig({ issuer, resource, verification: "local" }),
+    ).not.toThrow();
+  });
+
+  it("rejects insecure urls", () => {
+    expect(() =>
+      createResourceServerConfig({
+        issuer: "http://auth.example.com",
+        resource,
+        verification: "local",
+      }),
+    ).toThrow("must use https");
+  });
+});
+
+describe("routes", () => {
+  it("serves protected resource metadata", async () => {
+    const handler = createProtectedResourceMetadataHandler(
+      introspectionConfig(),
+    );
+    const response = handler();
+    expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
+    expect(await response.json()).toEqual({
+      resource,
+      authorization_servers: [issuer],
+      bearer_methods_supported: ["header"],
+      scopes_supported: ["read"],
+    });
+  });
+
+  it("mirrors authorization server metadata", async () => {
+    const handler = createAuthorizationServerMirrorHandler(
+      introspectionConfig(mockFetch(() => jsonResponse(serverMetadata))),
+    );
+    expect(await (await handler()).json()).toEqual(serverMetadata);
+  });
+
+  it("caches the mirrored metadata and sends Cache-Control", async () => {
+    const fetchMock = mockFetch(() => jsonResponse(serverMetadata));
+    const handler = createAuthorizationServerMirrorHandler(
+      introspectionConfig(fetchMock),
+    );
+    const responses = await Promise.all([handler(), handler()]);
+    await handler();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(responses[0].headers.get("cache-control")).toBe(
+      "public, max-age=3600",
+    );
+  });
+
+  it("refetches after the cache expires", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = mockFetch(() => jsonResponse(serverMetadata));
+      const handler = createAuthorizationServerMirrorHandler(
+        introspectionConfig(fetchMock),
+      );
+      await handler();
+      vi.advanceTimersByTime(3600 * 1000 + 1);
+      await handler();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not cache upstream failures", async () => {
+    let healthy = false;
+    const fetchMock = mockFetch(() =>
+      healthy
+        ? jsonResponse(serverMetadata)
+        : jsonResponse({}, { status: 500 }),
+    );
+    const handler = createAuthorizationServerMirrorHandler(
+      introspectionConfig(fetchMock),
+    );
+    expect((await handler()).status).toBe(502);
+    healthy = true;
+    expect((await handler()).status).toBe(200);
+  });
+
+  it("returns 502 when the upstream is unavailable", async () => {
+    const handler = createAuthorizationServerMirrorHandler(
+      introspectionConfig(mockFetch(() => jsonResponse({}, { status: 500 }))),
+    );
+    expect((await handler()).status).toBe(502);
+  });
+
+  it("returns 403 with the scope challenge for insufficient_scope", () => {
+    const response = createUnauthorizedResponse(introspectionConfig(), {
+      error: "insufficient_scope",
+      scope: "mcp:write",
+    });
+    expect(response.status).toBe(403);
+    expect(
+      parseWwwAuthenticate(response.headers.get("www-authenticate")),
+    ).toMatchObject({
+      error: "insufficient_scope",
+      scope: "mcp:write",
+      resourceMetadata: metadataUrl,
+    });
+  });
+
+  it("builds a parseable 401 challenge", () => {
+    const response = createUnauthorizedResponse(introspectionConfig(), {
+      error: "invalid_token",
+      errorDescription: 'bad "token"',
+      scope: ["read", "write"],
+    });
+    expect(response.status).toBe(401);
+    expect(
+      parseWwwAuthenticate(response.headers.get("www-authenticate")),
+    ).toMatchObject({
+      error: "invalid_token",
+      errorDescription: 'bad "token"',
+      scope: "read write",
+      resourceMetadata: metadataUrl,
+    });
+  });
+});
+
+describe("introspection verification", () => {
+  it("accepts an active token and exposes claims", async () => {
+    const fetchMock = mockFetch(() => jsonResponse(activeClaims));
+    const auth = await verifyAccessToken("tok", introspectionConfig(fetchMock));
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${issuer}/oauth2/introspect`);
+    expect(formBody(init)).toEqual({
+      token: "tok",
+      token_type_hint: "access_token",
+      client_id: "srv",
+      client_secret: "secret",
+    });
+    expect(auth).toMatchObject({
+      subject: "kp_1",
+      clientId: "agent1",
+      scopes: ["read", "write"],
+      permissions: ["read:data"],
+    });
+    expect(hasPermission(auth, "read:data")).toBe(true);
+    expect(hasPermission(auth, "delete:data")).toBe(false);
+  });
+
+  it.each([
+    ["inactive", { active: false }],
+    ["wrong audience", { ...activeClaims, aud: ["https://other.example.com"] }],
+    ["expired", { ...activeClaims, exp: 1 }],
+    ["wrong issuer", { ...activeClaims, iss: "https://evil.example.com" }],
+  ])("rejects %s tokens", async (_name, body) => {
+    const config = introspectionConfig(mockFetch(() => jsonResponse(body)));
+    await expect(verifyAccessToken("tok", config)).rejects.toMatchObject({
+      code: "invalid_token",
+    });
+  });
+
+  it.each([
+    ["trailing slash in aud", `${resource}/`, resource],
+    ["trailing slash in resource", resource, `${resource}/`],
+    [
+      "mixed-case host used in both",
+      "https://MCP.example.com/mcp",
+      "https://MCP.example.com/mcp",
+    ],
+  ])("matches the audience with %s", async (_name, aud, configuredResource) => {
+    const config = createResourceServerConfig({
+      issuer,
+      resource: configuredResource,
+      clientId: "srv",
+      clientSecret: "secret",
+      fetch: mockFetch(() => jsonResponse({ ...activeClaims, aud: [aud] })),
+    });
+    await expect(verifyAccessToken("tok", config)).resolves.toMatchObject({
+      subject: "kp_1",
+    });
+  });
+
+  it("accepts an active introspection response that omits aud", async () => {
+    const config = introspectionConfig(
+      mockFetch(() => jsonResponse({ ...activeClaims, aud: undefined })),
+    );
+    await expect(verifyAccessToken("tok", config)).resolves.toMatchObject({
+      subject: "kp_1",
+    });
+  });
+
+  it("authenticates requests and issues challenges", async () => {
+    const config = introspectionConfig(
+      mockFetch(() => jsonResponse(activeClaims)),
+    );
+
+    const missing = await authenticateRequest(new Request(resource), config);
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) {
+      expect(missing.response.status).toBe(401);
+      expect(
+        parseWwwAuthenticate(missing.response.headers.get("www-authenticate"))
+          ?.error,
+      ).toBeUndefined();
+    }
+
+    expect((await authenticateRequest(bearer("tok"), config)).ok).toBe(true);
+  });
+
+  it("returns invalid_token for rejected tokens and rethrows infrastructure errors", async () => {
+    const rejected = await authenticateRequest(
+      bearer("tok"),
+      introspectionConfig(mockFetch(() => jsonResponse({ active: false }))),
+    );
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) {
+      expect(
+        parseWwwAuthenticate(rejected.response.headers.get("www-authenticate"))
+          ?.error,
+      ).toBe("invalid_token");
+    }
+
+    await expect(
+      authenticateRequest(
+        bearer("tok"),
+        introspectionConfig(
+          mockFetch(() =>
+            jsonResponse({ error: "invalid_client" }, { status: 401 }),
+          ),
+        ),
+      ),
+    ).rejects.toMatchObject({ code: "invalid_client" });
+  });
+});
+
+describe("local verification", () => {
+  let keyPair: CryptoKeyPair;
+  let jwk: JsonWebKey & { kid: string };
+
+  const claims: Record<string, unknown> = {
+    ...activeClaims,
+    active: undefined,
+  };
+
+  beforeAll(async () => {
+    keyPair = await crypto.subtle.generateKey(
+      {
+        name: "RSASSA-PKCS1-v1_5",
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: "SHA-256",
+      },
+      true,
+      ["sign", "verify"],
+    );
+    jwk = {
+      ...(await crypto.subtle.exportKey("jwk", keyPair.publicKey)),
+      kid: "k1",
+    };
+  });
+
+  const sign = async (payload: Record<string, unknown>, kid = "k1") => {
+    const head = base64UrlEncode(JSON.stringify({ alg: "RS256", kid }));
+    const body = base64UrlEncode(JSON.stringify(payload));
+    const signature = await crypto.subtle.sign(
+      "RSASSA-PKCS1-v1_5",
+      keyPair.privateKey,
+      new TextEncoder().encode(`${head}.${body}`),
+    );
+    return `${head}.${body}.${base64UrlEncode(signature)}`;
+  };
+
+  const localConfig = () =>
+    createResourceServerConfig({
+      issuer,
+      resource,
+      verification: "local",
+      fetch: mockFetch(() => jsonResponse({ keys: [jwk] })),
+    });
+
+  it("verifies a signed token", async () => {
+    const auth = await verifyAccessToken(await sign(claims), localConfig());
+    expect(auth).toMatchObject({
+      subject: "kp_1",
+      permissions: ["read:data"],
+    });
+  });
+
+  it("caches the JWKS across verifications", async () => {
+    const config = localConfig();
+    await verifyAccessToken(await sign(claims), config);
+    await verifyAccessToken(await sign(claims), config);
+    expect(config.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  beforeEach(() => {
+    clearJwksCache();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("shares one JWKS fetch between concurrent requests", async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ keys: [jwk] }));
+    const config = createResourceServerConfig({
+      issuer,
+      resource,
+      verification: "local",
+      fetch: fetchMock,
+    });
+    const token = await sign(claims);
+    await Promise.all(
+      Array.from({ length: 20 }, () => verifyAccessToken(token, config)),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("shares the JWKS cache between configs for the same issuer", async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ keys: [jwk] }));
+    const token = await sign(claims);
+    for (let i = 0; i < 3; i++) {
+      await verifyAccessToken(
+        token,
+        createResourceServerConfig({
+          issuer,
+          resource,
+          verification: "local",
+          fetch: fetchMock,
+        }),
+      );
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("serves stale keys when a refetch fails after the TTL", async () => {
+    vi.useFakeTimers();
+    let healthy = true;
+    const fetchMock = mockFetch(() =>
+      healthy
+        ? jsonResponse({ keys: [jwk] })
+        : jsonResponse({}, { status: 503 }),
+    );
+    const config = createResourceServerConfig({
+      issuer,
+      resource,
+      verification: "local",
+      fetch: fetchMock,
+    });
+    const token = await sign({
+      ...claims,
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+    await verifyAccessToken(token, config);
+
+    healthy = false;
+    vi.advanceTimersByTime(11 * 60 * 1000);
+    await expect(verifyAccessToken(token, config)).resolves.toMatchObject({
+      subject: "kp_1",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await verifyAccessToken(token, config);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws when the first JWKS fetch fails", async () => {
+    const config = createResourceServerConfig({
+      issuer,
+      resource,
+      verification: "local",
+      fetch: mockFetch(() => jsonResponse({}, { status: 503 })),
+    });
+    await expect(
+      verifyAccessToken(await sign(claims), config),
+    ).rejects.toMatchObject({ status: 503 });
+  });
+
+  it("still requires aud for locally verified tokens", async () => {
+    await expect(
+      verifyAccessToken(
+        await sign({ ...claims, aud: undefined }),
+        localConfig(),
+      ),
+    ).rejects.toMatchObject({ code: "invalid_token" });
+  });
+
+  it("rejects tokens that are not yet valid", async () => {
+    const nbf = Math.floor(Date.now() / 1000) + 600;
+    await expect(
+      verifyAccessToken(await sign({ ...claims, nbf }), localConfig()),
+    ).rejects.toMatchObject({ code: "invalid_token" });
+  });
+
+  it("returns invalid_token for a non-base64url signature", async () => {
+    const [head, body] = (await sign(claims)).split(".");
+    const config = localConfig();
+    await expect(
+      verifyAccessToken(`${head}.${body}.!!!!`, config),
+    ).rejects.toMatchObject({ code: "invalid_token" });
+    const result = await authenticateRequest(
+      bearer(`${head}.${body}.!!!!`),
+      config,
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.response.status).toBe(401);
+  });
+
+  it("returns invalid_token when the signing key cannot be imported", async () => {
+    const config = createResourceServerConfig({
+      issuer,
+      resource,
+      verification: "local",
+      fetch: mockFetch(() =>
+        jsonResponse({ keys: [{ kty: "oct", k: "AAAA", kid: "k1" }] }),
+      ),
+    });
+    await expect(
+      verifyAccessToken(await sign(claims), config),
+    ).rejects.toMatchObject({ code: "invalid_token" });
+  });
+
+  it("rejects unsupported signing algorithms", async () => {
+    const token = `${base64UrlEncode(JSON.stringify({ alg: "HS256" }))}.e30.sig`;
+    await expect(verifyAccessToken(token, localConfig())).rejects.toMatchObject(
+      { code: "invalid_token" },
+    );
+  });
+
+  it("fails when crypto.subtle is unavailable", async () => {
+    const token = await sign(claims);
+    vi.stubGlobal("crypto", undefined);
+    await expect(verifyAccessToken(token, localConfig())).rejects.toMatchObject(
+      { code: "crypto_unavailable" },
+    );
+  });
+
+  it("rejects tampered signatures, unknown keys and missing expiry", async () => {
+    const [head, , signature] = (await sign(claims)).split(".");
+    const forged = base64UrlEncode(JSON.stringify({ ...claims, sub: "evil" }));
+
+    await expect(
+      verifyAccessToken(`${head}.${forged}.${signature}`, localConfig()),
+    ).rejects.toMatchObject({ code: "invalid_token" });
+    await expect(
+      verifyAccessToken(await sign(claims, "other"), localConfig()),
+    ).rejects.toMatchObject({ code: "invalid_token" });
+    await expect(
+      verifyAccessToken(
+        await sign({ ...claims, exp: undefined }),
+        localConfig(),
+      ),
+    ).rejects.toMatchObject({ code: "invalid_token" });
+    await expect(
+      verifyAccessToken("not.a.jwt", localConfig()),
+    ).rejects.toMatchObject({ code: "invalid_token" });
+  });
+});
+
+describe("adminRevoke", () => {
+  it("revokes through the derived endpoint with server credentials", async () => {
+    const fetchMock = mockFetch(() => new Response(null, { status: 200 }));
+    await adminRevoke(introspectionConfig(fetchMock), "tok", "access_token");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${issuer}/oauth2/revoke`);
+    expect(formBody(init)).toEqual({
+      token: "tok",
+      token_type_hint: "access_token",
+      client_id: "srv",
+      client_secret: "secret",
+    });
+  });
+
+  it("requires a clientId", async () => {
+    const config = createResourceServerConfig({
+      issuer,
+      resource,
+      verification: "local",
+    });
+    await expect(adminRevoke(config, "tok")).rejects.toMatchObject({
+      code: "missing_client_credentials",
+    });
+  });
+});
