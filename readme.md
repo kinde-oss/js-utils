@@ -118,10 +118,19 @@ if (!(await hasAuthenticationContext({ acr: "mfa", maxAge: 300 }))) {
 ```typescript
 const urlParams = new URLSearchParams(window.location.search);
 try {
-  await exchangeAuthCode({ urlParams, domain, clientId, redirectURL });
-  const returnTo = readStepUpState(urlParams.get("state") ?? "").returnTo;
-  if (returnTo) {
-    window.location.assign(returnTo);
+  const result = await exchangeAuthCode({
+    urlParams,
+    domain,
+    clientId,
+    redirectURL,
+  });
+  if (result.success) {
+    const returnTo = readStepUpState(urlParams.get("state") ?? "").returnTo;
+    if (returnTo) {
+      window.location.assign(returnTo);
+    }
+  } else {
+    // Sign-in failed. Show result.error; do not redirect.
   }
 } catch (error) {
   if (error instanceof UnmetAuthenticationRequirementsError) {

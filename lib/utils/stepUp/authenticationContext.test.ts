@@ -83,6 +83,15 @@ describe("hasAuthenticationContext", () => {
     ).toBe(false);
   });
 
+  it("fails maxAge when auth_time is in the future", () => {
+    expect(
+      hasAuthenticationContext(context("mfa", now + 1), { maxAge: 300 }, now),
+    ).toBe(false);
+    expect(
+      hasAuthenticationContext(context("mfa", now + 1), { acr: "mfa" }, now),
+    ).toBe(true);
+  });
+
   it("rejects an acr other than mfa or phr", () => {
     expect(() =>
       hasAuthenticationContext(context("mfa"), {

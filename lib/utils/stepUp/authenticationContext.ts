@@ -27,6 +27,7 @@ const ACR_RANK: Record<AcrValue, number> = {
   phr: 2,
 };
 
+/** `acr` claim as `mfa`, `phr`, or null when absent or unrecognised. */
 const normalizeAcr = (value: unknown): AcrValue | null => {
   if (typeof value !== "string") {
     return null;
@@ -34,6 +35,7 @@ const normalizeAcr = (value: unknown): AcrValue | null => {
   return highestAcr(value);
 };
 
+/** `amr` claim as a list of strings; empty when absent. */
 const normalizeAmr = (value: unknown): string[] => {
   if (!Array.isArray(value)) {
     return [];
@@ -41,6 +43,7 @@ const normalizeAmr = (value: unknown): string[] => {
   return value.filter((item): item is string => typeof item === "string");
 };
 
+/** `auth_time` claim in seconds, or null when it is not a finite number. */
 const normalizeAuthTime = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -85,6 +88,7 @@ export const getAuthenticationContext =
     return readAuthenticationContext({ idToken, accessToken });
   };
 
+/** Synchronous `getAuthenticationContext`. Throws when the active storage is async-only. */
 export const getAuthenticationContextSync =
   (): AuthenticationContext | null => {
     const idToken = getDecodedTokenSync<AuthenticationClaims>("idToken");
@@ -93,6 +97,10 @@ export const getAuthenticationContextSync =
     return readAuthenticationContext({ idToken, accessToken });
   };
 
+/**
+ * Whether `ctx` meets `requirement` at `now` (seconds).
+ * A missing or future `authTime` fails a `maxAge` check.
+ */
 const meets = (
   ctx: AuthenticationContext,
   requirement: AuthenticationContextRequirement,
@@ -114,7 +122,7 @@ const meets = (
 
   if (requirement.maxAge !== undefined && requirement.maxAge !== null) {
     formatMaxAge(requirement.maxAge);
-    if (ctx.authTime === null) {
+    if (ctx.authTime === null || ctx.authTime > now) {
       return false;
     }
     if (now - ctx.authTime > requirement.maxAge) {
@@ -125,6 +133,7 @@ const meets = (
   return true;
 };
 
+/** Distinguishes a context from a requirement when only one argument is passed. */
 const isAuthenticationContext = (
   value: AuthenticationContext | AuthenticationContextRequirement,
 ): value is AuthenticationContext => "authTime" in value || "amr" in value;

@@ -55,6 +55,57 @@ describe("isStepUpSupported", () => {
     );
   });
 
+  it("shares an in-flight request and rediscovers after the cache expires", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ acr_values_supported: ["mfa"] }),
+    } as Response);
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
+
+    await Promise.all([
+      isStepUpSupported("https://ttl.example.com"),
+      isStepUpSupported("https://ttl.example.com"),
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    nowSpy.mockReturnValue(1_000 + 60 * 60 * 1000 - 1);
+    await isStepUpSupported("https://ttl.example.com");
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    nowSpy.mockReturnValue(1_000 + 60 * 60 * 1000 + 1);
+    await isStepUpSupported("https://ttl.example.com");
+    expect(fetch).toHaveBeenCalledTimes(2);
+    nowSpy.mockRestore();
+  });
+
+  it("keeps a newer cache entry when an older request fails", async () => {
+    let failFirst: (response: Response) => void = () => {};
+    vi.mocked(fetch)
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            failFirst = resolve;
+          }),
+      )
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ acr_values_supported: ["mfa"] }),
+      } as Response);
+
+    const first = isStepUpSupported("https://race.example.com");
+    clearStepUpDiscoveryCache();
+    await expect(isStepUpSupported("https://race.example.com")).resolves.toBe(
+      true,
+    );
+    failFirst({ ok: false, status: 500 } as Response);
+    await expect(first).rejects.toThrow(/500/);
+
+    await expect(isStepUpSupported("https://race.example.com")).resolves.toBe(
+      true,
+    );
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it("drops a failed discovery response from the cache", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,

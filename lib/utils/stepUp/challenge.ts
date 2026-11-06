@@ -23,8 +23,12 @@ export type StepUpChallenge = {
   };
 };
 
+/** Quotes a header value. CR and LF become spaces so they cannot split the header. */
 const quote = (value: string): string =>
-  `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+  `"${value
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')}"`;
 
 /**
  * RFC 9470 challenge for an API whose verified token does not meet the requirement.
@@ -70,6 +74,7 @@ type AuthChallenge = {
   params: Record<string, string>;
 };
 
+/** Whether `char` is an RFC 9110 token character. */
 const isTokenChar = (char: string): boolean =>
   /[A-Za-z0-9!#$%&'*+\-.^_`|~]/.test(char);
 
@@ -82,12 +87,14 @@ export const parseWwwAuthenticate = (header: string): AuthChallenge[] => {
   const challenges: AuthChallenge[] = [];
   let index = 0;
 
+  /** Advances past whitespace. */
   const skipWhitespace = () => {
     while (index < header.length && /\s/.test(header[index])) {
       index += 1;
     }
   };
 
+  /** Reads a token; returns "" when the next character cannot start one. */
   const readToken = (): string => {
     const start = index;
     while (index < header.length && isTokenChar(header[index])) {
@@ -96,6 +103,7 @@ export const parseWwwAuthenticate = (header: string): AuthChallenge[] => {
     return header.slice(start, index);
   };
 
+  /** Reads a quoted string, unescaping `\x`. An unterminated string runs to the end. */
   const readQuoted = (): string => {
     index += 1;
     let value = "";
@@ -119,6 +127,7 @@ export const parseWwwAuthenticate = (header: string): AuthChallenge[] => {
     return value;
   };
 
+  /** Reads an auth-param value: a quoted string or a token. */
   const readValue = (): string => {
     skipWhitespace();
     if (header[index] === '"') {
@@ -143,6 +152,22 @@ export const parseWwwAuthenticate = (header: string): AuthChallenge[] => {
     }
 
     const params: Record<string, string> = {};
+    /** Skips a token68 credential (with `=` padding) that ends the challenge. */
+    const skipToken68 = (): boolean => {
+      const checkpoint = index;
+      skipWhitespace();
+      const match = /^[A-Za-z0-9\-._~+/]+=*/.exec(header.slice(index));
+      if (match) {
+        index += match[0].length;
+        skipWhitespace();
+        if (index >= header.length || header[index] === ",") {
+          return true;
+        }
+      }
+      index = checkpoint;
+      return false;
+    };
+    /** Reads one `name=value` auth-param; restores the position when there is none. */
     const readParam = (): boolean => {
       const checkpoint = index;
       skipWhitespace();
@@ -158,9 +183,10 @@ export const parseWwwAuthenticate = (header: string): AuthChallenge[] => {
       return true;
     };
 
-    // The first auth-param is separated from the scheme by whitespace.
-    // Later params, and the next challenge, are separated by commas.
-    if (readParam()) {
+    // A scheme carries either a token68 credential or auth-params. The first
+    // auth-param is separated from the scheme by whitespace; later params, and
+    // the next challenge, are separated by commas.
+    if (!skipToken68() && readParam()) {
       while (index < header.length && header[index] === ",") {
         const checkpoint = index;
         index += 1;
@@ -177,6 +203,7 @@ export const parseWwwAuthenticate = (header: string): AuthChallenge[] => {
   return challenges;
 };
 
+/** `max_age` from a challenge, or null when absent or not a non-negative integer. */
 const maxAgeFromChallenge = (value: string | undefined): number | null => {
   if (value === undefined || value === "") {
     return null;
@@ -222,6 +249,7 @@ export const parseStepUpChallenge = (response: {
   };
 };
 
+/** `StepUpRequiredError` for an RFC 9470 challenge response, or null for any other response. */
 export const stepUpRequiredFromResponse = (response: {
   status: number;
   headers: { get(name: string): string | null };

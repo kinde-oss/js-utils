@@ -18,6 +18,7 @@ export class UnmetAuthenticationRequirementsError extends Error {
   readonly acr: AcrValue | null;
   readonly maxAge: number | null;
 
+  /** @param details Callback `error_description` and `state`, and the requested context. */
   constructor(details: CallbackErrorDetails) {
     super(details.errorDescription);
     this.name = "UnmetAuthenticationRequirementsError";
@@ -39,6 +40,7 @@ export class LoginRequiredError extends Error {
   readonly acr: AcrValue | null;
   readonly maxAge: number | null;
 
+  /** @param details Callback `error_description` and `state`, and the requested context. */
   constructor(details: CallbackErrorDetails) {
     super(details.errorDescription);
     this.name = "LoginRequiredError";
@@ -59,6 +61,7 @@ export class StepUpRequiredError extends Error {
   readonly acr: AcrValue | null;
   readonly maxAge: number | null;
 
+  /** @param details Values read from the challenge. Missing values default to null. */
   constructor(details: {
     errorDescription?: string;
     acr?: AcrValue | null;

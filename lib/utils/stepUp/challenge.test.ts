@@ -43,6 +43,17 @@ describe("buildStepUpChallenge", () => {
     expect(ageOnly.headers["WWW-Authenticate"]).toContain('max_age="0"');
   });
 
+  it("replaces CR and LF in the description", () => {
+    const challenge = buildStepUpChallenge({
+      acr: "mfa",
+      errorDescription: 'line one\r\nline "two"\nend',
+    });
+    expect(challenge.headers["WWW-Authenticate"]).not.toMatch(/[\r\n]/);
+    expect(challenge.headers["WWW-Authenticate"]).toContain(
+      'error_description="line one line \\"two\\" end"',
+    );
+  });
+
   it("quotes and escapes the description", () => {
     const challenge = buildStepUpChallenge({
       acr: "mfa",
@@ -75,6 +86,25 @@ describe("parseStepUpChallenge", () => {
       errorDescription: 'say "hi", please',
     });
     expect(parseWwwAuthenticate(header)).toHaveLength(3);
+  });
+
+  it("skips a padded token68 challenge before the Bearer step-up challenge", () => {
+    const header =
+      'Negotiate YIIBhgYGKwYBBQUCoIIBejCCAXag==, Bearer error="insufficient_user_authentication", acr_values="mfa"';
+
+    expect(parseWwwAuthenticate(header)).toEqual([
+      { scheme: "Negotiate", params: {} },
+      {
+        scheme: "Bearer",
+        params: {
+          error: "insufficient_user_authentication",
+          acr_values: "mfa",
+        },
+      },
+    ]);
+    expect(parseStepUpChallenge(responseWith(401, header))).toMatchObject({
+      acr: "mfa",
+    });
   });
 
   it("returns null for a plain 401 and for other bearer errors", () => {

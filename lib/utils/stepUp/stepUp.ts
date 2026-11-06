@@ -1,7 +1,6 @@
 import { IssuerRouteTypes, PromptTypes, type LoginOptions } from "../../types";
-import { generateAuthUrl } from "../generateAuthUrl";
+import { applyReauthState, generateAuthUrl } from "../generateAuthUrl";
 import { generateRandomString } from "../generateRandomString";
-import { snakeToCamelCase } from "../snakeToCamelCase";
 import { isStepUpSupported } from "./discovery";
 import type { AcrValue } from "./params";
 import { formatAcrValues, formatMaxAge } from "./params";
@@ -26,40 +25,17 @@ export type StepUpOptions<T = Record<string, string>> = LoginOptions<T> & {
   parameters?: Record<string, unknown>;
 };
 
-const promptValue = (value: unknown): string | undefined => {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  return value;
-};
-
+/** Whether a prompt value, from any source, is `none`. */
 const isPromptNone = (value: unknown): boolean =>
-  promptValue(value)?.toLowerCase() === PromptTypes.none;
+  typeof value === "string" && value.toLowerCase() === PromptTypes.none;
 
-const reauthPrompt = (reauthState: string | undefined): string | undefined => {
-  if (!reauthState) {
-    return undefined;
-  }
-  try {
-    const decoded = snakeToCamelCase<{ prompt?: string }>(
-      JSON.parse(atob(reauthState)),
-    );
-    if (decoded && typeof decoded === "object" && "prompt" in decoded) {
-      return promptValue(decoded.prompt);
-    }
-  } catch {
-    // generateAuthUrl reports an invalid reauth state.
-  }
-  return undefined;
-};
-
+/** Throws when any source would send `prompt=none`. */
 const assertInteractive = (options: StepUpOptions): void => {
-  const prompt = reauthPrompt(options.reauthState) ?? options.prompt;
   const propertyPrompt = options.properties
     ? (options.properties as Record<string, unknown>).prompt
     : undefined;
   if (
-    isPromptNone(prompt) ||
+    isPromptNone(options.prompt) ||
     isPromptNone(options.parameters?.prompt) ||
     isPromptNone(propertyPrompt)
   ) {
@@ -69,6 +45,7 @@ const assertInteractive = (options: StepUpOptions): void => {
   }
 };
 
+/** Whether `acr` holds a requested context rather than an unset or empty value. */
 const hasAcrRequest = (acr: unknown): boolean => {
   if (acr == null || acr === "") {
     return false;
@@ -84,6 +61,9 @@ const hasAcrRequest = (acr: unknown): boolean => {
  * Never sends `prompt=none`. When discovery does not advertise
  * `acr_values_supported`, `acr` throws and a `maxAge`-only request falls back
  * to `prompt=login` without sending `max_age`.
+ *
+ * `reauthState` is decoded first. Its `acrValues`, `maxAge`, and `state` are
+ * ignored, and it cannot change the `prompt=login` fallback.
  */
 export const stepUp = async <T = Record<string, string>>(
   domain: string,
@@ -103,7 +83,14 @@ export const stepUp = async <T = Record<string, string>>(
     throw new Error("stepUp requires acr or maxAge.");
   }
 
-  assertInteractive(options);
+  const request = {
+    ...applyReauthState(options),
+    acrValues: options.acrValues,
+    maxAge: options.maxAge,
+    state: options.state,
+  };
+
+  assertInteractive(request);
   if (hasAcr) {
     formatAcrValues(requestedAcr);
   }
@@ -114,7 +101,7 @@ export const stepUp = async <T = Record<string, string>>(
   const supported = await isStepUpSupported(domain);
   let acrValues = hasAcr ? requestedAcr : undefined;
   let maxAge = hasMaxAge ? options.maxAge : undefined;
-  let prompt = options.prompt;
+  let prompt = request.prompt;
 
   if (!supported) {
     if (hasAcr) {
@@ -134,7 +121,7 @@ export const stepUp = async <T = Record<string, string>>(
     domain,
     IssuerRouteTypes.login,
     {
-      ...options,
+      ...request,
       acrValues,
       maxAge,
       prompt,

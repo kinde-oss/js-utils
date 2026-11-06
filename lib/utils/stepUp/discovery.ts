@@ -4,19 +4,32 @@ type OpenIdConfiguration = {
   acr_values_supported?: unknown;
 };
 
-const discoveryCache = new Map<string, Promise<OpenIdConfiguration>>();
+type CacheEntry = {
+  configuration: Promise<OpenIdConfiguration>;
+  /** Epoch ms. Infinity while the request is in flight. */
+  expiresAt: number;
+};
 
+const DISCOVERY_TTL_MS = 60 * 60 * 1000;
+
+const discoveryCache = new Map<string, CacheEntry>();
+
+/** Empties the discovery cache so the next check fetches discovery again. */
 export const clearStepUpDiscoveryCache = (): void => {
   discoveryCache.clear();
 };
 
+/**
+ * Fetches the issuer's OpenID configuration. Concurrent calls share one request.
+ * A successful result is reused for an hour; a failed request is not cached.
+ */
 const fetchOpenIdConfiguration = async (
   domain: string,
 ): Promise<OpenIdConfiguration> => {
   const normalized = sanitizeUrl(domain);
   const cached = discoveryCache.get(normalized);
-  if (cached) {
-    return cached;
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.configuration;
   }
 
   const pending = fetch(`${normalized}/.well-known/openid-configuration`).then(
@@ -30,11 +43,16 @@ const fetchOpenIdConfiguration = async (
     },
   );
 
-  discoveryCache.set(normalized, pending);
+  const entry: CacheEntry = { configuration: pending, expiresAt: Infinity };
+  discoveryCache.set(normalized, entry);
   try {
-    return await pending;
+    const configuration = await pending;
+    entry.expiresAt = Date.now() + DISCOVERY_TTL_MS;
+    return configuration;
   } catch (error) {
-    discoveryCache.delete(normalized);
+    if (discoveryCache.get(normalized) === entry) {
+      discoveryCache.delete(normalized);
+    }
     throw error;
   }
 };

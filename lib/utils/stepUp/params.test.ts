@@ -13,6 +13,12 @@ describe("formatAcrValues", () => {
     expect(() => formatAcrValues(1)).toThrow(/mfa" or "phr"/);
     expect(() => formatAcrValues("otp")).toThrow(/Received otp/);
   });
+
+  it("accepts the space-separated wire value", () => {
+    expect(formatAcrValues("mfa phr")).toBe("mfa phr");
+    expect(formatAcrValues(" MFA ")).toBe("mfa");
+    expect(() => formatAcrValues("mfa otp")).toThrow(/Received otp/);
+  });
 });
 
 describe("highestAcr", () => {

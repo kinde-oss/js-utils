@@ -9,6 +9,7 @@ import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
 import type { RefreshTokenResult } from "../../main";
 import { RefreshType } from "../../main";
 import { isClient } from "../isClient";
+import { getTokenGeneration } from "../tokenGeneration";
 
 /**
  * refreshes the token
@@ -78,6 +79,7 @@ export const refreshToken = async ({
   }
 
   clearRefreshTimer();
+  const startGeneration = getTokenGeneration();
   let result: RefreshTokenResult;
   let data;
   try {
@@ -119,6 +121,12 @@ export const refreshToken = async ({
         [StorageKeys.idToken]: data.id_token,
         [StorageKeys.refreshToken]: data.refresh_token,
       };
+    }
+    if (result.accessToken && getTokenGeneration() !== startGeneration) {
+      return handleResult({
+        success: false,
+        error: "Refresh superseded by a newer sign-in",
+      });
     }
     if (result.accessToken) {
       const secureStore = getActiveStorage();

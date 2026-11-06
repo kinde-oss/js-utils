@@ -21,6 +21,7 @@ export type CallbackAuthenticationRead =
       error: UnmetAuthenticationRequirementsError | LoginRequiredError;
     };
 
+/** Whether the callback `error` is one this module maps to a step-up error. */
 const isStepUpCallbackError = (
   error: string | null,
 ): error is StepUpCallbackErrorCode =>

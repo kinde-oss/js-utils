@@ -10,6 +10,7 @@ import { isCustomDomain } from ".";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 import { isClient } from "./isClient";
 import { readCallbackAuthenticationError } from "./stepUp/callback";
+import { advanceTokenGeneration } from "./tokenGeneration";
 
 export const frameworkSettings: {
   framework: string;
@@ -83,6 +84,7 @@ export const exchangeAuthCode = async ({
     };
   }
   if (callbackAuth.outcome === "error") {
+    await clearTempStore();
     throw callbackAuth.error;
   }
 
@@ -198,6 +200,7 @@ export const exchangeAuthCode = async ({
     expires_in: number;
   } = await response.json();
 
+  advanceTokenGeneration();
   const secureStore = getActiveStorage();
   if (secureStore) {
     try {

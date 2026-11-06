@@ -4,6 +4,7 @@ export const ACR_VALUES = ["mfa", "phr"] as const;
 
 export type AcrValue = (typeof ACR_VALUES)[number];
 
+/** Whether `value` is an authentication context Kinde recognises. */
 const isAcrValue = (value: string): value is AcrValue =>
   value === "mfa" || value === "phr";
 
@@ -16,7 +17,11 @@ export const formatAcrValues = (acrValues: unknown): string | undefined => {
     return undefined;
   }
 
-  const values = Array.isArray(acrValues) ? acrValues : [acrValues];
+  const values = Array.isArray(acrValues)
+    ? acrValues
+    : typeof acrValues === "string"
+      ? acrValues.trim().split(/\s+/)
+      : [acrValues];
   if (values.length === 0) {
     return undefined;
   }
@@ -55,6 +60,10 @@ export const formatMaxAge = (maxAge: unknown): string | undefined => {
   return String(maxAge);
 };
 
+/**
+ * Highest recognised context in a space-separated `acr_values` string, or null.
+ * Matches how Kinde applies a list: `phr` wins over `mfa`.
+ */
 export const highestAcr = (
   acrValues: string | null | undefined,
 ): AcrValue | null => {
@@ -78,27 +87,28 @@ export const highestAcr = (
  * Remembers the context requested on the authorization URL so a callback error
  * can report it. Clears any previous request when this login does not ask for one.
  */
-export const rememberStepUpRequest = (
+export const rememberStepUpRequest = async (
   storage: SessionManager | null,
   params: Record<string, string>,
-): void => {
+): Promise<void> => {
   if (!storage) {
     return;
   }
 
   if (params.acr_values) {
-    void storage.setSessionItem(StorageKeys.stepUpAcr, params.acr_values);
+    await storage.setSessionItem(StorageKeys.stepUpAcr, params.acr_values);
   } else {
-    void storage.removeSessionItem(StorageKeys.stepUpAcr);
+    await storage.removeSessionItem(StorageKeys.stepUpAcr);
   }
 
   if (Object.prototype.hasOwnProperty.call(params, "max_age")) {
-    void storage.setSessionItem(StorageKeys.stepUpMaxAge, params.max_age);
+    await storage.setSessionItem(StorageKeys.stepUpMaxAge, params.max_age);
   } else {
-    void storage.removeSessionItem(StorageKeys.stepUpMaxAge);
+    await storage.removeSessionItem(StorageKeys.stepUpMaxAge);
   }
 };
 
+/** Reads the `acr` remembered for this request from session storage. */
 export const acrFromStored = (value: unknown): AcrValue | null => {
   if (typeof value !== "string") {
     return null;
@@ -106,6 +116,7 @@ export const acrFromStored = (value: unknown): AcrValue | null => {
   return highestAcr(value);
 };
 
+/** Reads the `max_age` remembered for this request, or null when it is not a valid value. */
 export const maxAgeFromStored = (value: unknown): number | null => {
   if (typeof value !== "string" || value === "") {
     return null;

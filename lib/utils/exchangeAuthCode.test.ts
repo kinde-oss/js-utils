@@ -1,10 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { exchangeAuthCode } from ".";
-import {
-  LoginRequiredError,
-  readCallbackAuthenticationError,
-  UnmetAuthenticationRequirementsError,
-} from "./stepUp";
+import { LoginRequiredError, readCallbackAuthenticationError } from "./stepUp";
 import { refreshToken } from "./token";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import {
@@ -658,6 +654,10 @@ describe("exchangeAuthCode", () => {
       acr: "mfa",
       maxAge: 300,
     });
+    expect(await store.getSessionItem(StorageKeys.state)).toBeNull();
+    expect(await store.getSessionItem(StorageKeys.codeVerifier)).toBeNull();
+    expect(await store.getSessionItem(StorageKeys.stepUpAcr)).toBeNull();
+
     await expect(
       exchangeAuthCode({
         urlParams,
@@ -665,7 +665,10 @@ describe("exchangeAuthCode", () => {
         clientId: "test",
         redirectURL: "http://test.kinde.com",
       }),
-    ).rejects.toBeInstanceOf(UnmetAuthenticationRequirementsError);
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid state; supplied state, expected null",
+    });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(main.refreshToken).not.toHaveBeenCalled();
   });
@@ -832,6 +835,65 @@ describe("exchangeAuthCode", () => {
       "refresh_token=new-refresh",
     );
     expect(String(refreshCall?.[1]?.body)).not.toContain("old-refresh");
+  });
+
+  it("does not let a refresh that started earlier overwrite step-up tokens", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.codeVerifier]: "verifier",
+      [StorageKeys.refreshToken]: "old-refresh",
+    });
+
+    let finishRefresh: (response: Response) => void = () => {};
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finishRefresh = resolve;
+        }),
+    );
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "step-up-access",
+        id_token: "step-up-id",
+        refresh_token: "step-up-refresh",
+      }),
+    );
+
+    const pendingRefresh = refreshToken({
+      domain: "http://test.kinde.com",
+      clientId: "test",
+    });
+
+    await exchangeAuthCode({
+      urlParams: new URLSearchParams({ code: "code", state: "state" }),
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+
+    finishRefresh(
+      new Response(
+        JSON.stringify({
+          access_token: "stale-access",
+          id_token: "stale-id",
+          refresh_token: "stale-refresh",
+        }),
+      ),
+    );
+
+    await expect(pendingRefresh).resolves.toEqual({
+      success: false,
+      error: "Refresh superseded by a newer sign-in",
+    });
+    expect(await store.getSessionItem(StorageKeys.accessToken)).toBe(
+      "step-up-access",
+    );
+    expect(await store.getSessionItem(StorageKeys.idToken)).toBe("step-up-id");
+    expect(await store.getSessionItem(StorageKeys.refreshToken)).toBe(
+      "step-up-refresh",
+    );
   });
 
   it("rejects a step-up callback when storage is not initialized", async () => {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { IssuerRouteTypes, PromptTypes } from "../../types";
+import { PromptTypes } from "../../types";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
 import { clearActiveStorage, setActiveStorage } from "../token";
 import { base64UrlEncode } from "../base64UrlEncode";
@@ -174,10 +174,39 @@ describe("stepUp", () => {
     supportStepUp();
     const result = await stepUp(domain, { ...loginOptions, acr: "phr" });
     expect(result.url.pathname).toBe("/oauth2/auth");
-    expect(result.url.searchParams.get("prompt")).not.toBe(
-      IssuerRouteTypes.register,
-    );
+    expect(result.url.searchParams.get("prompt")).not.toBe(PromptTypes.create);
     expect(result.url.searchParams.get("acr_values")).toBe("phr");
+  });
+
+  it("does not let reauthState override the step-up request", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    } as Response);
+
+    const result = await stepUp(domain, {
+      ...loginOptions,
+      maxAge: 300,
+      returnTo: "https://app.example.com/payouts",
+      reauthState: btoa(
+        JSON.stringify({
+          acr_values: "phr",
+          max_age: 0,
+          state: "reauth-state",
+          prompt: "create",
+          lang: "en",
+        }),
+      ),
+    });
+
+    expect(result.url.searchParams.get("prompt")).toBe(PromptTypes.login);
+    expect(result.url.searchParams.has("acr_values")).toBe(false);
+    expect(result.url.searchParams.has("max_age")).toBe(false);
+    expect(result.url.searchParams.get("lang")).toBe("en");
+    expect(readStepUpState(result.state)).toEqual({
+      state: "state123",
+      returnTo: "https://app.example.com/payouts",
+    });
   });
 
   it("reads an envelope that has no returnTo", () => {
