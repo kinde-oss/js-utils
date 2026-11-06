@@ -2,6 +2,7 @@ import { base64UrlEncode, getInsecureStorage, StorageKeys } from "../main";
 import { IssuerRouteTypes, LoginOptions, PromptTypes } from "../types";
 import { generateRandomString } from "./generateRandomString";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
+import { rememberStepUpRequest } from "./stepUp/params";
 import { snakeToCamelCase } from "./snakeToCamelCase";
 
 const whiteListedProperties = [
@@ -90,10 +91,16 @@ export const generateAuthUrl = async (
     throw new Error(`Error generating auth URL: Client ID missing`);
   }
 
+  const mappedParams = mapLoginMethodParamsForUrl(
+    loginOptions,
+    config?.disableUrlSanitization,
+  );
+  rememberStepUpRequest(activeStorage, mappedParams);
+
   const searchParams: Record<string, string> = {
     client_id: loginOptions.clientId,
     response_type: loginOptions.responseType || "code",
-    ...mapLoginMethodParamsForUrl(loginOptions, config?.disableUrlSanitization),
+    ...mappedParams,
   };
 
   if (!loginOptions.state) {

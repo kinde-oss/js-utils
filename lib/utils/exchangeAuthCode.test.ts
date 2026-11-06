@@ -1,5 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { exchangeAuthCode } from ".";
+import {
+  LoginRequiredError,
+  UnmetAuthenticationRequirementsError,
+} from "./stepUp";
+import { refreshToken } from "./token";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import {
   setActiveStorage,
@@ -617,5 +622,214 @@ describe("exchangeAuthCode", () => {
         "Failed to persist tokens: Error: Persist failed",
       ),
     });
+  });
+
+  it("throws UnmetAuthenticationRequirementsError and does not retry or log in", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.codeVerifier]: "verifier",
+      [StorageKeys.stepUpAcr]: "mfa",
+      [StorageKeys.stepUpMaxAge]: "300",
+    });
+
+    const urlParams = new URLSearchParams({
+      error: "unmet_authentication_requirements",
+      error_description:
+        "The requested authentication context could not be met",
+      state: "state",
+      code: "should-not-be-exchanged",
+    });
+
+    await expect(
+      exchangeAuthCode({
+        urlParams,
+        domain: "http://test.kinde.com",
+        clientId: "test",
+        redirectURL: "http://test.kinde.com",
+      }),
+    ).rejects.toMatchObject({
+      name: "UnmetAuthenticationRequirementsError",
+      error: "unmet_authentication_requirements",
+      errorDescription: "The requested authentication context could not be met",
+      state: "state",
+      acr: "mfa",
+      maxAge: 300,
+    });
+    await expect(
+      exchangeAuthCode({
+        urlParams,
+        domain: "http://test.kinde.com",
+        clientId: "test",
+        redirectURL: "http://test.kinde.com",
+      }),
+    ).rejects.toBeInstanceOf(UnmetAuthenticationRequirementsError);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(main.refreshToken).not.toHaveBeenCalled();
+  });
+
+  it("throws LoginRequiredError for login_required", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+    });
+
+    const urlParams = new URLSearchParams({
+      error: "login_required",
+      error_description: "Login required",
+      state: "state",
+    });
+
+    await expect(
+      exchangeAuthCode({
+        urlParams,
+        domain: "http://test.kinde.com",
+        clientId: "test",
+        redirectURL: "http://test.kinde.com",
+      }),
+    ).rejects.toBeInstanceOf(LoginRequiredError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not report a step-up error when state does not match", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "stored",
+    });
+
+    const urlParams = new URLSearchParams({
+      error: "unmet_authentication_requirements",
+      error_description: "nope",
+      state: "other",
+    });
+
+    await expect(
+      exchangeAuthCode({
+        urlParams,
+        domain: "http://test.kinde.com",
+        clientId: "test",
+        redirectURL: "http://test.kinde.com",
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid state; supplied other, expected stored",
+    });
+  });
+
+  it("keeps the existing result for other callback errors", async () => {
+    const urlParams = new URLSearchParams({
+      error: "access_denied",
+      error_description: "User denied access",
+    });
+
+    await expect(
+      exchangeAuthCode({
+        urlParams,
+        domain: "http://test.kinde.com",
+        clientId: "test",
+        redirectURL: "http://test.kinde.com",
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid state or code",
+    });
+  });
+
+  it("replaces access, ID, and refresh tokens after a step-up callback", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.codeVerifier]: "verifier",
+      [StorageKeys.accessToken]: "old-access",
+      [StorageKeys.idToken]: "old-id",
+      [StorageKeys.refreshToken]: "old-refresh",
+    });
+
+    const urlParams = new URLSearchParams({
+      code: "code",
+      state: "state",
+    });
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "new-access",
+        id_token: "new-id",
+        refresh_token: "new-refresh",
+        expires_in: 3600,
+      }),
+    );
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      accessToken: "new-access",
+      idToken: "new-id",
+      refreshToken: "new-refresh",
+    });
+    expect(await store.getSessionItem(StorageKeys.accessToken)).toBe(
+      "new-access",
+    );
+    expect(await store.getSessionItem(StorageKeys.idToken)).toBe("new-id");
+    expect(await store.getSessionItem(StorageKeys.refreshToken)).toBe(
+      "new-refresh",
+    );
+  });
+
+  it("refreshes with the refresh token from the step-up", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.codeVerifier]: "verifier",
+      [StorageKeys.refreshToken]: "old-refresh",
+    });
+
+    const urlParams = new URLSearchParams({
+      code: "code",
+      state: "state",
+    });
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "new-access",
+        id_token: "new-id",
+        refresh_token: "new-refresh",
+        expires_in: 3600,
+      }),
+    );
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "refreshed-access",
+        id_token: "refreshed-id",
+        refresh_token: "refreshed-refresh",
+        expires_in: 3600,
+      }),
+    );
+
+    await exchangeAuthCode({
+      urlParams,
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+
+    await refreshToken({
+      domain: "http://test.kinde.com",
+      clientId: "test",
+    });
+
+    const refreshCall = fetchMock.mock.calls[1];
+    expect(String(refreshCall?.[1]?.body)).toContain(
+      "refresh_token=new-refresh",
+    );
+    expect(String(refreshCall?.[1]?.body)).not.toContain("old-refresh");
   });
 });

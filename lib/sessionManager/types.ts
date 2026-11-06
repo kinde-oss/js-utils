@@ -16,6 +16,8 @@ export enum StorageKeys {
   state = "state",
   nonce = "nonce",
   codeVerifier = "codeVerifier",
+  stepUpAcr = "stepUpAcr",
+  stepUpMaxAge = "stepUpMaxAge",
 }
 
 export enum TimeoutActivityType {
