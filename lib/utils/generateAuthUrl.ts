@@ -2,6 +2,7 @@ import { base64UrlEncode, getInsecureStorage, StorageKeys } from "../main";
 import { IssuerRouteTypes, LoginOptions, PromptTypes } from "../types";
 import { generateRandomString } from "./generateRandomString";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
+import { rememberStepUpRequest } from "./stepUp/params";
 import { snakeToCamelCase } from "./snakeToCamelCase";
 
 const whiteListedProperties = [
@@ -47,6 +48,34 @@ interface generateAuthUrlConfig {
 }
 
 /**
+ * Merges the parameters encoded in `reauthState` over `loginOptions` and
+ * removes `reauthState`. Options without one are returned unchanged.
+ */
+export const applyReauthState = <T extends LoginOptions>(
+  loginOptions: T,
+): T => {
+  if (!loginOptions.reauthState) {
+    return loginOptions;
+  }
+  try {
+    const decodedReauthParams: LoginOptions = snakeToCamelCase<LoginOptions>(
+      JSON.parse(atob(loginOptions.reauthState)),
+    );
+    const merged = {
+      ...loginOptions,
+      ...decodedReauthParams,
+    };
+    delete merged.reauthState;
+    return merged;
+  } catch (ex: unknown) {
+    const errorDescription = ex instanceof Error ? ex.message : "Unknown error";
+    throw new Error(`Error handling reauth state: ${errorDescription}`, {
+      cause: ex,
+    });
+  }
+};
+
+/**
  *
  * @param options
  * @param type
@@ -67,33 +96,22 @@ export const generateAuthUrl = async (
   const authPath = `${domain}/oauth2/auth`;
   const activeStorage = getInsecureStorage();
 
-  if (loginOptions.reauthState) {
-    try {
-      const decodedReauthParams: LoginOptions = snakeToCamelCase<LoginOptions>(
-        JSON.parse(atob(loginOptions.reauthState)),
-      );
-      loginOptions = {
-        ...loginOptions,
-        ...decodedReauthParams,
-      };
-      delete loginOptions.reauthState;
-    } catch (ex: unknown) {
-      const errorDescription =
-        ex instanceof Error ? ex.message : "Unknown error";
-      throw new Error(`Error handling reauth state: ${errorDescription}`, {
-        cause: ex,
-      });
-    }
-  }
+  loginOptions = applyReauthState(loginOptions);
 
   if (!loginOptions.clientId) {
     throw new Error(`Error generating auth URL: Client ID missing`);
   }
 
+  const mappedParams = mapLoginMethodParamsForUrl(
+    loginOptions,
+    config?.disableUrlSanitization,
+  );
+  await rememberStepUpRequest(activeStorage, mappedParams);
+
   const searchParams: Record<string, string> = {
     client_id: loginOptions.clientId,
     response_type: loginOptions.responseType || "code",
-    ...mapLoginMethodParamsForUrl(loginOptions, config?.disableUrlSanitization),
+    ...mappedParams,
   };
 
   if (!loginOptions.state) {

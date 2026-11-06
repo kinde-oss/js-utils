@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { exchangeAuthCode } from ".";
+import { LoginRequiredError, readCallbackAuthenticationError } from "./stepUp";
+import { refreshToken } from "./token";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import {
   setActiveStorage,
@@ -616,6 +618,390 @@ describe("exchangeAuthCode", () => {
       error: expect.stringContaining(
         "Failed to persist tokens: Error: Persist failed",
       ),
+    });
+  });
+
+  it("throws UnmetAuthenticationRequirementsError and does not retry or log in", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.codeVerifier]: "verifier",
+      [StorageKeys.stepUpAcr]: "mfa",
+      [StorageKeys.stepUpMaxAge]: "300",
+    });
+
+    const urlParams = new URLSearchParams({
+      error: "unmet_authentication_requirements",
+      error_description:
+        "The requested authentication context could not be met",
+      state: "state",
+      code: "should-not-be-exchanged",
+    });
+
+    await expect(
+      exchangeAuthCode({
+        urlParams,
+        domain: "http://test.kinde.com",
+        clientId: "test",
+        redirectURL: "http://test.kinde.com",
+      }),
+    ).rejects.toMatchObject({
+      name: "UnmetAuthenticationRequirementsError",
+      error: "unmet_authentication_requirements",
+      errorDescription: "The requested authentication context could not be met",
+      state: "state",
+      acr: "mfa",
+      maxAge: 300,
+    });
+    expect(await store.getSessionItem(StorageKeys.state)).toBeNull();
+    expect(await store.getSessionItem(StorageKeys.codeVerifier)).toBeNull();
+    expect(await store.getSessionItem(StorageKeys.stepUpAcr)).toBeNull();
+
+    await expect(
+      exchangeAuthCode({
+        urlParams,
+        domain: "http://test.kinde.com",
+        clientId: "test",
+        redirectURL: "http://test.kinde.com",
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid state; supplied state, expected null",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(main.refreshToken).not.toHaveBeenCalled();
+  });
+
+  it("throws LoginRequiredError for login_required", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+    });
+
+    const urlParams = new URLSearchParams({
+      error: "login_required",
+      error_description: "Login required",
+      state: "state",
+    });
+
+    await expect(
+      exchangeAuthCode({
+        urlParams,
+        domain: "http://test.kinde.com",
+        clientId: "test",
+        redirectURL: "http://test.kinde.com",
+      }),
+    ).rejects.toBeInstanceOf(LoginRequiredError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not report a step-up error when state does not match", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "stored",
+    });
+
+    const urlParams = new URLSearchParams({
+      error: "unmet_authentication_requirements",
+      error_description: "nope",
+      state: "other",
+    });
+
+    await expect(
+      exchangeAuthCode({
+        urlParams,
+        domain: "http://test.kinde.com",
+        clientId: "test",
+        redirectURL: "http://test.kinde.com",
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid state; supplied other, expected stored",
+    });
+  });
+
+  it("keeps the existing result for other callback errors", async () => {
+    const urlParams = new URLSearchParams({
+      error: "access_denied",
+      error_description: "User denied access",
+    });
+
+    await expect(
+      exchangeAuthCode({
+        urlParams,
+        domain: "http://test.kinde.com",
+        clientId: "test",
+        redirectURL: "http://test.kinde.com",
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid state or code",
+    });
+  });
+
+  it("replaces access, ID, and refresh tokens after a step-up callback", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.codeVerifier]: "verifier",
+      [StorageKeys.accessToken]: "old-access",
+      [StorageKeys.idToken]: "old-id",
+      [StorageKeys.refreshToken]: "old-refresh",
+    });
+
+    const urlParams = new URLSearchParams({
+      code: "code",
+      state: "state",
+    });
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "new-access",
+        id_token: "new-id",
+        refresh_token: "new-refresh",
+        expires_in: 3600,
+      }),
+    );
+
+    const result = await exchangeAuthCode({
+      urlParams,
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      accessToken: "new-access",
+      idToken: "new-id",
+      refreshToken: "new-refresh",
+    });
+    expect(await store.getSessionItem(StorageKeys.accessToken)).toBe(
+      "new-access",
+    );
+    expect(await store.getSessionItem(StorageKeys.idToken)).toBe("new-id");
+    expect(await store.getSessionItem(StorageKeys.refreshToken)).toBe(
+      "new-refresh",
+    );
+  });
+
+  it("refreshes with the refresh token from the step-up", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.codeVerifier]: "verifier",
+      [StorageKeys.refreshToken]: "old-refresh",
+    });
+
+    const urlParams = new URLSearchParams({
+      code: "code",
+      state: "state",
+    });
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "new-access",
+        id_token: "new-id",
+        refresh_token: "new-refresh",
+        expires_in: 3600,
+      }),
+    );
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "refreshed-access",
+        id_token: "refreshed-id",
+        refresh_token: "refreshed-refresh",
+        expires_in: 3600,
+      }),
+    );
+
+    await exchangeAuthCode({
+      urlParams,
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+
+    await refreshToken({
+      domain: "http://test.kinde.com",
+      clientId: "test",
+    });
+
+    const refreshCall = fetchMock.mock.calls[1];
+    expect(String(refreshCall?.[1]?.body)).toContain(
+      "refresh_token=new-refresh",
+    );
+    expect(String(refreshCall?.[1]?.body)).not.toContain("old-refresh");
+  });
+
+  it("does not let a refresh that started earlier overwrite step-up tokens", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.codeVerifier]: "verifier",
+      [StorageKeys.refreshToken]: "old-refresh",
+    });
+
+    let finishRefresh: (response: Response) => void = () => {};
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finishRefresh = resolve;
+        }),
+    );
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "step-up-access",
+        id_token: "step-up-id",
+        refresh_token: "step-up-refresh",
+      }),
+    );
+
+    const pendingRefresh = refreshToken({
+      domain: "http://test.kinde.com",
+      clientId: "test",
+    });
+
+    await exchangeAuthCode({
+      urlParams: new URLSearchParams({ code: "code", state: "state" }),
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+
+    finishRefresh(
+      new Response(
+        JSON.stringify({
+          access_token: "stale-access",
+          id_token: "stale-id",
+          refresh_token: "stale-refresh",
+        }),
+      ),
+    );
+
+    await expect(pendingRefresh).resolves.toEqual({
+      success: false,
+      error: "Refresh superseded by a newer sign-in",
+    });
+    expect(await store.getSessionItem(StorageKeys.accessToken)).toBe(
+      "step-up-access",
+    );
+    expect(await store.getSessionItem(StorageKeys.idToken)).toBe("step-up-id");
+    expect(await store.getSessionItem(StorageKeys.refreshToken)).toBe(
+      "step-up-refresh",
+    );
+  });
+
+  it("writes step-up tokens last when a refresh is already persisting", async () => {
+    vi.useRealTimers();
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.codeVerifier]: "verifier",
+      [StorageKeys.refreshToken]: "old-refresh",
+    });
+
+    let enterWrite: () => void = () => {};
+    const writing = new Promise<void>((resolve) => {
+      enterWrite = resolve;
+    });
+    let releaseWrite: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      releaseWrite = resolve;
+    });
+    const write = store.setSessionItem.bind(store);
+    vi.spyOn(store, "setSessionItem").mockImplementation(async (key, value) => {
+      if (value === "stale-access") {
+        enterWrite();
+        await gate;
+      }
+      write(key, value);
+    });
+
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "stale-access",
+        id_token: "stale-id",
+        refresh_token: "stale-refresh",
+      }),
+    );
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "step-up-access",
+        id_token: "step-up-id",
+        refresh_token: "step-up-refresh",
+      }),
+    );
+
+    const refreshing = refreshToken({
+      domain: "http://test.kinde.com",
+      clientId: "test",
+    });
+    await writing;
+
+    const exchanging = exchangeAuthCode({
+      urlParams: new URLSearchParams({ code: "code", state: "state" }),
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+    // Let the callback reach its own write before the refresh's write finishes.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    releaseWrite();
+    await Promise.all([refreshing, exchanging]);
+
+    expect(await store.getSessionItem(StorageKeys.accessToken)).toBe(
+      "step-up-access",
+    );
+    expect(await store.getSessionItem(StorageKeys.idToken)).toBe("step-up-id");
+    expect(await store.getSessionItem(StorageKeys.refreshToken)).toBe(
+      "step-up-refresh",
+    );
+  });
+
+  it("rejects a step-up callback when storage is not initialized", async () => {
+    clearActiveStorage();
+    clearInsecureStorage();
+
+    await expect(
+      readCallbackAuthenticationError(
+        new URLSearchParams({
+          error: "unmet_authentication_requirements",
+          state: "state",
+        }),
+      ),
+    ).resolves.toEqual({
+      outcome: "reject",
+      message: "Authentication storage is not initialized",
+    });
+  });
+
+  it("uses an empty description when the callback omits error_description", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.stepUpMaxAge]: "nope",
+    });
+
+    await expect(
+      readCallbackAuthenticationError(
+        new URLSearchParams({
+          error: "login_required",
+          state: "state",
+        }),
+      ),
+    ).resolves.toMatchObject({
+      outcome: "error",
+      error: expect.objectContaining({
+        errorDescription: "",
+        maxAge: null,
+      }),
     });
   });
 });

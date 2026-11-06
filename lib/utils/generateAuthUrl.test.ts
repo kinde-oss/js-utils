@@ -477,6 +477,139 @@ describe("generateAuthUrl", () => {
     result.url.searchParams.delete("state");
     expect(result.url.toString()).toBe(expectedUrl);
   });
+
+  it("is unchanged when acrValues and maxAge are unset", async () => {
+    const result = await generateAuthUrl(
+      "https://auth.example.com",
+      IssuerRouteTypes.login,
+      {
+        clientId: "client123",
+        responseType: "code",
+        scope: [Scopes.openid],
+        redirectURL: "https://example.com",
+        state: "state123",
+        codeChallenge: "challenge123",
+        codeChallengeMethod: "S256",
+      },
+    );
+    result.url.searchParams.delete("nonce");
+
+    expect(result.url.toString()).toBe(
+      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&redirect_uri=https%3A%2F%2Fexample.com&audience=&scope=openid&state=state123&code_challenge=challenge123&code_challenge_method=S256",
+    );
+    expect(result.url.searchParams.has("acr_values")).toBe(false);
+    expect(result.url.searchParams.has("max_age")).toBe(false);
+    expect(result.url.toString()).not.toMatch(/undefined|null|NaN/);
+  });
+
+  it("adds acr_values and max_age when they are set", async () => {
+    const result = await generateAuthUrl(
+      "https://auth.example.com",
+      IssuerRouteTypes.login,
+      {
+        clientId: "client123",
+        responseType: "code",
+        scope: [Scopes.openid],
+        redirectURL: "https://example.com",
+        state: "state123",
+        codeChallenge: "challenge123",
+        codeChallengeMethod: "S256",
+        acrValues: "mfa",
+        maxAge: 0,
+      },
+    );
+    result.url.searchParams.delete("nonce");
+
+    expect(result.url.searchParams.get("acr_values")).toBe("mfa");
+    expect(result.url.searchParams.get("max_age")).toBe("0");
+    expect(result.url.toString()).toBe(
+      "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&redirect_uri=https%3A%2F%2Fexample.com&audience=&scope=openid&acr_values=mfa&max_age=0&state=state123&code_challenge=challenge123&code_challenge_method=S256",
+    );
+  });
+
+  it("space-joins an acrValues list", async () => {
+    const result = await generateAuthUrl(
+      "https://auth.example.com",
+      IssuerRouteTypes.register,
+      {
+        clientId: "client123",
+        responseType: "code",
+        scope: [Scopes.openid],
+        redirectURL: "https://example.com",
+        state: "state123",
+        codeChallenge: "challenge123",
+        codeChallengeMethod: "S256",
+        acrValues: ["mfa", "phr"],
+        maxAge: 300,
+      },
+    );
+    result.url.searchParams.delete("nonce");
+
+    expect(result.url.searchParams.get("acr_values")).toBe("mfa phr");
+    expect(result.url.searchParams.get("max_age")).toBe("300");
+    expect(result.url.searchParams.get("prompt")).toBe("create");
+    expect(result.url.toString()).toContain("acr_values=mfa+phr");
+  });
+
+  it("throws for an invalid maxAge before building the URL", async () => {
+    await expect(
+      generateAuthUrl("https://auth.example.com", IssuerRouteTypes.login, {
+        clientId: "client123",
+        redirectURL: "https://example.com",
+        maxAge: -1,
+      }),
+    ).rejects.toThrow(/non-negative integer/);
+    await expect(
+      generateAuthUrl("https://auth.example.com", IssuerRouteTypes.login, {
+        clientId: "client123",
+        redirectURL: "https://example.com",
+        maxAge: 1.5,
+      }),
+    ).rejects.toThrow(/non-negative integer/);
+  });
+
+  it("does not copy an unset max_age through properties or reauth state", async () => {
+    const consoleWarnSpy = vi.spyOn(console, "warn");
+    const withProperty = await generateAuthUrl(
+      "https://auth.example.com",
+      IssuerRouteTypes.login,
+      {
+        clientId: "client123",
+        responseType: "code",
+        scope: [Scopes.openid],
+        redirectURL: "https://example.com",
+        state: "state123",
+        codeChallenge: "challenge123",
+        codeChallengeMethod: "S256",
+        properties: {
+          max_age: "undefined",
+        },
+      },
+    );
+    expect(withProperty.url.searchParams.has("max_age")).toBe(false);
+    expect(withProperty.url.toString()).not.toContain("undefined");
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "Unsupported Property for url generation: ",
+      "max_age",
+    );
+
+    const withReauth = await generateAuthUrl(
+      "https://auth.example.com",
+      IssuerRouteTypes.login,
+      {
+        redirectURL: "https://example.com",
+        scope: [Scopes.openid],
+        state: "state123",
+        codeChallenge: "challenge123",
+        codeChallengeMethod: "S256",
+        reauthState: btoa(
+          JSON.stringify({ client_id: "client123", max_age: null }),
+        ),
+      },
+    );
+    expect(withReauth.url.searchParams.has("max_age")).toBe(false);
+    expect(withReauth.url.searchParams.has("acr_values")).toBe(false);
+  });
 });
 
 describe("generatePKCEPair", () => {
