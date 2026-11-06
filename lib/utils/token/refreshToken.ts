@@ -58,6 +58,8 @@ export const refreshToken = async ({
     storage = getActiveStorage();
   }
 
+  const startGeneration = getTokenGeneration();
+
   if (refreshType === RefreshType.refreshToken) {
     if (!storage) {
       return handleResult({
@@ -79,7 +81,6 @@ export const refreshToken = async ({
   }
 
   clearRefreshTimer();
-  const startGeneration = getTokenGeneration();
   let result: RefreshTokenResult;
   let data;
   try {

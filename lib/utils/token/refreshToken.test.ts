@@ -8,6 +8,7 @@ import * as tokenUtils from ".";
 import * as refreshTimer from "../refreshTimer";
 import { createMockAccessToken } from "./testUtils";
 import * as isClient from "../isClient";
+import { advanceTokenGeneration } from "../tokenGeneration";
 
 describe("refreshToken", () => {
   const mockDomain = "https://example.com";
@@ -174,6 +175,53 @@ describe("refreshToken", () => {
 
     // callback was called
     expect(callback).toHaveBeenCalled();
+  });
+
+  it("treats a sign-in during the refresh-token read as superseding", async () => {
+    let releaseRead: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    let enteredRead: () => void = () => {};
+    const reading = new Promise<void>((resolve) => {
+      enteredRead = resolve;
+    });
+    vi.spyOn(memoryStorage, "getSessionItem").mockImplementation(
+      async (key) => {
+        if (key === StorageKeys.refreshToken) {
+          enteredRead();
+          await gate;
+          return mockRefreshTokenValue;
+        }
+        return null;
+      },
+    );
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          access_token: "stale-access",
+          id_token: "stale-id",
+          refresh_token: "stale-refresh",
+        }),
+    } as Response);
+
+    const pending = tokenUtils.refreshToken({
+      domain: mockKindeDomain,
+      clientId: mockClientId,
+    });
+    await reading;
+    advanceTokenGeneration();
+    releaseRead();
+
+    await expect(pending).resolves.toEqual({
+      success: false,
+      error: "Refresh superseded by a newer sign-in",
+    });
+    expect(memoryStorage.setSessionItem).not.toHaveBeenCalledWith(
+      StorageKeys.accessToken,
+      "stale-access",
+    );
   });
 
   it("should use sanitizeUrl for the domain", async () => {

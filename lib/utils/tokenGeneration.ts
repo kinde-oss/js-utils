@@ -1,7 +1,7 @@
 let generation = 0;
 let writeQueue: Promise<void> = Promise.resolve();
 
-/** Current token generation. A refresh records it before it calls the token endpoint. */
+/** Current token generation. A refresh records it before reading the stored refresh token. */
 export const getTokenGeneration = (): number => generation;
 
 /** Marks tokens from an authorization-code callback as newer than any refresh in flight. */
