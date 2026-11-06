@@ -10,7 +10,7 @@ import { isCustomDomain } from ".";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 import { isClient } from "./isClient";
 import { readCallbackAuthenticationError } from "./stepUp/callback";
-import { advanceTokenGeneration } from "./tokenGeneration";
+import { advanceTokenGeneration, withTokenWriteLock } from "./tokenGeneration";
 
 export const frameworkSettings: {
   framework: string;
@@ -200,26 +200,33 @@ export const exchangeAuthCode = async ({
     expires_in: number;
   } = await response.json();
 
-  advanceTokenGeneration();
   const secureStore = getActiveStorage();
-  if (secureStore) {
-    try {
-      await secureStore.setItems({
-        [StorageKeys.accessToken]: data.access_token,
-        [StorageKeys.idToken]: data.id_token,
-        [StorageKeys.refreshToken]: data.refresh_token,
-      });
-    } catch (error) {
-      console.error("Failed to persist tokens to secure storage:", error);
-      return {
-        success: false,
-        error: `Failed to persist tokens: ${error}`,
-      };
-    }
-  }
-
-  if (storageSettings.useInsecureForRefreshToken || !isCustomDomain(domain)) {
-    activeStorage.setSessionItem(StorageKeys.refreshToken, data.refresh_token);
+  try {
+    await withTokenWriteLock(async () => {
+      advanceTokenGeneration();
+      if (secureStore) {
+        await secureStore.setItems({
+          [StorageKeys.accessToken]: data.access_token,
+          [StorageKeys.idToken]: data.id_token,
+          [StorageKeys.refreshToken]: data.refresh_token,
+        });
+      }
+      if (
+        storageSettings.useInsecureForRefreshToken ||
+        !isCustomDomain(domain)
+      ) {
+        await activeStorage.setSessionItem(
+          StorageKeys.refreshToken,
+          data.refresh_token,
+        );
+      }
+    });
+  } catch (error) {
+    console.error("Failed to persist tokens to secure storage:", error);
+    return {
+      success: false,
+      error: `Failed to persist tokens: ${error}`,
+    };
   }
 
   if (autoRefresh) {

@@ -896,6 +896,74 @@ describe("exchangeAuthCode", () => {
     );
   });
 
+  it("writes step-up tokens last when a refresh is already persisting", async () => {
+    vi.useRealTimers();
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.codeVerifier]: "verifier",
+      [StorageKeys.refreshToken]: "old-refresh",
+    });
+
+    let enterWrite: () => void = () => {};
+    const writing = new Promise<void>((resolve) => {
+      enterWrite = resolve;
+    });
+    let releaseWrite: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      releaseWrite = resolve;
+    });
+    const write = store.setSessionItem.bind(store);
+    vi.spyOn(store, "setSessionItem").mockImplementation(async (key, value) => {
+      if (value === "stale-access") {
+        enterWrite();
+        await gate;
+      }
+      write(key, value);
+    });
+
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "stale-access",
+        id_token: "stale-id",
+        refresh_token: "stale-refresh",
+      }),
+    );
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        access_token: "step-up-access",
+        id_token: "step-up-id",
+        refresh_token: "step-up-refresh",
+      }),
+    );
+
+    const refreshing = refreshToken({
+      domain: "http://test.kinde.com",
+      clientId: "test",
+    });
+    await writing;
+
+    const exchanging = exchangeAuthCode({
+      urlParams: new URLSearchParams({ code: "code", state: "state" }),
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+    // Let the callback reach its own write before the refresh's write finishes.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    releaseWrite();
+    await Promise.all([refreshing, exchanging]);
+
+    expect(await store.getSessionItem(StorageKeys.accessToken)).toBe(
+      "step-up-access",
+    );
+    expect(await store.getSessionItem(StorageKeys.idToken)).toBe("step-up-id");
+    expect(await store.getSessionItem(StorageKeys.refreshToken)).toBe(
+      "step-up-refresh",
+    );
+  });
+
   it("rejects a step-up callback when storage is not initialized", async () => {
     clearActiveStorage();
     clearInsecureStorage();
