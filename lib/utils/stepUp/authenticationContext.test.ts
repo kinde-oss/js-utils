@@ -83,6 +83,20 @@ describe("hasAuthenticationContext", () => {
     ).toBe(false);
   });
 
+  it("rejects an acr other than mfa or phr", () => {
+    expect(() =>
+      hasAuthenticationContext(context("mfa"), {
+        acr: "otp" as AuthenticationContext["acr"],
+      }),
+    ).toThrow(/acr must be "mfa" or "phr"/);
+  });
+
+  it("requires both arguments when the first value is a context", () => {
+    expect(() => hasAuthenticationContext(context(null))).toThrow(
+      /needs both the context and the requirement/,
+    );
+  });
+
   it("reads the current session when only a requirement is passed", async () => {
     const store = new MemoryStorage();
     setActiveStorage(store);
@@ -168,6 +182,18 @@ describe("getAuthenticationContext", () => {
       acr: "phr",
       amr: ["passkey"],
       authTime: 50,
+    });
+  });
+
+  it("ignores amr entries that are not strings and an unknown acr", () => {
+    expect(
+      readAuthenticationContext({
+        idToken: { acr: "otp", amr: ["pwd", 1], auth_time: "1716800000" },
+      }),
+    ).toEqual({
+      acr: null,
+      amr: ["pwd"],
+      authTime: null,
     });
   });
 

@@ -5,7 +5,10 @@ import {
   parseWwwAuthenticate,
   stepUpRequiredFromResponse,
 } from "./challenge";
-import { StepUpRequiredError } from "./errors";
+import {
+  StepUpRequiredError,
+  UnmetAuthenticationRequirementsError,
+} from "./errors";
 
 const responseWith = (status: number, authenticate?: string): Response =>
   new Response(null, {
@@ -107,6 +110,74 @@ describe("parseStepUpChallenge", () => {
       acr: "mfa",
       maxAge: 300,
       errorDescription: "A different authentication level is required",
+    });
+  });
+
+  it("reads an unquoted max_age and treats a missing or invalid one as absent", () => {
+    expect(
+      parseStepUpChallenge(
+        responseWith(
+          401,
+          'Bearer error="insufficient_user_authentication", max_age=300',
+        ),
+      ),
+    ).toMatchObject({ acr: null, maxAge: 300, errorDescription: "" });
+
+    expect(
+      parseStepUpChallenge(
+        responseWith(
+          401,
+          'Bearer error="insufficient_user_authentication", max_age=""',
+        ),
+      )?.maxAge,
+    ).toBeNull();
+    expect(
+      parseStepUpChallenge(
+        responseWith(
+          401,
+          'Bearer error="insufficient_user_authentication", max_age="abc"',
+        ),
+      )?.maxAge,
+    ).toBeNull();
+  });
+
+  it("stops at an unfinished quote, trailing whitespace, or a non-token scheme", () => {
+    expect(parseWwwAuthenticate('Bearer error="unterminated')).toEqual([
+      {
+        scheme: "Bearer",
+        params: { error: "unterminated" },
+      },
+    ]);
+    expect(parseWwwAuthenticate("   ")).toEqual([]);
+    expect(parseWwwAuthenticate('Bearer error="x", @')).toEqual([
+      { scheme: "Bearer", params: { error: "x" } },
+    ]);
+    expect(parseWwwAuthenticate('Bearer error="abc\\')).toEqual([
+      { scheme: "Bearer", params: { error: "abc" } },
+    ]);
+    expect(parseWwwAuthenticate("Bearer error=x y")).toEqual([
+      { scheme: "Bearer", params: { error: "x" } },
+      { scheme: "y", params: {} },
+    ]);
+  });
+});
+
+describe("step-up errors", () => {
+  it("fills the default description and null claims when they are omitted", () => {
+    expect(new StepUpRequiredError({})).toMatchObject({
+      errorDescription: "A different authentication level is required",
+      acr: null,
+      maxAge: null,
+    });
+    expect(
+      new UnmetAuthenticationRequirementsError({
+        errorDescription: "could not",
+        state: "state",
+      }),
+    ).toMatchObject({
+      acr: null,
+      maxAge: null,
+      state: "state",
     });
   });
 });

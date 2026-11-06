@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { IssuerRouteTypes, PromptTypes } from "../../types";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
 import { clearActiveStorage, setActiveStorage } from "../token";
+import { base64UrlEncode } from "../base64UrlEncode";
 import { clearStepUpDiscoveryCache } from "./discovery";
 import { readStepUpState } from "./state";
 import { stepUp } from "./stepUp";
@@ -93,6 +94,9 @@ describe("stepUp", () => {
     await expect(stepUp(domain, loginOptions)).rejects.toThrow(
       /requires acr or maxAge/,
     );
+    await expect(
+      stepUp(domain, { ...loginOptions, acrValues: [] }),
+    ).rejects.toThrow(/requires acr or maxAge/);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -150,6 +154,22 @@ describe("stepUp", () => {
     expect(result.url.searchParams.has("acr_values")).toBe(false);
   });
 
+  it("accepts an acrValues list and generates state when none is supplied", async () => {
+    supportStepUp();
+
+    const result = await stepUp(domain, {
+      clientId: loginOptions.clientId,
+      redirectURL: loginOptions.redirectURL,
+      codeChallenge: loginOptions.codeChallenge,
+      acrValues: ["mfa", "phr"],
+      reauthState: btoa(JSON.stringify({ lang: "en" })),
+    });
+
+    expect(result.url.searchParams.get("acr_values")).toBe("mfa phr");
+    expect(result.state).toHaveLength(32);
+    expect(result.url.searchParams.get("lang")).toBe("en");
+  });
+
   it("uses the login route rather than registration", async () => {
     supportStepUp();
     const result = await stepUp(domain, { ...loginOptions, acr: "phr" });
@@ -158,5 +178,16 @@ describe("stepUp", () => {
       IssuerRouteTypes.register,
     );
     expect(result.url.searchParams.get("acr_values")).toBe("phr");
+  });
+
+  it("reads an envelope that has no returnTo", () => {
+    const state = base64UrlEncode(
+      JSON.stringify({ k: "kinde-step-up", state: "abc", returnTo: 1 }),
+    );
+
+    expect(readStepUpState(state)).toEqual({
+      state: "abc",
+      returnTo: undefined,
+    });
   });
 });

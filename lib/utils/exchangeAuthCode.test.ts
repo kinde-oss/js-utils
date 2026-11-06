@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { exchangeAuthCode } from ".";
 import {
   LoginRequiredError,
+  readCallbackAuthenticationError,
   UnmetAuthenticationRequirementsError,
 } from "./stepUp";
 import { refreshToken } from "./token";
@@ -831,5 +832,46 @@ describe("exchangeAuthCode", () => {
       "refresh_token=new-refresh",
     );
     expect(String(refreshCall?.[1]?.body)).not.toContain("old-refresh");
+  });
+
+  it("rejects a step-up callback when storage is not initialized", async () => {
+    clearActiveStorage();
+    clearInsecureStorage();
+
+    await expect(
+      readCallbackAuthenticationError(
+        new URLSearchParams({
+          error: "unmet_authentication_requirements",
+          state: "state",
+        }),
+      ),
+    ).resolves.toEqual({
+      outcome: "reject",
+      message: "Authentication storage is not initialized",
+    });
+  });
+
+  it("uses an empty description when the callback omits error_description", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.stepUpMaxAge]: "nope",
+    });
+
+    await expect(
+      readCallbackAuthenticationError(
+        new URLSearchParams({
+          error: "login_required",
+          state: "state",
+        }),
+      ),
+    ).resolves.toMatchObject({
+      outcome: "error",
+      error: expect.objectContaining({
+        errorDescription: "",
+        maxAge: null,
+      }),
+    });
   });
 });

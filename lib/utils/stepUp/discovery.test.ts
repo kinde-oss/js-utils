@@ -35,4 +35,39 @@ describe("isStepUpSupported", () => {
       false,
     );
   });
+
+  it("is true for phr alone and false when no recognised value is advertised", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ acr_values_supported: ["phr"] }),
+    } as Response);
+    await expect(isStepUpSupported("https://phr.example.com")).resolves.toBe(
+      true,
+    );
+
+    clearStepUpDiscoveryCache();
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ acr_values_supported: ["otp"] }),
+    } as Response);
+    await expect(isStepUpSupported("https://otp.example.com")).resolves.toBe(
+      false,
+    );
+  });
+
+  it("drops a failed discovery response from the cache", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({}),
+    } as Response);
+
+    await expect(isStepUpSupported("https://down.example.com")).rejects.toThrow(
+      /503/,
+    );
+    await expect(isStepUpSupported("https://down.example.com")).rejects.toThrow(
+      /503/,
+    );
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
 });
