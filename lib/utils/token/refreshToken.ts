@@ -9,6 +9,7 @@ import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
 import type { RefreshTokenResult } from "../../main";
 import { RefreshType } from "../../main";
 import { isClient } from "../isClient";
+import { getTokenGeneration, withTokenWriteLock } from "../tokenGeneration";
 
 /**
  * refreshes the token
@@ -56,6 +57,8 @@ export const refreshToken = async ({
   } else {
     storage = getActiveStorage();
   }
+
+  const startGeneration = getTokenGeneration();
 
   if (refreshType === RefreshType.refreshToken) {
     if (!storage) {
@@ -121,28 +124,43 @@ export const refreshToken = async ({
       };
     }
     if (result.accessToken) {
-      const secureStore = getActiveStorage();
-      if (!secureStore) {
-        return handleResult({
-          success: false,
-          error: "No active storage found",
-        });
-      }
+      const accessToken = result.accessToken;
+      const failure = await withTokenWriteLock(
+        async (): Promise<RefreshTokenResult | null> => {
+          if (getTokenGeneration() !== startGeneration) {
+            return {
+              success: false,
+              error: "Refresh superseded by a newer sign-in",
+            };
+          }
+          const secureStore = getActiveStorage();
+          if (!secureStore) {
+            return { success: false, error: "No active storage found" };
+          }
 
-      await secureStore.setSessionItem(
-        StorageKeys.accessToken,
-        result.accessToken,
-      );
-      if (result.idToken) {
-        await secureStore.setSessionItem(StorageKeys.idToken, result.idToken);
-      }
-      if (storage) {
-        if (result.refreshToken) {
-          await storage.setSessionItem(
-            StorageKeys.refreshToken,
-            result.refreshToken,
+          await secureStore.setSessionItem(
+            StorageKeys.accessToken,
+            accessToken,
           );
-        }
+          if (result.idToken) {
+            await secureStore.setSessionItem(
+              StorageKeys.idToken,
+              result.idToken,
+            );
+          }
+          if (storage) {
+            if (result.refreshToken) {
+              await storage.setSessionItem(
+                StorageKeys.refreshToken,
+                result.refreshToken,
+              );
+            }
+          }
+          return null;
+        },
+      );
+      if (failure) {
+        return handleResult(failure);
       }
 
       if (isClient()) {
