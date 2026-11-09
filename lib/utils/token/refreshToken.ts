@@ -94,9 +94,8 @@ export const refreshToken = async ({
       if (clientSecret) {
         body.append("client_secret", clientSecret);
       }
-      const includeCredentials =
-        refreshType === RefreshType.cookie ||
-        (isCustomDomain(domain) && !storageSettings.useInsecureForRefreshToken);
+      // Cookies are only needed for the cookie flow; sending them alongside a body refresh_token would duplicate it.
+      const includeCredentials = refreshType === RefreshType.cookie;
 
       const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
         method: "POST",

@@ -1,16 +1,11 @@
 import {
   getActiveStorage,
-  isCustomDomain,
   isTokenExpired,
   refreshToken,
   RefreshTokenResult,
-  RefreshType,
   StorageKeys,
-  storageSettings,
 } from "../main";
-import { getCookie } from "./getCookie";
-
-const kindeCookieName = "_kbrte";
+import { getRefreshType } from "./getRefreshType";
 
 export const checkAuth = async ({
   domain,
@@ -32,6 +27,10 @@ export const checkAuth = async ({
     };
   }
 
+  // A cookie-backed session must keep using the cookie flow for every refresh
+  // (including ones below driven by cached storage tokens) - see getRefreshType.
+  const refreshType = getRefreshType(domain);
+
   const storage = getActiveStorage();
 
   if (storage) {
@@ -50,7 +49,7 @@ export const checkAuth = async ({
         return await refreshToken({
           domain,
           clientId,
-          refreshType: RefreshType.refreshToken,
+          refreshType,
         });
       }
 
@@ -63,16 +62,9 @@ export const checkAuth = async ({
     }
   }
 
-  const usingCustomDomain = isCustomDomain(domain);
-  const forceLocalStorage = storageSettings.useInsecureForRefreshToken;
-  let kbrteCookie = null;
-  if (usingCustomDomain && !forceLocalStorage) {
-    kbrteCookie = getCookie(kindeCookieName);
-  }
-
   return await refreshToken({
     domain,
     clientId,
-    refreshType: kbrteCookie ? RefreshType.cookie : RefreshType.refreshToken,
+    refreshType,
   });
 };
