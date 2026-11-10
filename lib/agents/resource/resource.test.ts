@@ -253,12 +253,12 @@ describe("introspection verification", () => {
     });
   });
 
-  it("accepts an active introspection response that omits aud", async () => {
+  it("rejects an active introspection response that omits aud", async () => {
     const config = introspectionConfig(
       mockFetch(() => jsonResponse({ ...activeClaims, aud: undefined })),
     );
-    await expect(verifyAccessToken("tok", config)).resolves.toMatchObject({
-      subject: "kp_1",
+    await expect(verifyAccessToken("tok", config)).rejects.toMatchObject({
+      code: "invalid_token",
     });
   });
 
@@ -450,7 +450,7 @@ describe("local verification", () => {
     ).rejects.toMatchObject({ status: 503 });
   });
 
-  it("still requires aud for locally verified tokens", async () => {
+  it("requires aud for locally verified tokens", async () => {
     await expect(
       verifyAccessToken(
         await sign({ ...claims, aud: undefined }),

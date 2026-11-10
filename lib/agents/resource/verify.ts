@@ -98,7 +98,6 @@ const validateClaims = (
     stripTrailingSlash,
   );
   if (
-    (aud !== undefined || strict) &&
     !config.audience.some((expected) =>
       audiences.includes(stripTrailingSlash(expected)),
     )
