@@ -385,6 +385,64 @@ describe("discoverAgentAuth", () => {
     },
   );
 
+  it("blocks a protected resource metadata url on a private address", async () => {
+    const fetchMock = mockFetch(routes);
+    await expect(
+      discoverAgentAuth({
+        wwwAuthenticate: 'Bearer resource_metadata="https://10.0.0.5/meta"',
+        resourceUrl: prm.resource,
+        fetch: fetchMock,
+      }),
+    ).rejects.toMatchObject({
+      code: "metadata_unavailable",
+      cause: { code: "private_network_blocked" },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("blocks an authorization server on a private address", async () => {
+    const fetchMock = mockFetch((url) =>
+      url.includes("oauth-protected-resource")
+        ? jsonResponse({
+            ...prm,
+            authorization_servers: ["https://metadata.internal"],
+          })
+        : routes(url),
+    );
+    await expect(
+      discoverAgentAuth({
+        wwwAuthenticate: "Bearer",
+        resourceUrl: prm.resource,
+        fetch: fetchMock,
+      }),
+    ).rejects.toMatchObject({ code: "private_network_blocked" });
+    expect(
+      fetchMock.mock.calls.some((call) =>
+        call[0].includes("metadata.internal"),
+      ),
+    ).toBe(false);
+  });
+
+  it("discovers a private server when allowPrivateNetworks is set", async () => {
+    const resource = "http://127.0.0.1:8080/mcp";
+    const issuer = "http://127.0.0.1:9000";
+    const fetchMock = mockFetch((url) =>
+      url === "http://127.0.0.1:8080/.well-known/oauth-protected-resource/mcp"
+        ? jsonResponse({ resource, authorization_servers: [issuer] })
+        : url === `${issuer}/.well-known/oauth-authorization-server`
+          ? jsonResponse({ ...serverMetadata, issuer })
+          : new Response("nope", { status: 404 }),
+    );
+    const result = await discoverAgentAuth({
+      wwwAuthenticate: "Bearer",
+      resourceUrl: resource,
+      allowPrivateNetworks: true,
+      fetch: fetchMock,
+    });
+    expect(result.resource).toBe(resource);
+    expect(result.authorizationServer.issuer).toBe(issuer);
+  });
+
   it("rejects insecure metadata urls", async () => {
     await expect(
       discoverAgentAuth({

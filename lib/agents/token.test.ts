@@ -104,6 +104,58 @@ describe("exchangeCode", () => {
   });
 });
 
+describe("private network policy", () => {
+  const privateEndpoint = "https://10.0.0.5/oauth2/token";
+
+  it("blocks token endpoints on private addresses without calling fetch", async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ access_token: "at" }));
+    await expect(
+      exchangeCode({
+        tokenEndpoint: privateEndpoint,
+        clientId: "c1",
+        code: "x",
+        codeVerifier: "v",
+        redirectUri: "https://app.example.com/callback",
+        resource: "https://api.example.com/mcp",
+        fetch: fetchMock,
+      }),
+    ).rejects.toMatchObject({ code: "private_network_blocked" });
+    await expect(
+      refreshAccessToken({
+        tokenEndpoint: privateEndpoint,
+        clientId: "c1",
+        refreshToken: "rt",
+        resource: "https://api.example.com/mcp",
+        fetch: fetchMock,
+      }),
+    ).rejects.toMatchObject({ code: "private_network_blocked" });
+    await expect(
+      revokeToken({
+        revocationEndpoint: "https://metadata.internal/revoke",
+        clientId: "c1",
+        token: "t",
+        fetch: fetchMock,
+      }),
+    ).rejects.toMatchObject({ code: "private_network_blocked" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("allows private token endpoints when explicitly enabled", async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ access_token: "at" }));
+    const tokens = await exchangeCode({
+      tokenEndpoint: privateEndpoint,
+      clientId: "c1",
+      code: "x",
+      codeVerifier: "v",
+      redirectUri: "https://app.example.com/callback",
+      resource: "https://api.example.com/mcp",
+      allowPrivateNetworks: true,
+      fetch: fetchMock,
+    });
+    expect(tokens.accessToken).toBe("at");
+  });
+});
+
 describe("refreshAccessToken", () => {
   it("keeps the old refresh token when none is rotated", async () => {
     const fetchMock = mockFetch(() => jsonResponse({ access_token: "at2" }));

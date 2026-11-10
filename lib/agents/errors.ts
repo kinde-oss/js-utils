@@ -15,6 +15,9 @@ export type AgentAuthErrorCode =
   | "pkce_unsupported"
   | "crypto_unavailable"
   | "no_revocation_endpoint"
+  | "private_network_blocked"
+  | "redirect_blocked"
+  | "too_many_redirects"
   | (string & {});
 
 export class AgentAuthError extends Error {

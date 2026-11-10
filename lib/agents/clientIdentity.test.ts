@@ -131,6 +131,23 @@ describe("resolveClientIdentity", () => {
 });
 
 describe("registerClient", () => {
+  it("blocks a registration endpoint on a private address", async () => {
+    const fetchMock = dcrFetch();
+    await expect(
+      registerClient("https://10.0.0.5/register", registration, {
+        fetch: fetchMock,
+      }),
+    ).rejects.toMatchObject({ code: "private_network_blocked" });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await expect(
+      registerClient("https://10.0.0.5/register", registration, {
+        fetch: fetchMock,
+        allowPrivateNetworks: true,
+      }),
+    ).resolves.toMatchObject({ method: "dcr", clientId: "dcr-1" });
+  });
+
   it("rejects openid inside a multi-scope array entry", async () => {
     const fetchMock = dcrFetch();
     await expect(

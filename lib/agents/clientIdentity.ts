@@ -1,8 +1,8 @@
 import { assertValidCimdClientId, assertValidRedirectUri } from "./cimd";
 import { AgentAuthError } from "./errors";
 import {
+  assertAllowedUrl,
   assertNoOpenId,
-  assertSecureUrl,
   normalizeScope,
   postJson,
   readJson,
@@ -23,7 +23,7 @@ export const registerClient = async (
   request: DynamicRegistrationRequest,
   options: FetchOptions = {},
 ): Promise<ClientIdentity> => {
-  assertSecureUrl(registrationEndpoint, "registration_endpoint");
+  assertAllowedUrl(registrationEndpoint, "registration_endpoint", options);
   if (!request.redirectUris?.length) {
     throw new AgentAuthError(
       "invalid_client_metadata",

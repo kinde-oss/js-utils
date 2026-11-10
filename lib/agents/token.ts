@@ -1,7 +1,7 @@
 import { AgentAuthError } from "./errors";
 import {
+  assertAllowedUrl,
   assertNoOpenId,
-  assertSecureUrl,
   normalizeScope,
   readJson,
   resolveFetch,
@@ -65,7 +65,7 @@ export interface ExchangeCodeOptions extends ClientAuth, FetchOptions {
 export const exchangeCode = async (
   options: ExchangeCodeOptions,
 ): Promise<TokenSet> => {
-  assertSecureUrl(options.tokenEndpoint, "token_endpoint");
+  assertAllowedUrl(options.tokenEndpoint, "token_endpoint", options);
   const response = await postForm(
     resolveFetch(options.fetch),
     options.tokenEndpoint,
@@ -92,7 +92,7 @@ export interface RefreshAccessTokenOptions extends ClientAuth, FetchOptions {
 export const refreshAccessToken = async (
   options: RefreshAccessTokenOptions,
 ): Promise<TokenSet> => {
-  assertSecureUrl(options.tokenEndpoint, "token_endpoint");
+  assertAllowedUrl(options.tokenEndpoint, "token_endpoint", options);
   const scopes = normalizeScope(options.scope);
   assertNoOpenId(scopes);
   const response = await postForm(
@@ -125,7 +125,7 @@ export const revokeToken = async (
       "Authorization server does not advertise a revocation endpoint",
     );
   }
-  assertSecureUrl(options.revocationEndpoint, "revocation_endpoint");
+  assertAllowedUrl(options.revocationEndpoint, "revocation_endpoint", options);
   const response = await postForm(
     resolveFetch(options.fetch),
     options.revocationEndpoint,

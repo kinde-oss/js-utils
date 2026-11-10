@@ -1,5 +1,6 @@
 import { AgentAuthError } from "./errors";
 import {
+  assertAllowedUrl,
   assertSecureUrl,
   fetchJson,
   normalizeScope,
@@ -109,11 +110,12 @@ const fetchProtectedResourceMetadata = async (
   metadataUrl: string,
   options: FetchOptions,
 ): Promise<ProtectedResourceMetadata> => {
-  assertSecureUrl(metadataUrl, "resource_metadata");
+  assertAllowedUrl(metadataUrl, "resource_metadata", options);
   const metadata = await fetchJson<ProtectedResourceMetadata>(
     resolveFetch(options.fetch),
     metadataUrl,
     "Protected resource metadata request",
+    options,
   );
   if (!metadata || typeof metadata.resource !== "string") {
     throw new AgentAuthError(
@@ -128,7 +130,7 @@ const fetchAuthorizationServerMetadata = async (
   issuer: string,
   options: FetchOptions,
 ): Promise<AuthorizationServerMetadata> => {
-  assertSecureUrl(issuer, "authorization server issuer");
+  assertAllowedUrl(issuer, "authorization server issuer", options);
   const fetchImpl = resolveFetch(options.fetch);
 
   const candidates = [
@@ -144,6 +146,7 @@ const fetchAuthorizationServerMetadata = async (
         fetchImpl,
         candidate,
         "Authorization server metadata request",
+        options,
       );
       if (
         stripTrailingSlash(metadata.issuer ?? "") !== stripTrailingSlash(issuer)

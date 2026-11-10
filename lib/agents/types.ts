@@ -2,6 +2,7 @@ export type FetchLike = typeof fetch;
 
 export interface FetchOptions {
   fetch?: FetchLike;
+  allowPrivateNetworks?: boolean;
 }
 
 export interface CryptoAdapter {
