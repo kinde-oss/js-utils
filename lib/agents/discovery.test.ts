@@ -152,13 +152,96 @@ describe("discoverAgentAuth", () => {
     expect(result).not.toHaveProperty("scope");
   });
 
-  it("handles resource urls with many trailing slashes", async () => {
-    const result = await discoverAgentAuth({
-      wwwAuthenticate: "Bearer",
-      resourceUrl: `https://api.example.com/mcp${"/".repeat(50000)}`,
-      fetch: mockFetch(routes),
+  it("stays fast on resource urls with many trailing slashes", async () => {
+    const start = Date.now();
+    await expect(
+      discoverAgentAuth({
+        wwwAuthenticate: "Bearer",
+        resourceUrl: `https://api.example.com/mcp${"/".repeat(50000)}`,
+        fetch: mockFetch(routes),
+      }),
+    ).rejects.toMatchObject({ code: "metadata_unavailable" });
+    expect(Date.now() - start).toBeLessThan(2000);
+  });
+
+  describe("resource identity", () => {
+    const serving = (resource: string, path: string) =>
+      mockFetch((url) =>
+        url ===
+        `https://api.example.com/.well-known/oauth-protected-resource${path}`
+          ? jsonResponse({ ...prm, resource })
+          : routes(url),
+      );
+
+    it("rejects metadata whose resource differs only by a trailing slash", async () => {
+      await expect(
+        discoverAgentAuth({
+          wwwAuthenticate: "Bearer",
+          resourceUrl: "https://api.example.com/mcp",
+          fetch: serving("https://api.example.com/mcp/", "/mcp"),
+        }),
+      ).rejects.toMatchObject({ code: "resource_mismatch" });
+
+      await expect(
+        discoverAgentAuth({
+          wwwAuthenticate: "Bearer",
+          resourceUrl: "https://api.example.com/mcp/",
+          fetch: serving("https://api.example.com/mcp", "/mcp/"),
+        }),
+      ).rejects.toMatchObject({ code: "resource_mismatch" });
     });
-    expect(result.resource).toBe(prm.resource);
+
+    it("keeps a trailing slash on the path when building the well-known url", async () => {
+      const result = await discoverAgentAuth({
+        wwwAuthenticate: "Bearer",
+        resourceUrl: "https://api.example.com/mcp/",
+        fetch: serving("https://api.example.com/mcp/", "/mcp/"),
+      });
+      expect(result.resourceMetadataUrl).toBe(
+        "https://api.example.com/.well-known/oauth-protected-resource/mcp/",
+      );
+      expect(result.resource).toBe("https://api.example.com/mcp/");
+    });
+
+    it("rejects a resource that differs only by host case", async () => {
+      await expect(
+        discoverAgentAuth({
+          wwwAuthenticate: "Bearer",
+          resourceUrl: "https://api.example.com/mcp",
+          fetch: serving("https://API.example.com/mcp", "/mcp"),
+        }),
+      ).rejects.toMatchObject({ code: "resource_mismatch" });
+    });
+
+    it.each([
+      ["https://api.example.com", "https://api.example.com/"],
+      ["https://api.example.com/", "https://api.example.com"],
+    ])(
+      "treats a bare origin %s and %s as the same resource",
+      async (resourceUrl, metadataResource) => {
+        const result = await discoverAgentAuth({
+          wwwAuthenticate: "Bearer",
+          resourceUrl,
+          fetch: mockFetch((url) =>
+            url ===
+            "https://api.example.com/.well-known/oauth-protected-resource"
+              ? jsonResponse({ ...prm, resource: metadataResource })
+              : routes(url),
+          ),
+        });
+        expect(result.resource).toBe(metadataResource);
+      },
+    );
+
+    it("does not apply the bare-origin leniency to paths", async () => {
+      await expect(
+        discoverAgentAuth({
+          wwwAuthenticate: "Bearer",
+          resourceUrl: "https://api.example.com/mcp",
+          fetch: serving("https://api.example.com/mcp?x=1", "/mcp"),
+        }),
+      ).rejects.toMatchObject({ code: "resource_mismatch" });
+    });
   });
 
   it("falls back to the well-known url from resourceUrl", async () => {

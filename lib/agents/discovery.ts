@@ -100,10 +100,35 @@ export const parseWwwAuthenticate = (
   };
 };
 
-const buildWellKnownUrl = (base: string, suffix: string): string => {
+const buildWellKnownUrl = (
+  base: string,
+  suffix: string,
+  preserveTrailingSlash = false,
+): string => {
   const url = new URL(base);
-  const path = stripTrailingSlash(url.pathname);
+  const path = preserveTrailingSlash
+    ? url.pathname === "/"
+      ? ""
+      : url.pathname
+    : stripTrailingSlash(url.pathname);
   return `${url.origin}/.well-known/${suffix}${path}${url.search}`;
+};
+
+const bareOrigin = (value: string): string | null => {
+  try {
+    const url = new URL(value);
+    return value === url.origin || value === `${url.origin}/`
+      ? url.origin
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const isSameResource = (actual: string, expected: string): boolean => {
+  if (actual === expected) return true;
+  const origin = bareOrigin(actual);
+  return origin !== null && origin === bareOrigin(expected);
 };
 
 const fetchProtectedResourceMetadata = async (
@@ -215,7 +240,7 @@ export const discoverAgentAuth = async (
   const candidates = challengeMetadataUrl
     ? [challengeMetadataUrl]
     : [
-        buildWellKnownUrl(resourceUrl, "oauth-protected-resource"),
+        buildWellKnownUrl(resourceUrl, "oauth-protected-resource", true),
         `${new URL(resourceUrl).origin}/.well-known/oauth-protected-resource`,
       ].filter((value, index, all) => all.indexOf(value) === index);
 
@@ -251,10 +276,7 @@ export const discoverAgentAuth = async (
     );
   }
 
-  if (
-    stripTrailingSlash(resourceMetadata.resource) !==
-    stripTrailingSlash(resourceUrl)
-  ) {
+  if (!isSameResource(resourceMetadata.resource, resourceUrl)) {
     throw new AgentAuthError(
       "resource_mismatch",
       `Resource metadata describes ${resourceMetadata.resource}, not ${resourceUrl}`,
