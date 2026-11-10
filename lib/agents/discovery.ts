@@ -102,7 +102,7 @@ export const parseWwwAuthenticate = (
 const buildWellKnownUrl = (base: string, suffix: string): string => {
   const url = new URL(base);
   const path = stripTrailingSlash(url.pathname);
-  return `${url.origin}/.well-known/${suffix}${path}`;
+  return `${url.origin}/.well-known/${suffix}${path}${url.search}`;
 };
 
 const fetchProtectedResourceMetadata = async (

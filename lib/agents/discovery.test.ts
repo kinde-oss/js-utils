@@ -172,6 +172,50 @@ describe("discoverAgentAuth", () => {
     );
   });
 
+  it("keeps the resource query string in the well-known url", async () => {
+    const resource = "https://api.example.com/mcp?tenant=a";
+    const fetchMock = mockFetch((url) =>
+      url ===
+      "https://api.example.com/.well-known/oauth-protected-resource/mcp?tenant=a"
+        ? jsonResponse({ ...prm, resource })
+        : routes(url),
+    );
+    const result = await discoverAgentAuth({
+      wwwAuthenticate: "Bearer",
+      resourceUrl: resource,
+      fetch: fetchMock,
+    });
+    expect(result.resourceMetadataUrl).toBe(
+      "https://api.example.com/.well-known/oauth-protected-resource/mcp?tenant=a",
+    );
+  });
+
+  it("requests different metadata for resources that differ only by query", async () => {
+    const requested: string[] = [];
+    const fetchMock = mockFetch((url) => {
+      if (url.includes("oauth-protected-resource")) {
+        requested.push(url);
+        const tenant = new URL(url).searchParams.get("tenant");
+        return jsonResponse({
+          ...prm,
+          resource: `https://api.example.com/mcp?tenant=${tenant}`,
+        });
+      }
+      return routes(url);
+    });
+    for (const tenant of ["a", "b"]) {
+      await discoverAgentAuth({
+        wwwAuthenticate: "Bearer",
+        resourceUrl: `https://api.example.com/mcp?tenant=${tenant}`,
+        fetch: fetchMock,
+      });
+    }
+    expect(requested).toEqual([
+      "https://api.example.com/.well-known/oauth-protected-resource/mcp?tenant=a",
+      "https://api.example.com/.well-known/oauth-protected-resource/mcp?tenant=b",
+    ]);
+  });
+
   it("falls back to the root protected-resource metadata", async () => {
     const fetchMock = mockFetch((url) =>
       url === "https://api.example.com/.well-known/oauth-protected-resource"
