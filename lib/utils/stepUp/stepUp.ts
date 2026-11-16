@@ -112,7 +112,7 @@ export const stepUp = async <T = Record<string, string>>(
     prompt = PromptTypes.login;
   }
 
-  const innerState = options.state ?? generateRandomString(32);
+  const innerState = options.state || generateRandomString(32);
   const state = options.returnTo
     ? encodeStepUpState(innerState, options.returnTo)
     : options.state;
