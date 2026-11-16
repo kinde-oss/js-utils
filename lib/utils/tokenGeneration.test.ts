@@ -1,44 +1,84 @@
-import { describe, expect, it } from "vitest";
-import {
-  advanceTokenGeneration,
-  getTokenGeneration,
-  withTokenWriteLock,
-} from "./tokenGeneration";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { storageSettings } from "../sessionManager";
+import { withTokenSessionLock } from "./tokenGeneration";
 
-describe("tokenGeneration", () => {
-  it("advances the generation", () => {
-    const before = getTokenGeneration();
-    advanceTokenGeneration();
-    expect(getTokenGeneration()).toBe(before + 1);
+describe("withTokenSessionLock", () => {
+  const originalPrefix = storageSettings.keyPrefix;
+
+  afterEach(() => {
+    storageSettings.keyPrefix = originalPrefix;
+    Reflect.deleteProperty(navigator, "locks");
   });
 
-  it("runs writers one at a time, in call order", async () => {
+  it("runs callers one at a time, in call order, without the Web Locks API", async () => {
     const order: string[] = [];
     let releaseFirst: () => void = () => {};
     const gate = new Promise<void>((resolve) => {
       releaseFirst = resolve;
     });
+    let enteredFirst: () => void = () => {};
+    const started = new Promise<void>((resolve) => {
+      enteredFirst = resolve;
+    });
 
-    const first = withTokenWriteLock(async () => {
+    const first = withTokenSessionLock(async () => {
       order.push("first start");
+      enteredFirst();
       await gate;
       order.push("first end");
     });
-    const second = withTokenWriteLock(async () => {
+    const second = withTokenSessionLock(async () => {
       order.push("second");
     });
 
+    await started;
+    expect(order).toEqual(["first start"]);
     releaseFirst();
     await Promise.all([first, second]);
     expect(order).toEqual(["first start", "first end", "second"]);
   });
 
-  it("keeps the queue running after a writer fails", async () => {
+  it("keeps later callers running after one fails", async () => {
     await expect(
-      withTokenWriteLock(async () => {
+      withTokenSessionLock(async () => {
         throw new Error("write failed");
       }),
     ).rejects.toThrow("write failed");
-    await expect(withTokenWriteLock(async () => "ok")).resolves.toBe("ok");
+    await expect(withTokenSessionLock(async () => "ok")).resolves.toBe("ok");
+  });
+
+  it("requests an exclusive lock named with the storage prefix", async () => {
+    storageSettings.keyPrefix = "app-";
+    const request = vi.fn(
+      async (_name: string, callback: () => Promise<string>) => callback(),
+    );
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: { request },
+    });
+
+    await expect(withTokenSessionLock(async () => "locked")).resolves.toBe(
+      "locked",
+    );
+
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[0]?.[0]).toBe("kinde:token-session:app-");
+    expect(request.mock.calls[0]).toHaveLength(2);
+  });
+
+  it("returns the task failure from the Web Locks request", async () => {
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: {
+        request: (_name: string, callback: () => Promise<unknown>) =>
+          callback(),
+      },
+    });
+
+    await expect(
+      withTokenSessionLock(async () => {
+        throw new Error("lock failed");
+      }),
+    ).rejects.toThrow("lock failed");
   });
 });

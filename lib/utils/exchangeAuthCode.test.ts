@@ -847,12 +847,16 @@ describe("exchangeAuthCode", () => {
     });
 
     let finishRefresh: (response: Response) => void = () => {};
-    fetchMock.mockImplementationOnce(
-      () =>
-        new Promise<Response>((resolve) => {
-          finishRefresh = resolve;
-        }),
-    );
+    let refreshFetching: () => void = () => {};
+    const fetching = new Promise<void>((resolve) => {
+      refreshFetching = resolve;
+    });
+    fetchMock.mockImplementationOnce(() => {
+      refreshFetching();
+      return new Promise<Response>((resolve) => {
+        finishRefresh = resolve;
+      });
+    });
     fetchMock.mockResponseOnce(
       JSON.stringify({
         access_token: "step-up-access",
@@ -865,13 +869,15 @@ describe("exchangeAuthCode", () => {
       domain: "http://test.kinde.com",
       clientId: "test",
     });
+    await fetching;
 
-    await exchangeAuthCode({
+    const pendingExchange = exchangeAuthCode({
       urlParams: new URLSearchParams({ code: "code", state: "state" }),
       domain: "http://test.kinde.com",
       clientId: "test",
       redirectURL: "http://test.kinde.com",
     });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
 
     finishRefresh(
       new Response(
@@ -883,10 +889,13 @@ describe("exchangeAuthCode", () => {
       ),
     );
 
-    await expect(pendingRefresh).resolves.toEqual({
-      success: false,
-      error: "Refresh superseded by a newer sign-in",
+    await expect(pendingRefresh).resolves.toMatchObject({
+      success: true,
+      accessToken: "stale-access",
+      idToken: "stale-id",
+      refreshToken: "stale-refresh",
     });
+    await pendingExchange;
     expect(await store.getSessionItem(StorageKeys.accessToken)).toBe(
       "step-up-access",
     );
@@ -897,7 +906,6 @@ describe("exchangeAuthCode", () => {
   });
 
   it("writes step-up tokens last when a refresh is already persisting", async () => {
-    vi.useRealTimers();
     const store = new MemoryStorage();
     setActiveStorage(store);
     await store.setItems({
@@ -950,8 +958,6 @@ describe("exchangeAuthCode", () => {
       clientId: "test",
       redirectURL: "http://test.kinde.com",
     });
-    // Let the callback reach its own write before the refresh's write finishes.
-    await new Promise((resolve) => setTimeout(resolve, 50));
     releaseWrite();
     await Promise.all([refreshing, exchanging]);
 
