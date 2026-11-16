@@ -10,7 +10,11 @@ import { isCustomDomain } from ".";
 import { clearRefreshTimer, setRefreshTimer } from "./refreshTimer";
 import { isClient } from "./isClient";
 import { readCallbackAuthenticationError } from "./stepUp/callback";
-import { withTokenSessionLock } from "./tokenGeneration";
+import {
+  createTokenRequestDeadline,
+  isTokenRequestTimeout,
+  withTokenSessionLock,
+} from "./tokenGeneration";
 
 export const frameworkSettings: {
   framework: string;
@@ -173,33 +177,59 @@ export const exchangeAuthCode = async ({
       body,
     };
 
-    let response;
     clearRefreshTimer();
-    try {
-      response = await fetch(`${domain}/oauth2/token`, fetchOptions);
-      if (!response?.ok) {
-        const errorText = await response.text();
-        console.error("Token exchange failed:", response.status, errorText);
-        return {
-          success: false,
-          error: `Token exchange failed: ${response.status} - ${errorText}`,
-        };
-      }
-    } catch (error) {
-      await clearTempStore();
-      console.error("Token exchange failed:", error);
-      return {
-        success: false,
-        error: `Token exchange failed: ${error}`,
-      };
-    }
-
-    const data: {
+    const deadline = createTokenRequestDeadline();
+    let data: {
       access_token: string;
       id_token: string;
       refresh_token: string;
       expires_in: number;
-    } = await response.json();
+    };
+    try {
+      let response: Response;
+      try {
+        response = await deadline.readBody(() =>
+          fetch(`${domain}/oauth2/token`, {
+            ...fetchOptions,
+            signal: deadline.signal,
+          }),
+        );
+        if (!response.ok) {
+          const errorText = await deadline.readBody(() => response.text());
+          deadline.assertWithinDeadline();
+          console.error("Token exchange failed:", response.status, errorText);
+          return {
+            success: false,
+            error: `Token exchange failed: ${response.status} - ${errorText}`,
+          };
+        }
+      } catch (error) {
+        await clearTempStore();
+        console.error("Token exchange failed:", error);
+        return {
+          success: false,
+          error: `Token exchange failed: ${error}`,
+        };
+      }
+
+      try {
+        data = await deadline.readBody(() => response.json());
+        deadline.assertWithinDeadline();
+      } catch (error) {
+        if (!isTokenRequestTimeout(error)) {
+          throw error;
+        }
+        await clearTempStore();
+        console.error("Token exchange failed:", error);
+        return {
+          success: false,
+          error: `Token exchange failed: ${error}`,
+        };
+      }
+    } finally {
+      // Cancel the deadline before any token write.
+      deadline.settle();
+    }
 
     const secureStore = getActiveStorage();
     try {

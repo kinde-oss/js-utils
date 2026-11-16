@@ -9,7 +9,11 @@ import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
 import type { RefreshTokenResult } from "../../main";
 import { RefreshType } from "../../main";
 import { isClient } from "../isClient";
-import { callWithTokenSession, withTokenSessionLock } from "../tokenGeneration";
+import {
+  callWithTokenSession,
+  createTokenRequestDeadline,
+  withTokenSessionLock,
+} from "../tokenGeneration";
 
 /**
  * refreshes the token
@@ -110,28 +114,39 @@ export const refreshToken = async ({
             (isCustomDomain(domain) &&
               !storageSettings.useInsecureForRefreshToken);
 
-          const response = await fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
-            method: "POST",
-            ...(includeCredentials && { credentials: "include" }),
-            headers: {
-              "Content-type":
-                "application/x-www-form-urlencoded; charset=UTF-8",
-            },
-            body: body.toString(),
-          });
-          if (!response.ok) {
-            return {
-              success: false,
-              error: "Failed to refresh token",
+          const deadline = createTokenRequestDeadline();
+          try {
+            const response = await deadline.readBody(() =>
+              fetch(`${sanitizeUrl(domain)}/oauth2/token`, {
+                method: "POST",
+                signal: deadline.signal,
+                ...(includeCredentials && { credentials: "include" }),
+                headers: {
+                  "Content-type":
+                    "application/x-www-form-urlencoded; charset=UTF-8",
+                },
+                body: body.toString(),
+              }),
+            );
+            if (!response.ok) {
+              deadline.assertWithinDeadline();
+              return {
+                success: false,
+                error: "Failed to refresh token",
+              };
+            }
+            data = await deadline.readBody(() => response.json());
+            deadline.assertWithinDeadline();
+            result = {
+              success: true,
+              [StorageKeys.accessToken]: data.access_token,
+              [StorageKeys.idToken]: data.id_token,
+              [StorageKeys.refreshToken]: data.refresh_token,
             };
+          } finally {
+            // Cancel the deadline before any token write.
+            deadline.settle();
           }
-          data = await response.json();
-          result = {
-            success: true,
-            [StorageKeys.accessToken]: data.access_token,
-            [StorageKeys.idToken]: data.id_token,
-            [StorageKeys.refreshToken]: data.refresh_token,
-          };
         }
         if (result.accessToken) {
           const accessToken = result.accessToken;

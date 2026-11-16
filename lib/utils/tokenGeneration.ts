@@ -43,6 +43,90 @@ const nestedTokenSessionLockError = () =>
     "Nested token session lock rejected. The token session lock is already held and is not reentrant. onRefreshHandler must not call refreshToken, exchangeAuthCode, or any other locked token operation.",
   );
 
+/** Bounds a locked token request so a stalled fetch or body read releases the lock. */
+export const TOKEN_REQUEST_TIMEOUT_MS = 30_000;
+
+const tokenRequestTimeout = () =>
+  new DOMException("Token request timed out", "TimeoutError");
+
+export const isTokenRequestTimeout = (error: unknown): boolean =>
+  error instanceof DOMException && error.name === "TimeoutError";
+
+/**
+ * One deadline for a token request and its body.
+ * Settle it before storing tokens: a later abort must not persist a session.
+ */
+export const createTokenRequestDeadline = (
+  timeoutMs = TOKEN_REQUEST_TIMEOUT_MS,
+) => {
+  const controller = new AbortController();
+  const startedAt = Date.now();
+  let settled = false;
+  const timeoutId = setTimeout(() => {
+    if (!settled) {
+      controller.abort(tokenRequestTimeout());
+    }
+  }, timeoutMs);
+
+  const pastDeadline = () =>
+    controller.signal.aborted || Date.now() - startedAt >= timeoutMs;
+
+  const deadlineError = () => controller.signal.reason ?? tokenRequestTimeout();
+
+  return {
+    signal: controller.signal,
+    settle() {
+      settled = true;
+      clearTimeout(timeoutId);
+    },
+    assertWithinDeadline() {
+      if (!pastDeadline()) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeoutId);
+      if (!controller.signal.aborted) {
+        controller.abort(tokenRequestTimeout());
+      }
+      throw deadlineError();
+    },
+    readBody<T>(read: () => Promise<T>): Promise<T> {
+      return new Promise<T>((resolve, reject) => {
+        if (pastDeadline()) {
+          reject(deadlineError());
+          return;
+        }
+        const onAbort = () => {
+          reject(deadlineError());
+        };
+        controller.signal.addEventListener("abort", onAbort, { once: true });
+        let work: Promise<T>;
+        try {
+          work = read();
+        } catch (error) {
+          controller.signal.removeEventListener("abort", onAbort);
+          reject(error);
+          return;
+        }
+        work.then(
+          (value) => {
+            controller.signal.removeEventListener("abort", onAbort);
+            if (pastDeadline()) {
+              reject(deadlineError());
+              return;
+            }
+            resolve(value);
+          },
+          (error: unknown) => {
+            controller.signal.removeEventListener("abort", onAbort);
+            reject(error);
+          },
+        );
+      });
+    },
+  };
+};
+
 const withTokenWriteLock = <T>(task: () => Promise<T>): Promise<T> => {
   const run = writeQueue.then(task);
   writeQueue = run.then(

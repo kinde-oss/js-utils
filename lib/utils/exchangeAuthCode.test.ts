@@ -12,6 +12,7 @@ import createFetchMock from "vitest-fetch-mock";
 import { frameworkSettings } from "./exchangeAuthCode";
 import * as refreshTokenTimer from "./refreshTimer";
 import * as main from "../main";
+import { TOKEN_REQUEST_TIMEOUT_MS } from "./tokenGeneration";
 
 const fetchMock = createFetchMock(vi);
 
@@ -431,6 +432,47 @@ describe("exchangeAuthCode", () => {
       success: false,
       error: "Code verifier not found",
     });
+  });
+
+  it("does not persist tokens when the exchange body arrives after the deadline", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.state]: "state",
+      [StorageKeys.codeVerifier]: "verifier",
+    });
+    const setItems = vi.spyOn(store, "setItems");
+    let resolveJson: ((value: unknown) => void) | undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            new Promise((resolve) => {
+              resolveJson = resolve;
+            }),
+        }) as Promise<Response>,
+    );
+
+    const pending = exchangeAuthCode({
+      urlParams: new URLSearchParams({ code: "code", state: "state" }),
+      domain: "http://test.kinde.com",
+      clientId: "test",
+      redirectURL: "http://test.kinde.com",
+    });
+    await vi.advanceTimersByTimeAsync(TOKEN_REQUEST_TIMEOUT_MS);
+    resolveJson?.({
+      access_token: "late-access",
+      id_token: "late-id",
+      refresh_token: "late-refresh",
+    });
+
+    await expect(pending).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining("Token request timed out"),
+    });
+    expect(setItems).not.toHaveBeenCalled();
+    expect(await store.getSessionItem(StorageKeys.accessToken)).toBeNull();
   });
 
   it("should return error if fetch fails", async () => {
