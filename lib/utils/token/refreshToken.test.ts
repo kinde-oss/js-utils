@@ -620,6 +620,107 @@ describe("refreshToken", () => {
         refreshType: 1,
       });
     });
+
+    it("rejects a locked token operation awaited by onRefreshHandler instead of hanging", async () => {
+      vi.useRealTimers();
+      let nestedError: unknown;
+      storageSettings.onRefreshHandler = async (refreshType) => {
+        await Promise.resolve();
+        try {
+          await tokenUtils.refreshToken({
+            domain: mockDomain,
+            clientId: mockClientId,
+            refreshType,
+          });
+        } catch (error) {
+          nestedError = error;
+          throw error;
+        }
+        return {
+          success: true,
+          accessToken: "should-not-be-used",
+        };
+      };
+
+      const result = await Promise.race([
+        tokenUtils.refreshToken({
+          domain: mockDomain,
+          clientId: mockClientId,
+          refreshType: 1,
+        }),
+        new Promise<never>((_, reject) => {
+          setTimeout(
+            () => reject(new Error("nested token operation hung")),
+            1000,
+          );
+        }),
+      ]);
+
+      expect(nestedError).toBeInstanceOf(Error);
+      expect((nestedError as Error).message).toContain(
+        "Nested token session lock rejected",
+      );
+      expect(result).toStrictEqual({
+        success: false,
+        error: expect.stringContaining("Nested token session lock rejected"),
+      });
+
+      storageSettings.onRefreshHandler = vi.fn().mockResolvedValue({
+        success: true,
+        accessToken: "later-access-token",
+      });
+      await expect(
+        tokenUtils.refreshToken({
+          domain: mockDomain,
+          clientId: mockClientId,
+          refreshType: 1,
+        }),
+      ).resolves.toMatchObject({
+        success: true,
+        accessToken: "later-access-token",
+      });
+    });
+
+    it("runs onRefreshHandler inside the session lock", async () => {
+      let releaseHandler: () => void = () => {};
+      const gate = new Promise<void>((resolve) => {
+        releaseHandler = resolve;
+      });
+      let enteredHandler: () => void = () => {};
+      const started = new Promise<void>((resolve) => {
+        enteredHandler = resolve;
+      });
+      let handlerCalls = 0;
+      storageSettings.onRefreshHandler = async () => {
+        handlerCalls += 1;
+        if (handlerCalls === 1) {
+          enteredHandler();
+          await gate;
+        }
+        return {
+          success: true,
+          accessToken: "handler-access",
+        };
+      };
+
+      const first = tokenUtils.refreshToken({
+        domain: mockDomain,
+        clientId: mockClientId,
+        refreshType: 1,
+      });
+      await started;
+      const second = tokenUtils.refreshToken({
+        domain: mockDomain,
+        clientId: mockClientId,
+        refreshType: 1,
+      });
+      await Promise.resolve();
+      expect(handlerCalls).toBe(1);
+
+      releaseHandler();
+      await Promise.all([first, second]);
+      expect(handlerCalls).toBe(2);
+    });
   });
 
   it("should include credentials when refreshing on a custom domain", async () => {

@@ -66,6 +66,52 @@ describe("withTokenSessionLock", () => {
     expect(request.mock.calls[0]).toHaveLength(2);
   });
 
+  it("rejects a nested call after an await instead of waiting on the held lock", async () => {
+    await expect(
+      withTokenSessionLock(async () => {
+        await Promise.resolve();
+        return withTokenSessionLock(async () => "inner");
+      }),
+    ).rejects.toThrow(/Nested token session lock rejected/);
+
+    await expect(withTokenSessionLock(async () => "after")).resolves.toBe(
+      "after",
+    );
+  });
+
+  it("rejects a nested Web Lock request without re-requesting the held lock", async () => {
+    let held = false;
+    const request = vi.fn(
+      async (_name: string, callback: () => Promise<unknown>) => {
+        if (held) {
+          return new Promise(() => {});
+        }
+        held = true;
+        try {
+          return await callback();
+        } finally {
+          held = false;
+        }
+      },
+    );
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: { request },
+    });
+
+    await expect(
+      withTokenSessionLock(async () => {
+        await Promise.resolve();
+        return withTokenSessionLock(async () => "inner");
+      }),
+    ).rejects.toThrow(/Nested token session lock rejected/);
+    expect(request).toHaveBeenCalledTimes(1);
+
+    await expect(withTokenSessionLock(async () => "after")).resolves.toBe(
+      "after",
+    );
+  });
+
   it("returns the task failure from the Web Locks request", async () => {
     Object.defineProperty(navigator, "locks", {
       configurable: true,

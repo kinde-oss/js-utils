@@ -45,7 +45,12 @@ export type StorageSettingsType = {
     tokens?: TimeoutTokenData,
   ) => void | Promise<void>;
   /**
+   * Custom token refresh. Invoked while the token session lock is held so a
+   * slower refresh cannot overwrite a newer session.
    *
+   * Must not call `refreshToken`, `exchangeAuthCode`, or any other operation
+   * that acquires the token session lock. The lock is not reentrant, and a
+   * nested call is rejected instead of waiting.
    */
   onRefreshHandler?: (refreshType: RefreshType) => Promise<RefreshTokenResult>;
 };

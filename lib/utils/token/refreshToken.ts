@@ -9,7 +9,7 @@ import { clearRefreshTimer, setRefreshTimer } from "../refreshTimer";
 import type { RefreshTokenResult } from "../../main";
 import { RefreshType } from "../../main";
 import { isClient } from "../isClient";
-import { withTokenSessionLock } from "../tokenGeneration";
+import { callWithTokenSession, withTokenSessionLock } from "../tokenGeneration";
 
 /**
  * refreshes the token
@@ -86,8 +86,14 @@ export const refreshToken = async ({
       let result: RefreshTokenResult;
       let data;
       try {
-        if (storageSettings.onRefreshHandler) {
-          result = await storageSettings.onRefreshHandler(refreshType);
+        // Kept inside the session lock so a slower refresh cannot overwrite a
+        // newer session. callWithTokenSession rejects a handler that acquires
+        // this lock again.
+        const refreshHandler = storageSettings.onRefreshHandler;
+        if (refreshHandler) {
+          result = await callWithTokenSession(() =>
+            refreshHandler(refreshType),
+          );
         } else {
           const body = new URLSearchParams({
             ...(refreshType === RefreshType.refreshToken && {
