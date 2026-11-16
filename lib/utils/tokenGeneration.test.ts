@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { storageSettings } from "../sessionManager";
-import { withTokenSessionLock } from "./tokenGeneration";
+import {
+  createTokenRequestDeadline,
+  withTokenSessionLock,
+} from "./tokenGeneration";
 
 describe("withTokenSessionLock", () => {
   const originalPrefix = storageSettings.keyPrefix;
@@ -126,5 +129,76 @@ describe("withTokenSessionLock", () => {
         throw new Error("lock failed");
       }),
     ).rejects.toThrow("lock failed");
+  });
+});
+
+describe("createTokenRequestDeadline", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("aborts an open signal when the deadline has elapsed before the body is read", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const deadline = createTokenRequestDeadline(1_000);
+    const abort = vi.spyOn(AbortController.prototype, "abort");
+    vi.setSystemTime(1_000);
+
+    const read = vi.fn(() => Promise.resolve("body"));
+    await expect(deadline.readBody(read)).rejects.toMatchObject({
+      name: "TimeoutError",
+    });
+
+    expect(read).not.toHaveBeenCalled();
+    expect(deadline.signal.aborted).toBe(true);
+    expect(deadline.signal.reason).toMatchObject({ name: "TimeoutError" });
+    expect(abort).toHaveBeenCalledTimes(1);
+  });
+
+  it("aborts an open signal when the body arrives after the deadline", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const deadline = createTokenRequestDeadline(1_000);
+    let resolveBody: (value: string) => void = () => {};
+    const pending = deadline.readBody(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveBody = resolve;
+        }),
+    );
+    const abort = vi.spyOn(AbortController.prototype, "abort");
+    vi.setSystemTime(1_000);
+    resolveBody("body");
+
+    await expect(pending).rejects.toMatchObject({ name: "TimeoutError" });
+    expect(deadline.signal.aborted).toBe(true);
+    expect(abort).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not abort again when the signal is already aborted", async () => {
+    vi.useFakeTimers();
+    const deadline = createTokenRequestDeadline(1_000);
+    let resolveBody: (value: string) => void = () => {};
+    const pending = deadline.readBody(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveBody = resolve;
+        }),
+    );
+    const assertion = expect(pending).rejects.toMatchObject({
+      name: "TimeoutError",
+    });
+    await vi.advanceTimersByTimeAsync(1_000);
+    const abort = vi.spyOn(AbortController.prototype, "abort");
+    resolveBody("body");
+    await assertion;
+    await expect(
+      deadline.readBody(() => Promise.resolve("again")),
+    ).rejects.toMatchObject({
+      name: "TimeoutError",
+    });
+
+    expect(abort).not.toHaveBeenCalled();
   });
 });

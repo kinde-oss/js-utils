@@ -73,6 +73,12 @@ export const createTokenRequestDeadline = (
 
   const deadlineError = () => controller.signal.reason ?? tokenRequestTimeout();
 
+  const abortIfOpen = () => {
+    if (!controller.signal.aborted) {
+      controller.abort(tokenRequestTimeout());
+    }
+  };
+
   return {
     signal: controller.signal,
     settle() {
@@ -85,14 +91,13 @@ export const createTokenRequestDeadline = (
       }
       settled = true;
       clearTimeout(timeoutId);
-      if (!controller.signal.aborted) {
-        controller.abort(tokenRequestTimeout());
-      }
+      abortIfOpen();
       throw deadlineError();
     },
     readBody<T>(read: () => Promise<T>): Promise<T> {
       return new Promise<T>((resolve, reject) => {
         if (pastDeadline()) {
+          abortIfOpen();
           reject(deadlineError());
           return;
         }
@@ -112,6 +117,7 @@ export const createTokenRequestDeadline = (
           (value) => {
             controller.signal.removeEventListener("abort", onAbort);
             if (pastDeadline()) {
+              abortIfOpen();
               reject(deadlineError());
               return;
             }
