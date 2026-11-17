@@ -53,29 +53,30 @@ export const isTokenRequestTimeout = (error: unknown): boolean =>
   error instanceof DOMException && error.name === "TimeoutError";
 
 /**
- * One deadline for a token request and its body.
- * Settle it before storing tokens: a later abort must not persist a session.
+ * One deadline for a request and its body.
+ * Settle it before storing a result: a later abort must not count as success.
  */
 export const createTokenRequestDeadline = (
   timeoutMs = TOKEN_REQUEST_TIMEOUT_MS,
+  createTimeoutError: () => DOMException = tokenRequestTimeout,
 ) => {
   const controller = new AbortController();
   const startedAt = Date.now();
   let settled = false;
   const timeoutId = setTimeout(() => {
     if (!settled) {
-      controller.abort(tokenRequestTimeout());
+      controller.abort(createTimeoutError());
     }
   }, timeoutMs);
 
   const pastDeadline = () =>
     controller.signal.aborted || Date.now() - startedAt >= timeoutMs;
 
-  const deadlineError = () => controller.signal.reason ?? tokenRequestTimeout();
+  const deadlineError = () => controller.signal.reason ?? createTimeoutError();
 
   const abortIfOpen = () => {
     if (!controller.signal.aborted) {
-      controller.abort(tokenRequestTimeout());
+      controller.abort(createTimeoutError());
     }
   };
 

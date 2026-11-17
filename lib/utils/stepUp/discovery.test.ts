@@ -1,10 +1,24 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { clearStepUpDiscoveryCache, isStepUpSupported } from "./discovery";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  clearStepUpDiscoveryCache,
+  DISCOVERY_TIMEOUT_MS,
+  isStepUpSupported,
+} from "./discovery";
+
+const supportedDiscovery = () =>
+  ({
+    ok: true,
+    json: async () => ({ acr_values_supported: ["mfa"] }),
+  }) as Response;
 
 describe("isStepUpSupported", () => {
   beforeEach(() => {
     clearStepUpDiscoveryCache();
     vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("is true when acr_values_supported lists mfa or phr", async () => {
@@ -104,6 +118,115 @@ describe("isStepUpSupported", () => {
       true,
     );
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops a stalled discovery request so a later attempt can recover", async () => {
+    vi.useFakeTimers();
+    let fetches = 0;
+    let stalledSignal: AbortSignal | undefined;
+    vi.mocked(fetch).mockImplementation((_url, init) => {
+      fetches += 1;
+      if (fetches === 1) {
+        stalledSignal = init?.signal ?? undefined;
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(init.signal?.reason);
+          });
+        });
+      }
+      return Promise.resolve(supportedDiscovery());
+    });
+
+    const first = isStepUpSupported("https://stall.example.com");
+    const second = isStepUpSupported("https://stall.example.com");
+    const settled = Promise.allSettled([first, second]);
+    await vi.advanceTimersByTimeAsync(DISCOVERY_TIMEOUT_MS);
+
+    const [firstResult, secondResult] = await settled;
+    expect(firstResult.status).toBe("rejected");
+    expect(secondResult.status).toBe("rejected");
+    if (
+      firstResult.status === "rejected" &&
+      secondResult.status === "rejected"
+    ) {
+      expect(secondResult.reason).toBe(firstResult.reason);
+      expect(firstResult.reason).toMatchObject({
+        name: "TimeoutError",
+        message:
+          "OpenID configuration request timed out for https://stall.example.com",
+      });
+    }
+    expect(stalledSignal?.aborted).toBe(true);
+
+    await expect(isStepUpSupported("https://stall.example.com")).resolves.toBe(
+      true,
+    );
+    expect(fetches).toBe(2);
+  });
+
+  it("drops a stalled discovery body and ignores a late response", async () => {
+    vi.useFakeTimers();
+    let fetches = 0;
+    let resolveJson: (value: unknown) => void = () => {};
+    vi.mocked(fetch).mockImplementation(() => {
+      fetches += 1;
+      if (fetches === 1) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            new Promise((resolve) => {
+              resolveJson = resolve;
+            }),
+        } as Response);
+      }
+      return Promise.resolve(supportedDiscovery());
+    });
+
+    const pending = isStepUpSupported("https://body.example.com");
+    const failed = expect(pending).rejects.toMatchObject({
+      name: "TimeoutError",
+      message:
+        "OpenID configuration request timed out for https://body.example.com",
+    });
+    await vi.advanceTimersByTimeAsync(DISCOVERY_TIMEOUT_MS);
+    resolveJson({ acr_values_supported: ["mfa"] });
+    await failed;
+    await expect(isStepUpSupported("https://body.example.com")).resolves.toBe(
+      true,
+    );
+    expect(fetches).toBe(2);
+  });
+
+  it("keeps a newer cache entry when an older discovery request times out", async () => {
+    vi.useFakeTimers();
+    let fetches = 0;
+    vi.mocked(fetch).mockImplementation((_url, init) => {
+      fetches += 1;
+      if (fetches === 1) {
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(init.signal?.reason);
+          });
+        });
+      }
+      return Promise.resolve(supportedDiscovery());
+    });
+
+    const first = isStepUpSupported("https://race-timeout.example.com");
+    const failed = expect(first).rejects.toMatchObject({
+      name: "TimeoutError",
+    });
+    clearStepUpDiscoveryCache();
+    await expect(
+      isStepUpSupported("https://race-timeout.example.com"),
+    ).resolves.toBe(true);
+
+    await vi.advanceTimersByTimeAsync(DISCOVERY_TIMEOUT_MS);
+    await failed;
+    await expect(
+      isStepUpSupported("https://race-timeout.example.com"),
+    ).resolves.toBe(true);
+    expect(fetches).toBe(2);
   });
 
   it("drops a failed discovery response from the cache", async () => {
