@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
 import { clearActiveStorage, setActiveStorage } from "../token";
 import { createMockAccessToken } from "../token/testUtils";
@@ -126,6 +126,43 @@ describe("hasAuthenticationContext", () => {
     );
     expect(await hasAuthenticationContext({ acr: "phr" })).toBe(false);
     clearActiveStorage();
+  });
+
+  it("measures maxAge after the session read resolves", async () => {
+    vi.useFakeTimers();
+    try {
+      const startedAt = 1_716_800_000;
+      vi.setSystemTime(startedAt * 1000);
+
+      const store = new MemoryStorage();
+      setActiveStorage(store);
+      await store.setSessionItem(
+        StorageKeys.idToken,
+        createMockAccessToken({
+          acr: "mfa",
+          auth_time: startedAt,
+        }),
+      );
+
+      let release: () => void = () => {};
+      const pending = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const readItem = store.getSessionItem.bind(store);
+      vi.spyOn(store, "getSessionItem").mockImplementation(async (key) => {
+        await pending;
+        return readItem(key);
+      });
+
+      const check = hasAuthenticationContext({ maxAge: 0 });
+      vi.setSystemTime((startedAt + 1) * 1000);
+      release();
+
+      expect(await check).toBe(false);
+    } finally {
+      clearActiveStorage();
+      vi.useRealTimers();
+    }
   });
 });
 

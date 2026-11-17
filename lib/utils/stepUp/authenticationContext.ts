@@ -172,6 +172,7 @@ export function hasAuthenticationContext(
     if (!ctx) {
       return false;
     }
-    return meets(ctx, ctxOrRequirement, now);
+    // Read the clock after the session so a slow store cannot extend maxAge.
+    return meets(ctx, ctxOrRequirement, Math.floor(Date.now() / 1000));
   });
 }
