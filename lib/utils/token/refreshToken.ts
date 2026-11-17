@@ -91,13 +91,24 @@ export const refreshToken = async ({
       let data;
       try {
         // Kept inside the session lock so a slower refresh cannot overwrite a
-        // newer session. callWithTokenSession rejects a handler that acquires
-        // this lock again.
+        // newer session. The handler uses the same deadline as the built-in
+        // token request: a timeout releases the lock, and tokens that arrive
+        // after it are not stored. callWithTokenSession rejects a handler
+        // that acquires this lock again.
         const refreshHandler = storageSettings.onRefreshHandler;
         if (refreshHandler) {
-          result = await callWithTokenSession(() =>
-            refreshHandler(refreshType),
-          );
+          const deadline = createTokenRequestDeadline();
+          try {
+            result = await deadline.readBody(() =>
+              Promise.resolve(
+                callWithTokenSession(() => refreshHandler(refreshType)),
+              ),
+            );
+            deadline.assertWithinDeadline();
+          } finally {
+            // Cancel the deadline before any token write.
+            deadline.settle();
+          }
         } else {
           const body = new URLSearchParams({
             ...(refreshType === RefreshType.refreshToken && {

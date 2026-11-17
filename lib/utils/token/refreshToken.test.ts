@@ -722,6 +722,90 @@ describe("refreshToken", () => {
       await Promise.all([first, second]);
       expect(handlerCalls).toBe(2);
     });
+
+    it("releases the session lock when onRefreshHandler passes its deadline", async () => {
+      vi.useFakeTimers();
+      try {
+        let handlerCalls = 0;
+        storageSettings.onRefreshHandler = () => {
+          handlerCalls += 1;
+          if (handlerCalls === 1) {
+            return new Promise(() => {});
+          }
+          return Promise.resolve({
+            success: true,
+            accessToken: "later-access",
+          });
+        };
+
+        const first = tokenUtils.refreshToken({
+          domain: mockDomain,
+          clientId: mockClientId,
+          refreshType: 1,
+        });
+        const second = tokenUtils.refreshToken({
+          domain: mockDomain,
+          clientId: mockClientId,
+          refreshType: 1,
+        });
+        await Promise.resolve();
+        expect(handlerCalls).toBe(1);
+
+        await vi.advanceTimersByTimeAsync(TOKEN_REQUEST_TIMEOUT_MS);
+        const [firstResult, secondResult] = await Promise.all([first, second]);
+
+        expect(firstResult).toMatchObject({
+          success: false,
+          error: expect.stringContaining("Token request timed out"),
+        });
+        expect(secondResult).toMatchObject({
+          success: true,
+          accessToken: "later-access",
+        });
+        expect(memoryStorage.setSessionItem).toHaveBeenCalledWith(
+          StorageKeys.accessToken,
+          "later-access",
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("does not persist tokens when onRefreshHandler resolves after the deadline", async () => {
+      vi.useFakeTimers();
+      try {
+        let resolveHandler: (value: {
+          success: boolean;
+          accessToken: string;
+        }) => void = () => {};
+        storageSettings.onRefreshHandler = () =>
+          new Promise((resolve) => {
+            resolveHandler = resolve;
+          });
+
+        const pending = tokenUtils.refreshToken({
+          domain: mockDomain,
+          clientId: mockClientId,
+          refreshType: 1,
+        });
+        await vi.advanceTimersByTimeAsync(TOKEN_REQUEST_TIMEOUT_MS);
+        resolveHandler({
+          success: true,
+          accessToken: "late-access",
+        });
+
+        await expect(pending).resolves.toMatchObject({
+          success: false,
+          error: expect.stringContaining("Token request timed out"),
+        });
+        expect(memoryStorage.setSessionItem).not.toHaveBeenCalledWith(
+          StorageKeys.accessToken,
+          "late-access",
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   it("should include credentials when refreshing on a custom domain", async () => {
