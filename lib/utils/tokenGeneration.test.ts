@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { storageSettings } from "../sessionManager";
 import {
+  callWithTokenSession,
   createTokenRequestDeadline,
   withTokenSessionLock,
 } from "./tokenGeneration";
@@ -67,6 +68,71 @@ describe("withTokenSessionLock", () => {
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0]?.[0]).toBe("kinde:token-session:app-");
     expect(request.mock.calls[0]).toHaveLength(2);
+  });
+
+  it("lets a timer started inside the lock acquire it after the operation finishes", async () => {
+    const refreshed = new Promise<string>((resolve, reject) => {
+      void withTokenSessionLock(async () => {
+        window.setTimeout(() => {
+          withTokenSessionLock(async () => "refreshed").then(resolve, reject);
+        }, 0);
+      });
+    });
+
+    await expect(refreshed).resolves.toBe("refreshed");
+  });
+
+  it("rejects a timer that reenters the lock while its operation is still running", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let operation: Promise<unknown> = Promise.resolve();
+    const nested = new Promise<string>((resolve, reject) => {
+      operation = withTokenSessionLock(async () => {
+        window.setTimeout(() => {
+          withTokenSessionLock(async () => "inner").then(resolve, reject);
+        }, 0);
+        await gate;
+      });
+    });
+
+    try {
+      await expect(nested).rejects.toThrow(
+        /Nested token session lock rejected/,
+      );
+    } finally {
+      release();
+      await operation;
+    }
+  });
+
+  it("rejects a lock requested after callWithTokenSession awaits", async () => {
+    await expect(
+      callWithTokenSession(async () => {
+        await Promise.resolve();
+        return withTokenSessionLock(async () => "inner");
+      }),
+    ).rejects.toThrow(/Nested token session lock rejected/);
+
+    await expect(withTokenSessionLock(async () => "after")).resolves.toBe(
+      "after",
+    );
+  });
+
+  it("lets a timer started in the session callback acquire the lock after it finishes", async () => {
+    const refreshed = new Promise<string>((resolve, reject) => {
+      void withTokenSessionLock(async () => {
+        await callWithTokenSession(async () => {
+          await Promise.resolve();
+          window.setTimeout(() => {
+            withTokenSessionLock(async () => "refreshed").then(resolve, reject);
+          }, 0);
+        });
+      });
+    });
+
+    await expect(refreshed).resolves.toBe("refreshed");
   });
 
   it("rejects a nested call after an await instead of waiting on the held lock", async () => {

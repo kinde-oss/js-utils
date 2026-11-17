@@ -3,16 +3,20 @@ import { storageSettings } from "../sessionManager";
 let writeQueue: Promise<void> = Promise.resolve();
 let syncTokenSessionDepth = 0;
 
+type TokenSessionOwner = {
+  active: boolean;
+};
+
 type TokenSessionStorage = {
-  run<R>(store: true, callback: () => R): R;
-  getStore(): true | undefined;
+  run<R>(store: TokenSessionOwner, callback: () => R): R;
+  getStore(): TokenSessionOwner | undefined;
 };
 
 /**
- * AsyncLocalStorage follows the handler across `await`. A module-level held
- * flag cannot: another refresh in this realm is also running while the first
- * waits, and must still queue. Browsers have no equivalent, so same-turn
- * reentry is tracked separately.
+ * AsyncLocalStorage follows the handler across `await`, and a timer created
+ * inside it keeps the store. Each operation gets its own record, cleared when
+ * that operation settles, so the timer is not rejected as nested afterwards.
+ * Browsers have no equivalent, so same-turn reentry is tracked separately.
  */
 const loadTokenSessionStorage = (): TokenSessionStorage | undefined => {
   try {
@@ -36,7 +40,40 @@ const loadTokenSessionStorage = (): TokenSessionStorage | undefined => {
 const tokenSessionStorage = loadTokenSessionStorage();
 
 const tokenSessionActive = (): boolean =>
-  syncTokenSessionDepth > 0 || tokenSessionStorage?.getStore() === true;
+  syncTokenSessionDepth > 0 || tokenSessionStorage?.getStore()?.active === true;
+
+/**
+ * Runs `fn` in an active ownership record.
+ * An operation that is already active keeps its record. A new record stays
+ * active until `fn`'s promise settles, including across `await`.
+ */
+const enterTokenSession = <T>(fn: () => T): T => {
+  const storage = tokenSessionStorage;
+  if (!storage) {
+    return fn();
+  }
+  const current = storage.getStore();
+  if (current?.active) {
+    return fn();
+  }
+
+  const owner: TokenSessionOwner = { active: true };
+  return storage.run(owner, () => {
+    try {
+      const result = fn();
+      if (result instanceof Promise) {
+        return result.finally(() => {
+          owner.active = false;
+        }) as T;
+      }
+      owner.active = false;
+      return result;
+    } catch (error) {
+      owner.active = false;
+      throw error;
+    }
+  });
+};
 
 const nestedTokenSessionLockError = () =>
   new Error(
@@ -143,21 +180,18 @@ const withTokenWriteLock = <T>(task: () => Promise<T>): Promise<T> => {
   return run;
 };
 
-const runInTokenSession = <T>(task: () => T): T => {
-  if (tokenSessionStorage) {
-    return tokenSessionStorage.run(true, task);
-  }
-  return task();
-};
+const runInTokenSession = <T>(task: () => Promise<T>): Promise<T> =>
+  enterTokenSession(task);
 
 /**
  * Runs a callback on the current token-session turn.
  * Browsers without async context reject lock requests made before this
- * callback awaits. AsyncLocalStorage also rejects requests made after it awaits.
+ * callback awaits. An active AsyncLocalStorage operation keeps its owner, so
+ * a lock request after `await` is still rejected.
  */
 export const callWithTokenSession = <T>(fn: () => T): T => {
   if (tokenSessionStorage) {
-    return tokenSessionStorage.run(true, fn);
+    return enterTokenSession(fn);
   }
   syncTokenSessionDepth += 1;
   try {
