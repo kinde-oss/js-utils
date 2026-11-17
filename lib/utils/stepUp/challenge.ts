@@ -23,10 +23,10 @@ export type StepUpChallenge = {
   };
 };
 
-/** Quotes a header value. CR and LF become spaces so they cannot split the header. */
+/** Quotes a header value, replacing non-printable and non-ASCII characters with spaces. */
 const quote = (value: string): string =>
   `"${value
-    .replace(/[\r\n]+/g, " ")
+    .replace(/[^\x20-\x7E]+/g, " ")
     .replace(/\\/g, "\\\\")
     .replace(/"/g, '\\"')}"`;
 

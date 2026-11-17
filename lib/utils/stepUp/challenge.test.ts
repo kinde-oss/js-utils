@@ -1,3 +1,4 @@
+import { validateHeaderValue } from "node:http";
 import { describe, expect, it } from "vitest";
 import {
   buildStepUpChallenge,
@@ -52,6 +53,31 @@ describe("buildStepUpChallenge", () => {
     expect(challenge.headers["WWW-Authenticate"]).toContain(
       'error_description="line one line \\"two\\" end"',
     );
+  });
+
+  it("normalizes the description to printable ASCII in the header", () => {
+    const errorDescription =
+      "don\u2019t caf\u00e9. lock \u{1F512} now a\0b c\x7Fd e\x01f";
+    const challenge = buildStepUpChallenge({
+      acr: "mfa",
+      errorDescription,
+    });
+    const header = challenge.headers["WWW-Authenticate"];
+    const sanitized = "don t caf . lock   now a b c d e f";
+
+    expect(header).toContain(`error_description="${sanitized}"`);
+    expect(header).toMatch(/^[\x20-\x7E]*$/);
+    expect(challenge.body.error_description).toBe(errorDescription);
+    expect(() => validateHeaderValue("WWW-Authenticate", header)).not.toThrow();
+
+    const response = new Response(null, {
+      status: challenge.status,
+      headers: challenge.headers,
+    });
+    expect(parseStepUpChallenge(response)).toMatchObject({
+      acr: "mfa",
+      errorDescription: sanitized,
+    });
   });
 
   it("quotes and escapes the description", () => {
