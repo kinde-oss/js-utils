@@ -156,10 +156,14 @@ export function hasAuthenticationContext(
 export function hasAuthenticationContext(
   ctxOrRequirement: AuthenticationContext | AuthenticationContextRequirement,
   requirement?: AuthenticationContextRequirement,
-  now: number = Math.floor(Date.now() / 1000),
+  now?: number,
 ): boolean | Promise<boolean> {
   if (requirement !== undefined) {
-    return meets(ctxOrRequirement as AuthenticationContext, requirement, now);
+    return meets(
+      ctxOrRequirement as AuthenticationContext,
+      requirement,
+      now ?? Math.floor(Date.now() / 1000),
+    );
   }
 
   if (isAuthenticationContext(ctxOrRequirement)) {
@@ -172,7 +176,8 @@ export function hasAuthenticationContext(
     if (!ctx) {
       return false;
     }
-    // Read the clock after the session so a slow store cannot extend maxAge.
-    return meets(ctx, ctxOrRequirement, Math.floor(Date.now() / 1000));
+
+    // Default to the clock after the session read, preserving an explicit now.
+    return meets(ctx, ctxOrRequirement, now ?? Math.floor(Date.now() / 1000));
   });
 }

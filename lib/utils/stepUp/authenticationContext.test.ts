@@ -8,6 +8,7 @@ import {
   hasAuthenticationContext,
   readAuthenticationContext,
   type AuthenticationContext,
+  type AuthenticationContextRequirement,
 } from "./authenticationContext";
 
 const now = 1_716_800_000;
@@ -21,6 +22,42 @@ const context = (
   amr,
   authTime,
 });
+
+/** The session-reading overload shares `now` with the pure check, as its third argument. */
+const hasSessionContextAt = (
+  requirement: AuthenticationContextRequirement,
+  checkedAt: number,
+): Promise<boolean> =>
+  (
+    hasAuthenticationContext as (
+      requirement: AuthenticationContextRequirement,
+      omitted: undefined,
+      now: number,
+    ) => Promise<boolean>
+  )(requirement, undefined, checkedAt);
+
+const holdIdTokenRead = async (authTime: number): Promise<() => void> => {
+  const store = new MemoryStorage();
+  setActiveStorage(store);
+  await store.setSessionItem(
+    StorageKeys.idToken,
+    createMockAccessToken({
+      acr: "mfa",
+      auth_time: authTime,
+    }),
+  );
+
+  let release: () => void = () => {};
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const readItem = store.getSessionItem.bind(store);
+  vi.spyOn(store, "getSessionItem").mockImplementation(async (key) => {
+    await pending;
+    return readItem(key);
+  });
+  return release;
+};
 
 describe("hasAuthenticationContext", () => {
   it("treats an absent acr as baseline", () => {
@@ -133,32 +170,31 @@ describe("hasAuthenticationContext", () => {
     try {
       const startedAt = 1_716_800_000;
       vi.setSystemTime(startedAt * 1000);
-
-      const store = new MemoryStorage();
-      setActiveStorage(store);
-      await store.setSessionItem(
-        StorageKeys.idToken,
-        createMockAccessToken({
-          acr: "mfa",
-          auth_time: startedAt,
-        }),
-      );
-
-      let release: () => void = () => {};
-      const pending = new Promise<void>((resolve) => {
-        release = resolve;
-      });
-      const readItem = store.getSessionItem.bind(store);
-      vi.spyOn(store, "getSessionItem").mockImplementation(async (key) => {
-        await pending;
-        return readItem(key);
-      });
+      const release = await holdIdTokenRead(startedAt);
 
       const check = hasAuthenticationContext({ maxAge: 0 });
       vi.setSystemTime((startedAt + 1) * 1000);
       release();
 
       expect(await check).toBe(false);
+    } finally {
+      clearActiveStorage();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps an explicit now when the session read is slow", async () => {
+    vi.useFakeTimers();
+    try {
+      const startedAt = 1_716_800_000;
+      vi.setSystemTime(startedAt * 1000);
+      const release = await holdIdTokenRead(startedAt);
+
+      const check = hasSessionContextAt({ maxAge: 0 }, startedAt);
+      vi.setSystemTime((startedAt + 1) * 1000);
+      release();
+
+      expect(await check).toBe(true);
     } finally {
       clearActiveStorage();
       vi.useRealTimers();
