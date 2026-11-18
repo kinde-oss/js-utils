@@ -121,6 +121,40 @@ describe("buildAuthorizationUrl", () => {
     ).rejects.toMatchObject({ code: "openid_scope_not_allowed" });
   });
 
+  it.each([
+    "scope=read&scope=openid",
+    "scope=openid&scope=read",
+    "scope=read&scope=write+openid",
+    "scope=&scope=openid",
+  ])(
+    "rejects openid in any repeated scope parameter on the endpoint: %s",
+    async (query) => {
+      await expect(
+        buildAuthorizationUrl({
+          ...options,
+          authorizationServer: {
+            ...serverMetadata,
+            authorization_endpoint: `https://auth.example.com/authorize?${query}`,
+          },
+        }),
+      ).rejects.toMatchObject({ code: "openid_scope_not_allowed" });
+    },
+  );
+
+  it("replaces every repeated scope parameter when scopes are provided", async () => {
+    const result = await buildAuthorizationUrl({
+      ...options,
+      authorizationServer: {
+        ...serverMetadata,
+        authorization_endpoint:
+          "https://auth.example.com/authorize?scope=read&scope=openid",
+      },
+      scope: "write",
+    });
+    expect(result.url.searchParams.getAll("scope")).toEqual(["write"]);
+    expect(result.url.toString()).not.toContain("openid");
+  });
+
   it("overrides a preconfigured scope when scopes are provided", async () => {
     const result = await buildAuthorizationUrl({
       ...options,

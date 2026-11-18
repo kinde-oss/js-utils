@@ -59,7 +59,7 @@ export const buildAuthorizationUrl = async (
   if (scopes.length) url.searchParams.set("scope", scopes.join(" "));
   url.searchParams.set("resource", resource);
   url.searchParams.delete("nonce");
-  assertNoOpenId(normalizeScope(url.searchParams.get("scope") ?? undefined));
+  assertNoOpenId(normalizeScope(url.searchParams.getAll("scope")));
 
   return { url, state, codeVerifier, codeChallenge };
 };
