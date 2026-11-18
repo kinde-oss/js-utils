@@ -418,6 +418,48 @@ describe("discoverAgentAuth", () => {
     ).rejects.toMatchObject({ code: "issuer_mismatch" });
   });
 
+  describe("issuer identity", () => {
+    const wellKnown =
+      "https://auth.example.com/.well-known/oauth-authorization-server/tenant";
+    const serving = (listedIssuer: string, metadataIssuer: string) =>
+      mockFetch((url) =>
+        url.includes("oauth-protected-resource")
+          ? jsonResponse({ ...prm, authorization_servers: [listedIssuer] })
+          : url === wellKnown
+            ? jsonResponse({ ...serverMetadata, issuer: metadataIssuer })
+            : routes(url),
+      );
+
+    it.each([
+      ["https://auth.example.com/tenant", "https://auth.example.com/tenant/"],
+      ["https://auth.example.com/tenant/", "https://auth.example.com/tenant"],
+      ["https://auth.example.com/tenant", "https://AUTH.example.com/tenant"],
+    ])(
+      "rejects metadata whose issuer differs from the listed issuer: %s vs %s",
+      async (listedIssuer, metadataIssuer) => {
+        await expect(
+          discoverAgentAuth({
+            wwwAuthenticate: "Bearer",
+            resourceUrl: prm.resource,
+            fetch: serving(listedIssuer, metadataIssuer),
+          }),
+        ).rejects.toMatchObject({ code: "issuer_mismatch" });
+      },
+    );
+
+    it.each([
+      "https://auth.example.com/tenant",
+      "https://auth.example.com/tenant/",
+    ])("accepts an identical issuer %s", async (issuer) => {
+      const result = await discoverAgentAuth({
+        wwwAuthenticate: "Bearer",
+        resourceUrl: prm.resource,
+        fetch: serving(issuer, issuer),
+      });
+      expect(result.authorizationServer.issuer).toBe(issuer);
+    });
+  });
+
   it("rejects a metadata response that was redirected to http", async () => {
     const redirected = jsonResponse(prm);
     Object.defineProperty(redirected, "url", {

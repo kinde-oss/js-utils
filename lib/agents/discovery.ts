@@ -173,9 +173,7 @@ const fetchAuthorizationServerMetadata = async (
         "Authorization server metadata request",
         options,
       );
-      if (
-        stripTrailingSlash(metadata.issuer ?? "") !== stripTrailingSlash(issuer)
-      ) {
+      if (metadata.issuer !== issuer) {
         throw new AgentAuthError(
           "issuer_mismatch",
           `Metadata issuer ${metadata.issuer} does not match ${issuer}`,
