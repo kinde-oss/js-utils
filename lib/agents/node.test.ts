@@ -233,19 +233,22 @@ describe("createSafeFetch transport", () => {
   it("follows GET redirects hop by hop and re-resolves every host", async () => {
     resolveTo("first.example.com", ["127.0.0.1", 4]);
     resolveTo("second.example.com", ["127.0.0.1", 4]);
+    let arrivedPath = "";
     handler = (req, res) => {
       if (req.headers.host?.startsWith("first.")) {
         res.statusCode = 301;
         res.setHeader("location", `http://second.example.com:${port}/final`);
         res.end();
       } else {
-        res.end(`arrived ${req.url}`);
+        arrivedPath = req.url ?? "";
+        res.end("arrived");
       }
     };
     const response = await createSafeFetch(options)(
       `http://first.example.com:${port}/start`,
     );
-    expect(await response.text()).toBe("arrived /final");
+    expect(await response.text()).toBe("arrived");
+    expect(arrivedPath).toBe("/final");
     expect(lookupSpy.mock.calls.map((call) => call[0])).toEqual([
       "first.example.com",
       "second.example.com",
