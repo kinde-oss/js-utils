@@ -19,6 +19,7 @@ export type AgentAuthErrorCode =
   | "redirect_blocked"
   | "too_many_redirects"
   | "request_timeout"
+  | "unsupported_token_auth_method"
   | "response_too_large"
   | (string & {});
 

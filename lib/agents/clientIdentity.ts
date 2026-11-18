@@ -17,6 +17,17 @@ import type {
   PreRegisteredClient,
 } from "./types";
 
+const SUPPORTED_AUTH_METHODS = ["none", "client_secret_post"];
+
+const assertSupportedAuthMethod = (method: string): void => {
+  if (!SUPPORTED_AUTH_METHODS.includes(method)) {
+    throw new AgentAuthError(
+      "unsupported_token_auth_method",
+      `token_endpoint_auth_method ${method} is not supported; use ${SUPPORTED_AUTH_METHODS.join(" or ")}`,
+    );
+  }
+};
+
 export const registerClient = async (
   registrationEndpoint: string,
   request: DynamicRegistrationRequest,
@@ -34,12 +45,15 @@ export const registerClient = async (
   const scopes = normalizeScope(request.scope);
   assertNoOpenId(scopes);
 
+  const authMethod = request.tokenEndpointAuthMethod ?? "none";
+  assertSupportedAuthMethod(authMethod);
+
   const payload = {
     client_name: request.clientName,
     redirect_uris: request.redirectUris,
     grant_types: request.grantTypes ?? ["authorization_code", "refresh_token"],
     response_types: request.responseTypes ?? ["code"],
-    token_endpoint_auth_method: request.tokenEndpointAuthMethod ?? "none",
+    token_endpoint_auth_method: authMethod,
     ...(scopes.length && { scope: scopes.join(" ") }),
     ...(request.clientUri && { client_uri: request.clientUri }),
     ...(request.logoUri && { logo_uri: request.logoUri }),
@@ -58,6 +72,7 @@ export const registerClient = async (
   const data = await readJson<{
     client_id?: string;
     client_secret?: string;
+    token_endpoint_auth_method?: string;
     registration_access_token?: string;
     registration_client_uri?: string;
   }>(response, "Dynamic client registration");
@@ -67,6 +82,10 @@ export const registerClient = async (
       "invalid_response",
       "Registration response is missing client_id",
     );
+  }
+
+  if (data.token_endpoint_auth_method !== undefined) {
+    assertSupportedAuthMethod(data.token_endpoint_auth_method);
   }
 
   return {

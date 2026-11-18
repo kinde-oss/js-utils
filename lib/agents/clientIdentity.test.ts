@@ -190,6 +190,57 @@ describe("registerClient", () => {
     ).resolves.toMatchObject({ method: "dcr", clientId: "dcr-1" });
   });
 
+  it.each(["client_secret_basic", "client_secret_jwt", "private_key_jwt"])(
+    "rejects the unsupported auth method %s before registering",
+    async (tokenEndpointAuthMethod) => {
+      const fetchMock = dcrFetch();
+      await expect(
+        registerClient(
+          serverMetadata.registration_endpoint,
+          { ...registration, tokenEndpointAuthMethod },
+          { fetch: fetchMock },
+        ),
+      ).rejects.toMatchObject({ code: "unsupported_token_auth_method" });
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["none", "client_secret_post"])(
+    "registers with the supported auth method %s",
+    async (tokenEndpointAuthMethod) => {
+      const fetchMock = mockFetch(() =>
+        jsonResponse(
+          {
+            client_id: "dcr-1",
+            token_endpoint_auth_method: tokenEndpointAuthMethod,
+          },
+          { status: 201 },
+        ),
+      );
+      await registerClient(
+        serverMetadata.registration_endpoint,
+        { ...registration, tokenEndpointAuthMethod },
+        { fetch: fetchMock },
+      );
+      const sent = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      expect(sent.token_endpoint_auth_method).toBe(tokenEndpointAuthMethod);
+    },
+  );
+
+  it("refuses a registration whose assigned auth method is unsupported", async () => {
+    await expect(
+      registerClient(serverMetadata.registration_endpoint, registration, {
+        fetch: mockFetch(() =>
+          jsonResponse({
+            client_id: "dcr-1",
+            client_secret: "s",
+            token_endpoint_auth_method: "client_secret_basic",
+          }),
+        ),
+      }),
+    ).rejects.toMatchObject({ code: "unsupported_token_auth_method" });
+  });
+
   it("rejects openid inside a multi-scope array entry", async () => {
     const fetchMock = dcrFetch();
     await expect(
