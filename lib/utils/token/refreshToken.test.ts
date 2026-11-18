@@ -8,6 +8,7 @@ import * as tokenUtils from ".";
 import * as refreshTimer from "../refreshTimer";
 import { createMockAccessToken } from "./testUtils";
 import * as isClient from "../isClient";
+import { TOKEN_REQUEST_TIMEOUT_MS } from "../tokenGeneration";
 
 describe("refreshToken", () => {
   const mockDomain = "https://example.com";
@@ -174,6 +175,58 @@ describe("refreshToken", () => {
 
     // callback was called
     expect(callback).toHaveBeenCalled();
+  });
+
+  it("holds the session lock so a later refresh waits for the in-flight one", async () => {
+    let releaseRead: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    let enteredRead: () => void = () => {};
+    const reading = new Promise<void>((resolve) => {
+      enteredRead = resolve;
+    });
+    let reads = 0;
+    vi.spyOn(memoryStorage, "getSessionItem").mockImplementation(
+      async (key) => {
+        if (key === StorageKeys.refreshToken) {
+          reads += 1;
+          if (reads === 1) {
+            enteredRead();
+            await gate;
+          }
+          return mockRefreshTokenValue;
+        }
+        return null;
+      },
+    );
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          access_token: "new-access",
+          id_token: "new-id",
+          refresh_token: "new-refresh",
+        }),
+    } as Response);
+
+    const first = tokenUtils.refreshToken({
+      domain: mockKindeDomain,
+      clientId: mockClientId,
+    });
+    await reading;
+
+    const second = tokenUtils.refreshToken({
+      domain: mockKindeDomain,
+      clientId: mockClientId,
+    });
+    expect(reads).toBe(1);
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    releaseRead();
+    await Promise.all([first, second]);
+    expect(reads).toBe(2);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
   it("should use sanitizeUrl for the domain", async () => {
@@ -568,6 +621,191 @@ describe("refreshToken", () => {
         refreshType: 1,
       });
     });
+
+    it("rejects a locked token operation awaited by onRefreshHandler instead of hanging", async () => {
+      vi.useRealTimers();
+      let nestedError: unknown;
+      storageSettings.onRefreshHandler = async (refreshType) => {
+        await Promise.resolve();
+        try {
+          await tokenUtils.refreshToken({
+            domain: mockDomain,
+            clientId: mockClientId,
+            refreshType,
+          });
+        } catch (error) {
+          nestedError = error;
+          throw error;
+        }
+        return {
+          success: true,
+          accessToken: "should-not-be-used",
+        };
+      };
+
+      const result = await Promise.race([
+        tokenUtils.refreshToken({
+          domain: mockDomain,
+          clientId: mockClientId,
+          refreshType: 1,
+        }),
+        new Promise<never>((_, reject) => {
+          setTimeout(
+            () => reject(new Error("nested token operation hung")),
+            1000,
+          );
+        }),
+      ]);
+
+      expect(nestedError).toBeInstanceOf(Error);
+      expect((nestedError as Error).message).toContain(
+        "Nested token session lock rejected",
+      );
+      expect(result).toStrictEqual({
+        success: false,
+        error: expect.stringContaining("Nested token session lock rejected"),
+      });
+
+      storageSettings.onRefreshHandler = vi.fn().mockResolvedValue({
+        success: true,
+        accessToken: "later-access-token",
+      });
+      await expect(
+        tokenUtils.refreshToken({
+          domain: mockDomain,
+          clientId: mockClientId,
+          refreshType: 1,
+        }),
+      ).resolves.toMatchObject({
+        success: true,
+        accessToken: "later-access-token",
+      });
+    });
+
+    it("runs onRefreshHandler inside the session lock", async () => {
+      let releaseHandler: () => void = () => {};
+      const gate = new Promise<void>((resolve) => {
+        releaseHandler = resolve;
+      });
+      let enteredHandler: () => void = () => {};
+      const started = new Promise<void>((resolve) => {
+        enteredHandler = resolve;
+      });
+      let handlerCalls = 0;
+      storageSettings.onRefreshHandler = async () => {
+        handlerCalls += 1;
+        if (handlerCalls === 1) {
+          enteredHandler();
+          await gate;
+        }
+        return {
+          success: true,
+          accessToken: "handler-access",
+        };
+      };
+
+      const first = tokenUtils.refreshToken({
+        domain: mockDomain,
+        clientId: mockClientId,
+        refreshType: 1,
+      });
+      await started;
+      const second = tokenUtils.refreshToken({
+        domain: mockDomain,
+        clientId: mockClientId,
+        refreshType: 1,
+      });
+      await Promise.resolve();
+      expect(handlerCalls).toBe(1);
+
+      releaseHandler();
+      await Promise.all([first, second]);
+      expect(handlerCalls).toBe(2);
+    });
+
+    it("releases the session lock when onRefreshHandler passes its deadline", async () => {
+      vi.useFakeTimers();
+      try {
+        let handlerCalls = 0;
+        storageSettings.onRefreshHandler = () => {
+          handlerCalls += 1;
+          if (handlerCalls === 1) {
+            return new Promise(() => {});
+          }
+          return Promise.resolve({
+            success: true,
+            accessToken: "later-access",
+          });
+        };
+
+        const first = tokenUtils.refreshToken({
+          domain: mockDomain,
+          clientId: mockClientId,
+          refreshType: 1,
+        });
+        const second = tokenUtils.refreshToken({
+          domain: mockDomain,
+          clientId: mockClientId,
+          refreshType: 1,
+        });
+        await Promise.resolve();
+        expect(handlerCalls).toBe(1);
+
+        await vi.advanceTimersByTimeAsync(TOKEN_REQUEST_TIMEOUT_MS);
+        const [firstResult, secondResult] = await Promise.all([first, second]);
+
+        expect(firstResult).toMatchObject({
+          success: false,
+          error: expect.stringContaining("Token request timed out"),
+        });
+        expect(secondResult).toMatchObject({
+          success: true,
+          accessToken: "later-access",
+        });
+        expect(memoryStorage.setSessionItem).toHaveBeenCalledWith(
+          StorageKeys.accessToken,
+          "later-access",
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("does not persist tokens when onRefreshHandler resolves after the deadline", async () => {
+      vi.useFakeTimers();
+      try {
+        let resolveHandler: (value: {
+          success: boolean;
+          accessToken: string;
+        }) => void = () => {};
+        storageSettings.onRefreshHandler = () =>
+          new Promise((resolve) => {
+            resolveHandler = resolve;
+          });
+
+        const pending = tokenUtils.refreshToken({
+          domain: mockDomain,
+          clientId: mockClientId,
+          refreshType: 1,
+        });
+        await vi.advanceTimersByTimeAsync(TOKEN_REQUEST_TIMEOUT_MS);
+        resolveHandler({
+          success: true,
+          accessToken: "late-access",
+        });
+
+        await expect(pending).resolves.toMatchObject({
+          success: false,
+          error: expect.stringContaining("Token request timed out"),
+        });
+        expect(memoryStorage.setSessionItem).not.toHaveBeenCalledWith(
+          StorageKeys.accessToken,
+          "late-access",
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   it("should include credentials when refreshing on a custom domain", async () => {
@@ -685,5 +923,98 @@ describe("refreshToken", () => {
     expect(body).toContain("grant_type=refresh_token");
     expect(body).toContain("client_id=test-client-id");
     expect(body).toContain("client_secret=mock-client-secret");
+  });
+
+  it("releases the session lock when a token refresh passes its deadline", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(memoryStorage, "getSessionItem").mockImplementation(async (key) =>
+      key === StorageKeys.refreshToken ? mockRefreshTokenValue : null,
+    );
+    let enteredFetch: () => void = () => {};
+    const fetching = new Promise<void>((resolve) => {
+      enteredFetch = resolve;
+    });
+    let fetches = 0;
+    vi.mocked(global.fetch).mockImplementation((_url, init) => {
+      fetches += 1;
+      if (fetches === 1) {
+        enteredFetch();
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(init.signal?.reason);
+          });
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: "later-access",
+          }),
+      } as Response);
+    });
+
+    const first = tokenUtils.refreshToken({
+      domain: mockDomain,
+      clientId: mockClientId,
+    });
+    const second = tokenUtils.refreshToken({
+      domain: mockDomain,
+      clientId: mockClientId,
+    });
+    await fetching;
+    expect(fetches).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(TOKEN_REQUEST_TIMEOUT_MS);
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+
+    expect(firstResult).toMatchObject({
+      success: false,
+      error: expect.stringContaining("Token request timed out"),
+    });
+    expect(secondResult).toMatchObject({
+      success: true,
+      accessToken: "later-access",
+    });
+    expect(memoryStorage.setSessionItem).toHaveBeenCalledWith(
+      StorageKeys.accessToken,
+      "later-access",
+    );
+    vi.useRealTimers();
+  });
+
+  it("does not persist tokens when the refresh body arrives after the deadline", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(memoryStorage, "getSessionItem").mockImplementation(async (key) =>
+      key === StorageKeys.refreshToken ? mockRefreshTokenValue : null,
+    );
+    let resolveJson: (value: unknown) => void = () => {};
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        new Promise((resolve) => {
+          resolveJson = resolve;
+        }),
+    } as Response);
+
+    const pending = tokenUtils.refreshToken({
+      domain: mockDomain,
+      clientId: mockClientId,
+    });
+    await vi.advanceTimersByTimeAsync(TOKEN_REQUEST_TIMEOUT_MS);
+    resolveJson({
+      access_token: "late-access",
+      id_token: "late-id",
+      refresh_token: "late-refresh",
+    });
+    await expect(pending).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining("Token request timed out"),
+    });
+    expect(memoryStorage.setSessionItem).not.toHaveBeenCalledWith(
+      StorageKeys.accessToken,
+      "late-access",
+    );
+    vi.useRealTimers();
   });
 });

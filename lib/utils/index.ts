@@ -23,3 +23,27 @@ export {
 export { isClient } from "./isClient";
 export { isServer } from "./isServer";
 export { switchOrg } from "./switchOrg";
+export {
+  UnmetAuthenticationRequirementsError,
+  LoginRequiredError,
+  StepUpRequiredError,
+  isStepUpSupported,
+  readAuthenticationContext,
+  getAuthenticationContext,
+  getAuthenticationContextSync,
+  hasAuthenticationContext,
+  readCallbackAuthenticationError,
+  stepUp,
+  readStepUpState,
+  buildStepUpChallenge,
+  parseStepUpChallenge,
+  stepUpRequiredFromResponse,
+} from "./stepUp";
+export type {
+  AuthenticationContext,
+  AuthenticationContextRequirement,
+  StepUpOptions,
+  ParsedStepUpChallenge,
+  StepUpChallenge,
+  AcrValue,
+} from "./stepUp";

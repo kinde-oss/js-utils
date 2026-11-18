@@ -140,6 +140,55 @@ describe("mapLoginMethodParamsForUrl", () => {
     expect(result).toEqual(expectedOutput);
   });
 
+  it("should map acrValues and maxAge, including maxAge 0", () => {
+    const result = mapLoginMethodParamsForUrl({
+      acrValues: "mfa",
+      maxAge: 0,
+    });
+
+    expect(result.acr_values).toBe("mfa");
+    expect(result.max_age).toBe("0");
+  });
+
+  it("should space-join an acrValues list", () => {
+    const result = mapLoginMethodParamsForUrl({
+      acrValues: ["mfa", "phr"],
+    });
+
+    expect(result.acr_values).toBe("mfa phr");
+  });
+
+  it("should omit acr_values and max_age when they are unset", () => {
+    const result = mapLoginMethodParamsForUrl({
+      acrValues: undefined,
+      maxAge: undefined,
+    });
+
+    expect(result).not.toHaveProperty("acr_values");
+    expect(result).not.toHaveProperty("max_age");
+    expect(JSON.stringify(result)).not.toMatch(/undefined|null|NaN/);
+  });
+
+  it("should omit a null maxAge", () => {
+    const result = mapLoginMethodParamsForUrl({
+      maxAge: null as unknown as number,
+    });
+
+    expect(result).not.toHaveProperty("max_age");
+  });
+
+  it("should throw before mapping a negative or non-integer maxAge", () => {
+    expect(() => mapLoginMethodParamsForUrl({ maxAge: -1 })).toThrow(
+      /non-negative integer/,
+    );
+    expect(() => mapLoginMethodParamsForUrl({ maxAge: 1.5 })).toThrow(
+      /non-negative integer/,
+    );
+    expect(() => mapLoginMethodParamsForUrl({ maxAge: Number.NaN })).toThrow(
+      /non-negative integer/,
+    );
+  });
+
   it("should map with invitation code", () => {
     const options: Partial<LoginMethodParams> = {
       invitationCode: "invitation123",

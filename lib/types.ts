@@ -37,6 +37,8 @@ export type LoginMethodParams<T = Record<string, string>> = Partial<
     | "pricingTableKey"
     | "pagesMode"
     | "invitationCode"
+    | "acrValues"
+    | "maxAge"
   >
 >;
 
@@ -230,6 +232,17 @@ export type LoginOptions<T = Record<string, string>> = {
    * Invitation code to use for the registration
    */
   invitationCode?: string;
+  /**
+   * Authentication context class to request (RFC 9470).
+   * Kinde accepts `mfa` and `phr`. A list is space-separated; the highest is applied.
+   * Omitted from the authorization URL when unset.
+   */
+  acrValues?: "mfa" | "phr" | Array<"mfa" | "phr">;
+  /**
+   * Maximum age, in seconds, of the user's last authentication.
+   * `0` requires re-authentication. Omitted from the authorization URL when unset.
+   */
+  maxAge?: number;
   /**
    * Whether the login is an invitation (required when code is provided)
    *

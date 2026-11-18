@@ -1,4 +1,5 @@
 import { LoginMethodParams } from "../types";
+import { formatAcrValues, formatMaxAge } from "./stepUp/params";
 import { sanitizeUrl } from "./sanitizeUrl";
 
 export const mapLoginMethodParamsForUrl = (
@@ -32,6 +33,8 @@ export const mapLoginMethodParamsForUrl = (
     pages_mode: options.pagesMode,
     invitation_code: options.invitationCode,
     is_invitation: options.invitationCode ? "true" : undefined,
+    acr_values: formatAcrValues(options.acrValues),
+    max_age: formatMaxAge(options.maxAge),
   };
 
   Object.keys(translate).forEach(
