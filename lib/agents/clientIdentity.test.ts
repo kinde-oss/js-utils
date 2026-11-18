@@ -83,17 +83,59 @@ describe("resolveClientIdentity", () => {
     ).rejects.toMatchObject({ code: "no_client_identity" });
   });
 
-  it("matches the pre-registered issuer ignoring a trailing slash", async () => {
+  it.each([
+    ["https://auth.example.com/tenant", "https://auth.example.com/tenant/"],
+    ["https://auth.example.com/tenant/", "https://auth.example.com/tenant"],
+    ["https://auth.example.com", "https://auth.example.com/"],
+    ["https://auth.example.com/tenant", "https://AUTH.example.com/tenant"],
+  ])(
+    "requires an exact issuer match: %s vs %s",
+    async (serverIssuer, registeredIssuer) => {
+      const authorizationServer = {
+        ...serverMetadata,
+        issuer: serverIssuer,
+        client_id_metadata_document_supported: false,
+      };
+      const preRegisteredClient = {
+        issuer: registeredIssuer,
+        clientId: "pre-123",
+        clientSecret: "s",
+      };
+
+      await expect(
+        resolveClientIdentity({
+          authorizationServer,
+          preRegistered: preRegisteredClient,
+        }),
+      ).rejects.toMatchObject({ code: "no_client_identity" });
+
+      const identity = await resolveClientIdentity({
+        authorizationServer,
+        preRegistered: preRegisteredClient,
+        registration,
+        fetch: dcrFetch(),
+      });
+      expect(identity).toEqual({ method: "dcr", clientId: "dcr-1" });
+    },
+  );
+
+  it("uses pre-registered credentials when the issuer is identical", async () => {
     const identity = await resolveClientIdentity({
       authorizationServer: {
         ...serverMetadata,
+        issuer: "https://auth.example.com/tenant/",
         client_id_metadata_document_supported: false,
       },
-      preRegistered: { ...preRegistered, issuer: `${serverMetadata.issuer}/` },
+      preRegistered: {
+        issuer: "https://auth.example.com/tenant/",
+        clientId: "pre-123",
+        clientSecret: "s",
+      },
     });
-    expect(identity).toMatchObject({
+    expect(identity).toEqual({
       method: "preregistered",
       clientId: "pre-123",
+      clientSecret: "s",
     });
   });
 

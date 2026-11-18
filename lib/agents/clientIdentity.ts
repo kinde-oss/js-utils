@@ -7,7 +7,6 @@ import {
   postJson,
   readJson,
   resolveFetch,
-  stripTrailingSlash,
   toOAuthError,
 } from "./http";
 import type {
@@ -106,8 +105,7 @@ export const resolveClientIdentity = async (
 
   if (
     preRegistered?.clientId &&
-    stripTrailingSlash(preRegistered.issuer) ===
-      stripTrailingSlash(authorizationServer.issuer)
+    preRegistered.issuer === authorizationServer.issuer
   ) {
     return {
       method: "preregistered",
