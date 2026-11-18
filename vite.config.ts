@@ -16,6 +16,7 @@ export default defineConfig({
       entry: {
         "js-utils": resolve(rootDir, "lib/main.ts"),
         agents: resolve(rootDir, "lib/agents/index.ts"),
+        "agents-node": resolve(rootDir, "lib/agents/node.ts"),
       },
       formats: ["es", "cjs"],
       name: "@kinde/js-utils",
@@ -26,7 +27,7 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     rolldownOptions: {
-      external: ["/src/tests/**"],
+      external: ["/src/tests/**", /^node:/],
     },
   },
   root: "",

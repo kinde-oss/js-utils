@@ -18,6 +18,8 @@ export type AgentAuthErrorCode =
   | "private_network_blocked"
   | "redirect_blocked"
   | "too_many_redirects"
+  | "request_timeout"
+  | "response_too_large"
   | (string & {});
 
 export class AgentAuthError extends Error {
