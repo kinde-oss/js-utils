@@ -12,6 +12,7 @@ export {
 export { checkAuth } from "./checkAuth";
 export { isCustomDomain } from "./isCustomDomain";
 export { setRefreshTimer, clearRefreshTimer } from "./refreshTimer";
+export { withTokenSessionLock } from "./tokenGeneration";
 export { splitString } from "./splitString";
 export { generatePortalUrl } from "./generatePortalUrl";
 export { generateProfileUrl } from "./generatePortalUrl";

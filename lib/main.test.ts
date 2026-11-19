@@ -3,6 +3,7 @@ import * as index from "./main";
 import * as types from "./types";
 import * as utils from "./utils";
 import * as sessionManager from "./sessionManager";
+import { withTokenSessionLock } from "./utils/tokenGeneration";
 
 describe("index exports", () => {
   it("should export everything from types", () => {
@@ -21,6 +22,10 @@ describe("index exports", () => {
     Object.keys(sessionManager).forEach((key) => {
       expect(index).toHaveProperty(key);
     });
+  });
+
+  it("should expose the existing token-session lock through the public entry point", () => {
+    expect(index.withTokenSessionLock).toBe(withTokenSessionLock);
   });
 
   it("should not export anything extra", () => {
@@ -49,6 +54,7 @@ describe("index exports", () => {
       "mapLoginMethodParamsForUrl",
       "sanitizeUrl",
       "exchangeAuthCode",
+      "withTokenSessionLock",
       "isAuthenticated",
       "isTokenExpired",
       "refreshToken",

@@ -9,6 +9,7 @@ export {
   generateAuthUrl,
   mapLoginMethodParamsForUrl,
   exchangeAuthCode,
+  withTokenSessionLock,
   checkAuth,
   isCustomDomain,
   setRefreshTimer,
