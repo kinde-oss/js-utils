@@ -124,6 +124,11 @@ export const assertAllowedUrl = (
   return url;
 };
 
+export const stringArray = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
+
 export const normalizeScope = (scope?: string | string[]): string[] => {
   if (!scope) return [];
   const parts = (Array.isArray(scope) ? scope : [scope]).flatMap((s) =>

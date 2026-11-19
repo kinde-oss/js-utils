@@ -101,6 +101,64 @@ describe("discoverAgentAuth", () => {
     expect(result.scope).toBe("read");
   });
 
+  describe("malformed remote metadata", () => {
+    const withMetadata = (overrides: Record<string, unknown>) =>
+      mockFetch((url) =>
+        url.includes("oauth-protected-resource")
+          ? jsonResponse({ ...prm, ...overrides })
+          : routes(url),
+      );
+    const discover = (overrides: Record<string, unknown>) =>
+      discoverAgentAuth({
+        wwwAuthenticate: "Bearer",
+        resourceUrl: prm.resource,
+        fetch: withMetadata(overrides),
+      });
+
+    it.each([
+      ["an object", {}],
+      ["a string", "read write"],
+      ["a number", 1],
+      ["null", null],
+      ["an array of non-strings", [1, null, {}]],
+    ])(
+      "ignores scopes_supported that is %s instead of throwing a TypeError",
+      async (_label, scopes_supported) => {
+        const result = await discover({ scopes_supported });
+        expect(result).not.toHaveProperty("scope");
+      },
+    );
+
+    it("keeps only the string entries of scopes_supported", async () => {
+      const result = await discover({
+        scopes_supported: ["read", 1, null, "openid", { a: 1 }, "write"],
+      });
+      expect(result.scope).toBe("read write");
+    });
+
+    it.each([
+      ["a string", "https://auth.example.com"],
+      ["an object", {}],
+      ["an array of non-strings", [1, null]],
+    ])(
+      "treats authorization_servers that is %s as missing",
+      async (_label, authorization_servers) => {
+        await expect(discover({ authorization_servers })).rejects.toMatchObject(
+          {
+            code: "no_authorization_server",
+          },
+        );
+      },
+    );
+
+    it("keeps only the string entries of authorization_servers", async () => {
+      const result = await discover({
+        authorization_servers: [1, "https://auth.example.com", null],
+      });
+      expect(result.authorizationServer.issuer).toBe(serverMetadata.issuer);
+    });
+  });
+
   it("prefers the challenge scope over scopes_supported", async () => {
     const result = await discoverAgentAuth({
       wwwAuthenticate: 'Bearer scope="read"',

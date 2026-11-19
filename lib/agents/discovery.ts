@@ -5,6 +5,7 @@ import {
   fetchJson,
   normalizeScope,
   resolveFetch,
+  stringArray,
   stripOpenId,
   stripTrailingSlash,
 } from "./http";
@@ -281,7 +282,7 @@ export const discoverAgentAuth = async (
     );
   }
 
-  const servers = resourceMetadata.authorization_servers ?? [];
+  const servers = stringArray(resourceMetadata.authorization_servers);
   if (!servers.length) {
     throw new AgentAuthError(
       "no_authorization_server",
@@ -302,7 +303,9 @@ export const discoverAgentAuth = async (
   const scope = (
     challengeScopes.length
       ? challengeScopes
-      : stripOpenId(normalizeScope(resourceMetadata.scopes_supported))
+      : stripOpenId(
+          normalizeScope(stringArray(resourceMetadata.scopes_supported)),
+        )
   ).join(" ");
 
   return {

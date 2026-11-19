@@ -170,6 +170,26 @@ describe("buildAuthorizationUrl", () => {
     expect(result.url.toString()).not.toContain("openid");
   });
 
+  it.each([
+    ["an object", {}],
+    ["a string", "S256"],
+    ["null", null],
+    ["an array without S256", [1, "plain"]],
+  ])(
+    "refuses when code_challenge_methods_supported is %s",
+    async (_label, methods) => {
+      await expect(
+        buildAuthorizationUrl({
+          ...options,
+          authorizationServer: {
+            ...serverMetadata,
+            code_challenge_methods_supported: methods as unknown as string[],
+          },
+        }),
+      ).rejects.toMatchObject({ code: "pkce_unsupported" });
+    },
+  );
+
   it("requires S256 support when advertised", async () => {
     await expect(
       buildAuthorizationUrl({

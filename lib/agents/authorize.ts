@@ -4,6 +4,7 @@ import {
   assertSecureUrl,
   normalizeScope,
   parseUrl,
+  stringArray,
 } from "./http";
 import { generatePkcePair, generateState } from "./pkce";
 import type {
@@ -30,8 +31,10 @@ export const buildAuthorizationUrl = async (
 ): Promise<AuthorizationRequest> => {
   const { authorizationServer, clientId, redirectUri, resource } = options;
 
-  const supportedMethods = authorizationServer.code_challenge_methods_supported;
-  if (!supportedMethods?.includes("S256")) {
+  const supportedMethods = stringArray(
+    authorizationServer.code_challenge_methods_supported,
+  );
+  if (!supportedMethods.includes("S256")) {
     throw new AgentAuthError(
       "pkce_unsupported",
       "Authorization server does not advertise S256 PKCE support",
