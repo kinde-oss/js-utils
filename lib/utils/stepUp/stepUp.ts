@@ -78,7 +78,8 @@ export const stepUp = async <T = Record<string, string>>(
 }> => {
   const requestedAcr = options.acr ?? options.acrValues;
   const hasAcr = hasAcrRequest(requestedAcr);
-  const hasMaxAge = options.maxAge !== undefined && options.maxAge !== null;
+  const formattedMaxAge = formatMaxAge(options.maxAge);
+  const hasMaxAge = formattedMaxAge !== undefined;
   if (!hasAcr && !hasMaxAge) {
     throw new Error("stepUp requires acr or maxAge.");
   }
@@ -93,9 +94,6 @@ export const stepUp = async <T = Record<string, string>>(
   assertInteractive(request);
   if (hasAcr) {
     formatAcrValues(requestedAcr);
-  }
-  if (hasMaxAge) {
-    formatMaxAge(options.maxAge);
   }
 
   const supported = await isStepUpSupported(domain);

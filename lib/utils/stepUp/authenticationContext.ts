@@ -1,4 +1,5 @@
 import { getDecodedToken, getDecodedTokenSync } from "../token";
+import { cachedStepUpSupported, isStepUpSupported } from "./discovery";
 import type { AcrValue } from "./params";
 import { formatMaxAge, highestAcr } from "./params";
 
@@ -20,6 +21,7 @@ type AuthenticationClaims = {
   acr?: unknown;
   amr?: unknown;
   auth_time?: unknown;
+  iss?: unknown;
 };
 
 const ACR_RANK: Record<AcrValue, number> = {
@@ -74,27 +76,63 @@ export const readAuthenticationContext = (tokens: {
   };
 };
 
+/** Issuer claim from the ID token when it has one, otherwise the access token. */
+const issuerFrom = (
+  idToken: AuthenticationClaims | null,
+  accessToken: AuthenticationClaims | null,
+): string | null => {
+  const issuer = idToken?.iss ?? accessToken?.iss;
+  return typeof issuer === "string" && issuer !== "" ? issuer : null;
+};
+
+/**
+ * Drops `authTime` when discovery says step-up is unsupported.
+ * `undefined` means the issuer has not been checked, so the token value stays.
+ */
+const applyStepUpSupport = (
+  ctx: AuthenticationContext | null,
+  supported: boolean | undefined,
+): AuthenticationContext | null => {
+  if (!ctx || supported !== false) {
+    return ctx;
+  }
+  return { ...ctx, authTime: null };
+};
+
 /**
  * Authentication context of the current session.
- * `authTime` is returned as stored on the token. On an issuer that does not
- * advertise `acr_values_supported`, that value may be the token issue time
- * and must not be used for recency. Check `isStepUpSupported` first.
+ * `authTime` comes from the ID token when one exists, otherwise the access token.
+ * The issuer is read the same way. When `acr_values_supported` is absent,
+ * `authTime` is `null` because that claim may be the token issue time.
  */
 export const getAuthenticationContext =
   async (): Promise<AuthenticationContext | null> => {
     const idToken = await getDecodedToken<AuthenticationClaims>("idToken");
     const accessToken =
       await getDecodedToken<AuthenticationClaims>("accessToken");
-    return readAuthenticationContext({ idToken, accessToken });
+    const ctx = readAuthenticationContext({ idToken, accessToken });
+    const issuer = issuerFrom(idToken, accessToken);
+    if (!ctx || !issuer) {
+      return ctx;
+    }
+    return applyStepUpSupport(ctx, await isStepUpSupported(issuer));
   };
 
-/** Synchronous `getAuthenticationContext`. Throws when the active storage is async-only. */
+/**
+ * Synchronous `getAuthenticationContext`. Throws when the active storage is async-only.
+ * Uses the cached discovery document. Until that cache exists, `authTime` is the token value.
+ */
 export const getAuthenticationContextSync =
   (): AuthenticationContext | null => {
     const idToken = getDecodedTokenSync<AuthenticationClaims>("idToken");
     const accessToken =
       getDecodedTokenSync<AuthenticationClaims>("accessToken");
-    return readAuthenticationContext({ idToken, accessToken });
+    const ctx = readAuthenticationContext({ idToken, accessToken });
+    const issuer = issuerFrom(idToken, accessToken);
+    if (!ctx || !issuer) {
+      return ctx;
+    }
+    return applyStepUpSupport(ctx, cachedStepUpSupported(issuer));
   };
 
 /**
@@ -120,12 +158,12 @@ const meets = (
     }
   }
 
-  if (requirement.maxAge !== undefined && requirement.maxAge !== null) {
-    formatMaxAge(requirement.maxAge);
+  const maxAge = formatMaxAge(requirement.maxAge);
+  if (maxAge !== undefined) {
     if (ctx.authTime === null || ctx.authTime > now) {
       return false;
     }
-    if (now - ctx.authTime > requirement.maxAge) {
+    if (now - ctx.authTime > Number(maxAge)) {
       return false;
     }
   }

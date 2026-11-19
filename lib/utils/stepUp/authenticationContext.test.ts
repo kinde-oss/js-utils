@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
 import { clearActiveStorage, setActiveStorage } from "../token";
 import { createMockAccessToken } from "../token/testUtils";
@@ -10,6 +10,23 @@ import {
   type AuthenticationContext,
   type AuthenticationContextRequirement,
 } from "./authenticationContext";
+import { clearStepUpDiscoveryCache } from "./discovery";
+
+beforeEach(() => {
+  clearStepUpDiscoveryCache();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ acr_values_supported: ["mfa", "phr"] }),
+    })),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 const now = 1_716_800_000;
 
@@ -290,5 +307,37 @@ describe("getAuthenticationContext", () => {
       amr: [],
       authTime: null,
     });
+  });
+
+  it("returns authTime null when acr_values_supported is absent", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ issuer: "https://kinde.com" }),
+    } as Response);
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({
+        acr: "mfa",
+        amr: ["pwd", "totp"],
+        auth_time: 1716800000,
+      }),
+    );
+
+    expect(await getAuthenticationContext()).toEqual({
+      acr: "mfa",
+      amr: ["pwd", "totp"],
+      authTime: null,
+    });
+    expect(getAuthenticationContextSync()).toEqual({
+      acr: "mfa",
+      amr: ["pwd", "totp"],
+      authTime: null,
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "https://kinde.com/.well-known/openid-configuration",
+      expect.anything(),
+    );
   });
 });

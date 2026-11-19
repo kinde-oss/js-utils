@@ -551,6 +551,30 @@ describe("generateAuthUrl", () => {
     expect(result.url.toString()).toContain("acr_values=mfa+phr");
   });
 
+  it("omits an empty, null, or NaN maxAge and still builds the URL", async () => {
+    for (const maxAge of ["", null, Number.NaN]) {
+      const result = await generateAuthUrl(
+        "https://auth.example.com",
+        IssuerRouteTypes.login,
+        {
+          clientId: "client123",
+          responseType: "code",
+          scope: [Scopes.openid],
+          redirectURL: "https://example.com",
+          state: "state123",
+          codeChallenge: "challenge123",
+          codeChallengeMethod: "S256",
+          maxAge: maxAge as unknown as number,
+        },
+      );
+      result.url.searchParams.delete("nonce");
+      expect(result.url.searchParams.has("max_age")).toBe(false);
+      expect(result.url.toString()).toBe(
+        "https://auth.example.com/oauth2/auth?client_id=client123&response_type=code&redirect_uri=https%3A%2F%2Fexample.com&audience=&scope=openid&state=state123&code_challenge=challenge123&code_challenge_method=S256",
+      );
+    }
+  });
+
   it("throws for an invalid maxAge before building the URL", async () => {
     await expect(
       generateAuthUrl("https://auth.example.com", IssuerRouteTypes.login, {

@@ -50,7 +50,7 @@ describe("isStepUpSupported", () => {
     );
   });
 
-  it("is true for phr alone and false when no recognised value is advertised", async () => {
+  it("is true whenever acr_values_supported is present", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ acr_values_supported: ["phr"] }),
@@ -65,6 +65,24 @@ describe("isStepUpSupported", () => {
       json: async () => ({ acr_values_supported: ["otp"] }),
     } as Response);
     await expect(isStepUpSupported("https://otp.example.com")).resolves.toBe(
+      true,
+    );
+
+    clearStepUpDiscoveryCache();
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ acr_values_supported: [] }),
+    } as Response);
+    await expect(isStepUpSupported("https://empty.example.com")).resolves.toBe(
+      true,
+    );
+
+    clearStepUpDiscoveryCache();
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ acr_values_supported: null }),
+    } as Response);
+    await expect(isStepUpSupported("https://null.example.com")).resolves.toBe(
       false,
     );
   });
