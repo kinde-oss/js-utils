@@ -174,6 +174,70 @@ describe("refreshAccessToken", () => {
     expect(tokens.refreshToken).toBe("rt1");
   });
 
+  it.each([
+    ["an empty string", ""],
+    ["null", null],
+    ["a number", 123],
+    ["an object", {}],
+  ])(
+    "falls back to the supplied refresh token when the server returns %s",
+    async (_label, refresh_token) => {
+      const tokens = await refreshAccessToken({
+        tokenEndpoint,
+        clientId: "c1",
+        resource: "https://api.example.com/mcp",
+        refreshToken: "rt1",
+        fetch: mockFetch(() =>
+          jsonResponse({ access_token: "at2", refresh_token }),
+        ),
+      });
+      expect(tokens.refreshToken).toBe("rt1");
+    },
+  );
+
+  it("does not invent a refresh token on code exchange when the server sends an empty one", async () => {
+    const tokens = await exchangeCode({
+      tokenEndpoint,
+      clientId: "c1",
+      code: "x",
+      codeVerifier: "v",
+      redirectUri: "https://app.example.com/callback",
+      resource: "https://api.example.com/mcp",
+      fetch: mockFetch(() =>
+        jsonResponse({ access_token: "at", refresh_token: "" }),
+      ),
+    });
+    expect(tokens).not.toHaveProperty("refreshToken");
+  });
+
+  it("ignores malformed token_type and scope and rejects a non-string access token", async () => {
+    const tokens = await exchangeCode({
+      tokenEndpoint,
+      clientId: "c1",
+      code: "x",
+      codeVerifier: "v",
+      redirectUri: "https://app.example.com/callback",
+      resource: "https://api.example.com/mcp",
+      fetch: mockFetch(() =>
+        jsonResponse({ access_token: "at", token_type: 5, scope: { a: 1 } }),
+      ),
+    });
+    expect(tokens.tokenType).toBe("Bearer");
+    expect(tokens).not.toHaveProperty("scope");
+
+    await expect(
+      exchangeCode({
+        tokenEndpoint,
+        clientId: "c1",
+        code: "x",
+        codeVerifier: "v",
+        redirectUri: "https://app.example.com/callback",
+        resource: "https://api.example.com/mcp",
+        fetch: mockFetch(() => jsonResponse({ access_token: 123 })),
+      }),
+    ).rejects.toMatchObject({ code: "invalid_response" });
+  });
+
   it("uses a rotated refresh token", async () => {
     const tokens = await refreshAccessToken({
       tokenEndpoint,

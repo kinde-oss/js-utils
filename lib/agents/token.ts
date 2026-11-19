@@ -32,7 +32,7 @@ const parseTokenResponse = async (
     throw await toOAuthError(response, label);
   }
   const data = await readJson<TokenResponseBody>(response, label);
-  if (!data?.access_token) {
+  if (typeof data?.access_token !== "string" || !data.access_token) {
     throw new AgentAuthError(
       "invalid_response",
       `${label} response is missing access_token`,
@@ -40,17 +40,23 @@ const parseTokenResponse = async (
   }
   const expiresIn =
     typeof data.expires_in === "number" ? data.expires_in : undefined;
-  const refreshToken = data.refresh_token ?? fallbackRefreshToken;
+  const refreshToken =
+    typeof data.refresh_token === "string" && data.refresh_token
+      ? data.refresh_token
+      : fallbackRefreshToken;
 
   return {
     accessToken: data.access_token,
-    tokenType: data.token_type ?? "Bearer",
+    tokenType:
+      typeof data.token_type === "string" && data.token_type
+        ? data.token_type
+        : "Bearer",
     ...(refreshToken && { refreshToken }),
     ...(expiresIn !== undefined && {
       expiresIn,
       expiresAt: Date.now() + expiresIn * 1000,
     }),
-    ...(data.scope && { scope: data.scope }),
+    ...(typeof data.scope === "string" && data.scope && { scope: data.scope }),
   };
 };
 

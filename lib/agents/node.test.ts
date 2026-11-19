@@ -198,6 +198,179 @@ describe("createSafeFetch transport", () => {
     });
   });
 
+  describe("Request inputs", () => {
+    const record = () => {
+      const seen: {
+        method: string;
+        headers: Record<string, string | string[] | undefined>;
+        body: string;
+      }[] = [];
+      handler = (req, res, body) => {
+        seen.push({ method: req.method ?? "", headers: req.headers, body });
+        res.end("ok");
+      };
+      return seen;
+    };
+
+    it("preserves the method, headers and body of a Request without init", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const request = new Request(`http://pinned.example.com:${port}/token`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-trace": "abc" },
+        body: JSON.stringify({ a: 1 }),
+      });
+      const response = await createSafeFetch(options)(request);
+      expect(await response.text()).toBe("ok");
+      expect(seen).toHaveLength(1);
+      expect(seen[0].method).toBe("POST");
+      expect(seen[0].headers["x-trace"]).toBe("abc");
+      expect(seen[0].headers["content-type"]).toBe("application/json");
+      expect(seen[0].body).toBe('{"a":1}');
+      expect(seen[0].headers["content-length"]).toBe(
+        String(Buffer.byteLength('{"a":1}')),
+      );
+    });
+
+    it("lets init override the properties of a Request", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const request = new Request(`http://pinned.example.com:${port}/`, {
+        method: "POST",
+        headers: { "x-from": "request" },
+        body: "from-request",
+      });
+      await createSafeFetch(options)(request, {
+        headers: { "x-from": "init" },
+        body: "from-init",
+      });
+      expect(seen[0].method).toBe("POST");
+      expect(seen[0].headers["x-from"]).toBe("init");
+      expect(seen[0].body).toBe("from-init");
+    });
+
+    it("keeps URL plus init behaviour unchanged", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      await createSafeFetch(options)(`http://pinned.example.com:${port}/`, {
+        method: "POST",
+        headers: { "x-a": "1" },
+        body: "body",
+      });
+      expect(seen[0].method).toBe("POST");
+      expect(seen[0].headers["x-a"]).toBe("1");
+      expect(seen[0].body).toBe("body");
+    });
+
+    it("uses the redirect policy of a Request", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      handler = (_req, res) => {
+        res.statusCode = 302;
+        res.setHeader("location", "/elsewhere");
+        res.end();
+      };
+      const response = await createSafeFetch(options)(
+        new Request(`http://pinned.example.com:${port}/`, {
+          redirect: "manual",
+        }),
+      );
+      expect(response.status).toBe(302);
+    });
+
+    it("sends a GET Request without a body", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      await createSafeFetch(options)(
+        new Request(`http://pinned.example.com:${port}/`, {
+          headers: { "x-get": "1" },
+        }),
+      );
+      expect(seen[0].method).toBe("GET");
+      expect(seen[0].headers["x-get"]).toBe("1");
+      expect(seen[0].body).toBe("");
+    });
+  });
+
+  describe("credentials on redirects", () => {
+    const sensitive = {
+      authorization: "Bearer secret",
+      "proxy-authorization": "Basic abc",
+      cookie: "session=1",
+      "x-keep": "yes",
+    };
+
+    const hopsTo = (locationOf: (host: string) => string) => {
+      const seen: Record<string, string | string[] | undefined>[] = [];
+      handler = (req, res) => {
+        seen.push(req.headers);
+        if (seen.length === 1) {
+          res.statusCode = 302;
+          res.setHeader("location", locationOf(req.headers.host ?? ""));
+          res.end();
+        } else {
+          res.end("done");
+        }
+      };
+      return seen;
+    };
+
+    it("removes credentials when the redirect changes origin", async () => {
+      resolveTo("first.example.com", ["127.0.0.1", 4]);
+      resolveTo("second.example.com", ["127.0.0.1", 4]);
+      const seen = hopsTo(() => `http://second.example.com:${port}/final`);
+      await createSafeFetch(options)(`http://first.example.com:${port}/start`, {
+        headers: sensitive,
+      });
+      expect(seen).toHaveLength(2);
+      expect(seen[0].authorization).toBe("Bearer secret");
+      expect(seen[0].cookie).toBe("session=1");
+      expect(seen[1].authorization).toBeUndefined();
+      expect(seen[1]["proxy-authorization"]).toBeUndefined();
+      expect(seen[1].cookie).toBeUndefined();
+      expect(seen[1]["x-keep"]).toBe("yes");
+    });
+
+    it("keeps credentials for a same-origin redirect", async () => {
+      resolveTo("first.example.com", ["127.0.0.1", 4]);
+      const seen = hopsTo(() => "/final");
+      await createSafeFetch(options)(`http://first.example.com:${port}/start`, {
+        headers: sensitive,
+      });
+      expect(seen).toHaveLength(2);
+      expect(seen[1].authorization).toBe("Bearer secret");
+      expect(seen[1].cookie).toBe("session=1");
+    });
+
+    it("treats a different port as a different origin", async () => {
+      resolveTo("first.example.com", ["127.0.0.1", 4]);
+      const other = createServer((req, res) => {
+        seenOther.push(req.headers);
+        res.end("other");
+      });
+      const seenOther: Record<string, string | string[] | undefined>[] = [];
+      await new Promise<void>((resolve) =>
+        other.listen(0, "127.0.0.1", resolve),
+      );
+      const otherPort = (other.address() as AddressInfo).port;
+      hopsTo(() => `http://first.example.com:${otherPort}/final`);
+      handler = (_req, res) => {
+        res.statusCode = 302;
+        res.setHeader(
+          "location",
+          `http://first.example.com:${otherPort}/final`,
+        );
+        res.end();
+      };
+      await createSafeFetch(options)(`http://first.example.com:${port}/start`, {
+        headers: sensitive,
+      });
+      await new Promise<void>((resolve) => other.close(() => resolve()));
+      expect(seenOther).toHaveLength(1);
+      expect(seenOther[0].authorization).toBeUndefined();
+      expect(seenOther[0]["x-keep"]).toBe("yes");
+    });
+  });
+
   it("returns redirects untouched in manual mode", async () => {
     resolveTo("pinned.example.com", ["127.0.0.1", 4]);
     handler = (_req, res) => {

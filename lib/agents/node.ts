@@ -17,6 +17,7 @@ export interface SafeFetchOptions {
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const NULL_BODY_STATUSES = new Set([204, 205, 304]);
+const CREDENTIAL_HEADERS = ["authorization", "proxy-authorization", "cookie"];
 
 const isBlockedAddress = (entry: LookupAddress): boolean => {
   try {
@@ -140,6 +141,7 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
           {
             method,
             lookup,
+            agent: false,
             headers: body
               ? { ...headers, "content-length": String(body.byteLength) }
               : headers,
@@ -231,15 +233,32 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
     });
 
   return async (input, init) => {
-    const redirect = init?.redirect ?? "follow";
-    const method = (init?.method ?? "GET").toUpperCase();
-    const headers = Object.fromEntries(new Headers(init?.headers).entries());
-    const body = toBody(init?.body);
+    const original =
+      typeof Request !== "undefined" && input instanceof Request
+        ? input
+        : undefined;
+    const redirect = init?.redirect ?? original?.redirect ?? "follow";
+    const method = (init?.method ?? original?.method ?? "GET").toUpperCase();
+    let headers = Object.fromEntries(
+      new Headers(init?.headers ?? original?.headers).entries(),
+    );
+    const signal = init?.signal ?? original?.signal;
+    let body: Buffer | undefined;
+    if (init?.body !== undefined && init.body !== null) {
+      body = toBody(init.body);
+    } else if (
+      original &&
+      original.body &&
+      method !== "GET" &&
+      method !== "HEAD"
+    ) {
+      body = Buffer.from(await original.arrayBuffer());
+    }
     let target = toUrl(input);
 
     for (let hop = 0; hop <= maxRedirects; hop++) {
       assertDestination(target);
-      const response = await send(target, method, headers, body, init?.signal);
+      const response = await send(target, method, headers, body, signal);
 
       if (!REDIRECT_STATUSES.has(response.status) || redirect === "manual") {
         return response;
@@ -261,7 +280,15 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
       const location = response.headers.get("location");
       if (!location) return response;
       try {
-        target = new URL(location, target);
+        const next = new URL(location, target);
+        if (next.origin !== target.origin) {
+          headers = Object.fromEntries(
+            Object.entries(headers).filter(
+              ([name]) => !CREDENTIAL_HEADERS.includes(name.toLowerCase()),
+            ),
+          );
+        }
+        target = next;
       } catch (cause) {
         throw new AgentAuthError(
           "redirect_blocked",
