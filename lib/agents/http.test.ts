@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AgentAuthError } from "./errors";
-import { fetchJson, isPrivateHost } from "./http";
+import { fetchJson, isPrivateHost, postForm, postJson } from "./http";
 import { jsonResponse, mockFetch } from "./testUtils";
 
 describe("isPrivateHost", () => {
@@ -150,5 +150,174 @@ describe("fetchJson", () => {
         "Metadata",
       ),
     ).rejects.toMatchObject({ code: "redirect_blocked" });
+  });
+});
+
+const aborted = () => new DOMException("aborted", "AbortError");
+
+const neverAnswers = (_url: string, init?: RequestInit) =>
+  new Promise<Response>((_resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => reject(aborted()));
+  });
+
+const stalledBody = (_url: string, init?: RequestInit) =>
+  Promise.resolve(
+    new Response(
+      new ReadableStream({
+        start(controller) {
+          init?.signal?.addEventListener("abort", () =>
+            controller.error(aborted()),
+          );
+        },
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    ),
+  );
+
+const streamOf = (...sizes: number[]) =>
+  new Response(
+    new ReadableStream({
+      start(controller) {
+        for (const size of sizes) {
+          controller.enqueue(new Uint8Array(size).fill(120));
+        }
+        controller.close();
+      },
+    }),
+    { status: 200 },
+  );
+
+describe("request limits", () => {
+  it("times out a server that never answers", async () => {
+    await expect(
+      fetchJson(
+        mockFetch(neverAnswers),
+        "https://a.example.com/meta",
+        "Metadata",
+        {
+          timeoutMs: 20,
+        },
+      ),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+  });
+
+  it("keeps the deadline running while the body is read", async () => {
+    await expect(
+      fetchJson(
+        mockFetch(stalledBody),
+        "https://a.example.com/meta",
+        "Metadata",
+        {
+          timeoutMs: 30,
+        },
+      ),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+  });
+
+  it("passes an abort signal to every request", async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ ok: true }));
+    await fetchJson(fetchMock, "https://a.example.com/meta", "Metadata");
+    await postForm(fetchMock, "https://a.example.com/token", { a: "1" });
+    await postJson(fetchMock, "https://a.example.com/register", { a: 1 });
+    for (const call of fetchMock.mock.calls) {
+      expect(call[1].signal).toBeInstanceOf(AbortSignal);
+    }
+  });
+
+  it("does not leave the deadline running after a normal response", async () => {
+    const clear = vi.spyOn(globalThis, "clearTimeout");
+    await fetchJson(
+      mockFetch(() => jsonResponse({ ok: true })),
+      "https://a.example.com/meta",
+      "Metadata",
+    );
+    expect(clear).toHaveBeenCalled();
+    clear.mockRestore();
+  });
+
+  it("rejects a body larger than the cap while streaming", async () => {
+    await expect(
+      fetchJson(
+        mockFetch(() => streamOf(600, 600)),
+        "https://a.example.com/meta",
+        "Metadata",
+        { maxResponseBytes: 1000 },
+      ),
+    ).rejects.toMatchObject({ code: "response_too_large" });
+  });
+
+  it("rejects a declared Content-Length above the cap without reading the body", async () => {
+    const response = new Response("{}", {
+      status: 200,
+      headers: { "content-length": "5000" },
+    });
+    const read = vi.spyOn(response.body as ReadableStream, "getReader");
+    await expect(
+      fetchJson(
+        mockFetch(() => response),
+        "https://a.example.com/meta",
+        "Metadata",
+        { maxResponseBytes: 1000 },
+      ),
+    ).rejects.toMatchObject({ code: "response_too_large" });
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("accepts a body that fits the cap", async () => {
+    await expect(
+      fetchJson(
+        mockFetch(() => jsonResponse({ ok: true })),
+        "https://a.example.com/meta",
+        "Metadata",
+        { maxResponseBytes: 1000 },
+      ),
+    ).resolves.toEqual({ ok: true });
+  });
+
+  it.each([
+    [
+      "postForm",
+      (f: typeof fetch, o: object) =>
+        postForm(f, "https://a.example.com/token", { a: "1" }, o),
+    ],
+    [
+      "postJson",
+      (f: typeof fetch, o: object) =>
+        postJson(f, "https://a.example.com/register", { a: 1 }, o),
+    ],
+  ])("%s enforces the timeout and the size cap", async (_name, send) => {
+    await expect(
+      send(mockFetch(neverAnswers), { timeoutMs: 20 }),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+    await expect(
+      send(mockFetch(stalledBody), { timeoutMs: 30 }),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+    await expect(
+      send(
+        mockFetch(() => streamOf(600, 600)),
+        { maxResponseBytes: 1000 },
+      ),
+    ).rejects.toMatchObject({ code: "response_too_large" });
+  });
+
+  it("returns a readable response from the post helpers", async () => {
+    const response = await postForm(
+      mockFetch(() => jsonResponse({ access_token: "at" }, { status: 201 })),
+      "https://a.example.com/token",
+      { a: "1" },
+    );
+    expect(response.status).toBe(201);
+    expect(response.ok).toBe(true);
+    expect(await response.json()).toEqual({ access_token: "at" });
+  });
+
+  it("handles responses that must not have a body", async () => {
+    const response = await postJson(
+      mockFetch(() => new Response(null, { status: 204 })),
+      "https://a.example.com/revoke",
+      {},
+    );
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
   });
 });

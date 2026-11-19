@@ -3,6 +3,9 @@ import type { FetchLike, FetchOptions } from "./types";
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const MAX_REDIRECTS = 5;
+const DEFAULT_TIMEOUT_MS = 10_000;
+const DEFAULT_MAX_RESPONSE_BYTES = 1_048_576;
+const NULL_BODY_STATUSES = new Set([204, 205, 304]);
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const PRIVATE_SUFFIXES = [
   ".localhost",
@@ -183,86 +186,202 @@ export const toOAuthError = async (
   return new AgentAuthError(code, description, response.status);
 };
 
+type LimitOptions = Pick<
+  FetchOptions,
+  "allowPrivateNetworks" | "timeoutMs" | "maxResponseBytes"
+>;
+
+const withDeadline = async <T>(
+  timeoutMs: number,
+  run: (signal: AbortSignal) => Promise<T>,
+): Promise<T> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await run(controller.signal);
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new AgentAuthError(
+        "request_timeout",
+        `Request exceeded ${timeoutMs}ms`,
+        undefined,
+        { cause: error },
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+const tooLarge = (maxBytes: number) =>
+  new AgentAuthError(
+    "response_too_large",
+    `Response exceeded ${maxBytes} bytes`,
+  );
+
+const bufferResponse = async (
+  response: Response,
+  maxBytes: number,
+): Promise<Response> => {
+  const declared = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    await response.body?.cancel().catch(() => undefined);
+    throw tooLarge(maxBytes);
+  }
+
+  let bytes: Uint8Array;
+  if (response.body && typeof response.body.getReader === "function") {
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        throw tooLarge(maxBytes);
+      }
+      chunks.push(value);
+    }
+    bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+  } else {
+    bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength > maxBytes) throw tooLarge(maxBytes);
+  }
+
+  return new Response(
+    NULL_BODY_STATUSES.has(response.status)
+      ? null
+      : (bytes as unknown as BodyInit),
+    {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    },
+  );
+};
+
 export const fetchJson = async <T>(
   fetchImpl: FetchLike,
   url: string,
   label: string,
-  options: Pick<FetchOptions, "allowPrivateNetworks"> = {},
+  options: LimitOptions = {},
 ): Promise<T> => {
-  let current = url;
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    assertAllowedUrl(current, label, options);
-    const response = await fetchImpl(current, {
-      method: "GET",
-      redirect: "manual",
-      headers: { Accept: "application/json" },
-    });
+  const maxBytes = options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
+  return withDeadline(
+    options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    async (signal) => {
+      let current = url;
+      for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+        assertAllowedUrl(current, label, options);
+        const response = await fetchImpl(current, {
+          method: "GET",
+          redirect: "manual",
+          signal,
+          headers: { Accept: "application/json" },
+        });
 
-    if (
-      response.type === "opaqueredirect" ||
-      REDIRECT_STATUSES.has(response.status)
-    ) {
-      const location = response.headers.get("location");
-      if (!location) {
-        throw new AgentAuthError(
-          "redirect_blocked",
-          `${label} redirected but the destination could not be read`,
-          response.status,
-        );
-      }
-      try {
-        current = new URL(location, current).toString();
-      } catch (cause) {
-        throw new AgentAuthError(
-          "redirect_blocked",
-          `${label} redirected to an invalid URL`,
-          response.status,
-          { cause },
-        );
-      }
-      continue;
-    }
+        if (
+          response.type === "opaqueredirect" ||
+          REDIRECT_STATUSES.has(response.status)
+        ) {
+          const location = response.headers.get("location");
+          if (!location) {
+            throw new AgentAuthError(
+              "redirect_blocked",
+              `${label} redirected but the destination could not be read`,
+              response.status,
+            );
+          }
+          try {
+            current = new URL(location, current).toString();
+          } catch (cause) {
+            throw new AgentAuthError(
+              "redirect_blocked",
+              `${label} redirected to an invalid URL`,
+              response.status,
+              { cause },
+            );
+          }
+          continue;
+        }
 
-    if (response.url) assertAllowedUrl(response.url, label, options);
-    if (!response.ok) {
-      throw await toOAuthError(response, label);
-    }
-    return readJson<T>(response, label);
-  }
-  throw new AgentAuthError(
-    "too_many_redirects",
-    `${label} exceeded ${MAX_REDIRECTS} redirects`,
+        if (response.url) assertAllowedUrl(response.url, label, options);
+        const buffered = await bufferResponse(response, maxBytes);
+        if (!buffered.ok) {
+          throw await toOAuthError(buffered, label);
+        }
+        return readJson<T>(buffered, label);
+      }
+      throw new AgentAuthError(
+        "too_many_redirects",
+        `${label} exceeded ${MAX_REDIRECTS} redirects`,
+      );
+    },
   );
 };
+
+type PostOptions = Pick<FetchOptions, "timeoutMs" | "maxResponseBytes">;
+
+const post = (
+  fetchImpl: FetchLike,
+  url: string,
+  headers: Record<string, string>,
+  body: string,
+  options: PostOptions,
+): Promise<Response> =>
+  withDeadline(options.timeoutMs ?? DEFAULT_TIMEOUT_MS, async (signal) =>
+    bufferResponse(
+      await fetchImpl(url, {
+        method: "POST",
+        redirect: "error",
+        signal,
+        headers,
+        body,
+      }),
+      options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
+    ),
+  );
 
 export const postForm = async (
   fetchImpl: FetchLike,
   url: string,
   params: Record<string, string | undefined>,
+  options: PostOptions = {},
 ): Promise<Response> => {
   const body = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined) body.set(key, value);
   }
-  return fetchImpl(url, {
-    method: "POST",
-    redirect: "error",
-    headers: {
+  return post(
+    fetchImpl,
+    url,
+    {
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",
     },
-    body: body.toString(),
-  });
+    body.toString(),
+    options,
+  );
 };
 
 export const postJson = async (
   fetchImpl: FetchLike,
   url: string,
   body: unknown,
+  options: PostOptions = {},
 ): Promise<Response> =>
-  fetchImpl(url, {
-    method: "POST",
-    redirect: "error",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(body),
-  });
+  post(
+    fetchImpl,
+    url,
+    { "Content-Type": "application/json", Accept: "application/json" },
+    JSON.stringify(body),
+    options,
+  );

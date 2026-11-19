@@ -1,6 +1,7 @@
 import { lookup as dnsLookup } from "node:dns";
 import type { LookupAddress } from "node:dns";
 import { request as httpRequest } from "node:http";
+import type { ClientRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import type { LookupFunction } from "node:net";
 import { AgentAuthError } from "./errors";
@@ -113,27 +114,42 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
     signal: AbortSignal | null | undefined,
   ): Promise<Response> =>
     new Promise<Response>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        const error = new AgentAuthError(
+          "request_timeout",
+          `Request exceeded ${timeoutMs}ms`,
+        );
+        request?.destroy(error);
+        fail(error);
+      }, timeoutMs);
+      const succeed = (response: Response) => {
+        clearTimeout(timer);
+        resolve(response);
+      };
+      const fail = (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      };
+      let request: ClientRequest | undefined;
+
       const requestFn =
         target.protocol === "https:" ? httpsRequest : httpRequest;
-      const request = requestFn(
-        target,
-        {
-          method,
-          lookup,
-          timeout: timeoutMs,
-          headers: body
-            ? { ...headers, "content-length": String(body.byteLength) }
-            : headers,
-          ...(signal && { signal }),
-        },
-        (incoming) => {
-          const chunks: Buffer[] = [];
-          let received = 0;
-          incoming.on("data", (chunk: Buffer) => {
-            received += chunk.byteLength;
-            if (received > maxResponseBytes) {
+      try {
+        request = requestFn(
+          target,
+          {
+            method,
+            lookup,
+            headers: body
+              ? { ...headers, "content-length": String(body.byteLength) }
+              : headers,
+            ...(signal && { signal }),
+          },
+          (incoming) => {
+            const declared = Number(incoming.headers["content-length"]);
+            if (Number.isFinite(declared) && declared > maxResponseBytes) {
               incoming.destroy();
-              reject(
+              fail(
                 new AgentAuthError(
                   "response_too_large",
                   `Response exceeded ${maxResponseBytes} bytes`,
@@ -141,43 +157,75 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
               );
               return;
             }
-            chunks.push(chunk);
-          });
-          incoming.on("error", reject);
-          incoming.on("end", () => {
-            const responseHeaders = new Headers();
-            for (const [name, value] of Object.entries(incoming.headers)) {
-              if (Array.isArray(value)) {
-                value.forEach((v) => responseHeaders.append(name, v));
-              } else if (value !== undefined) {
-                responseHeaders.set(name, value);
+
+            const chunks: Buffer[] = [];
+            let received = 0;
+            incoming.on("data", (chunk: Buffer) => {
+              received += chunk.byteLength;
+              if (received > maxResponseBytes) {
+                incoming.destroy();
+                fail(
+                  new AgentAuthError(
+                    "response_too_large",
+                    `Response exceeded ${maxResponseBytes} bytes`,
+                  ),
+                );
+                return;
               }
-            }
-            const status = incoming.statusCode ?? 0;
-            resolve(
-              new Response(
-                NULL_BODY_STATUSES.has(status)
-                  ? null
-                  : (Buffer.concat(chunks) as unknown as BodyInit),
-                {
-                  status,
-                  statusText: incoming.statusMessage,
-                  headers: responseHeaders,
-                },
-              ),
-            );
-          });
-        },
-      );
-      request.on("timeout", () => {
-        request.destroy(
-          new AgentAuthError(
-            "request_timeout",
-            `Request exceeded ${timeoutMs}ms`,
-          ),
+              chunks.push(chunk);
+            });
+            incoming.on("error", fail);
+            incoming.on("end", () => {
+              try {
+                const status = incoming.statusCode ?? 0;
+                if (status < 200 || status > 599) {
+                  throw new AgentAuthError(
+                    "invalid_response",
+                    `Server returned an unsupported status code ${status}`,
+                    status,
+                  );
+                }
+                const responseHeaders = new Headers();
+                for (const [name, value] of Object.entries(incoming.headers)) {
+                  if (Array.isArray(value)) {
+                    value.forEach((v) => responseHeaders.append(name, v));
+                  } else if (value !== undefined) {
+                    responseHeaders.set(name, value);
+                  }
+                }
+                succeed(
+                  new Response(
+                    NULL_BODY_STATUSES.has(status)
+                      ? null
+                      : (Buffer.concat(chunks) as unknown as BodyInit),
+                    {
+                      status,
+                      statusText: incoming.statusMessage,
+                      headers: responseHeaders,
+                    },
+                  ),
+                );
+              } catch (cause) {
+                fail(
+                  cause instanceof AgentAuthError
+                    ? cause
+                    : new AgentAuthError(
+                        "invalid_response",
+                        "Server returned a response that could not be read",
+                        undefined,
+                        { cause },
+                      ),
+                );
+              }
+            });
+          },
         );
-      });
-      request.on("error", reject);
+      } catch (error) {
+        fail(error);
+        return;
+      }
+
+      request.on("error", fail);
       if (body) request.write(body);
       request.end();
     });

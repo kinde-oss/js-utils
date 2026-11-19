@@ -63,6 +63,7 @@ export const registerClient = async (
     resolveFetch(options.fetch),
     registrationEndpoint,
     payload,
+    options,
   );
 
   if (!response.ok) {

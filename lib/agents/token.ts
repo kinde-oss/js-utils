@@ -78,6 +78,7 @@ export const exchangeCode = async (
       redirect_uri: options.redirectUri,
       resource: options.resource,
     },
+    options,
   );
   return parseTokenResponse(response, "Token exchange");
 };
@@ -106,6 +107,7 @@ export const refreshAccessToken = async (
       scope: scopes.length ? scopes.join(" ") : undefined,
       resource: options.resource,
     },
+    options,
   );
   return parseTokenResponse(response, "Token refresh", options.refreshToken);
 };
@@ -135,6 +137,7 @@ export const revokeToken = async (
       client_id: options.clientId,
       client_secret: options.clientSecret,
     },
+    options,
   );
   if (!response.ok) {
     throw await toOAuthError(response, "Token revocation");

@@ -294,6 +294,50 @@ describe("createSafeFetch transport", () => {
     ).rejects.toMatchObject({ code: "request_timeout" });
   });
 
+  it("bounds the whole request, not only socket inactivity", async () => {
+    resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+    handler = (_req, res) => {
+      res.write("x");
+      const trickle = setInterval(() => res.write("x"), 20);
+      res.on("close", () => clearInterval(trickle));
+    };
+    const started = Date.now();
+    await expect(
+      createSafeFetch({ ...options, timeoutMs: 150 })(
+        `http://pinned.example.com:${port}/`,
+      ),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+    expect(Date.now() - started).toBeLessThan(1500);
+  });
+
+  it("rejects instead of crashing when the server sends an invalid status", async () => {
+    resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+    handler = (_req, res) => {
+      res.statusCode = 600;
+      res.end("odd");
+    };
+    const result = createSafeFetch(options)(
+      `http://pinned.example.com:${port}/`,
+    );
+    await expect(result).rejects.toBeInstanceOf(AgentAuthError);
+    await expect(result).rejects.toMatchObject({ code: "invalid_response" });
+  });
+
+  it("rejects a declared Content-Length above the cap before the body arrives", async () => {
+    resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+    handler = (_req, res) => {
+      res.setHeader("content-length", "5000");
+      res.flushHeaders();
+    };
+    const started = Date.now();
+    await expect(
+      createSafeFetch({ ...options, maxResponseBytes: 1000, timeoutMs: 5000 })(
+        `http://pinned.example.com:${port}/`,
+      ),
+    ).rejects.toMatchObject({ code: "response_too_large" });
+    expect(Date.now() - started).toBeLessThan(2000);
+  });
+
   it("caps the response size", async () => {
     resolveTo("pinned.example.com", ["127.0.0.1", 4]);
     handler = (_req, res) => {
