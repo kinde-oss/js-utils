@@ -84,10 +84,23 @@ describe("assertValidCimdClientId", () => {
     "https://a.com/client.json ",
     "https://a.com/cli\nent.json",
     "https://a.com/cli\tent.json",
+    "https://a.com/client.json#",
+    "https://a.com/client.json?x=1#",
+    "https://a.com/client.json#frag",
+    "https://@a.com/client.json",
+    "https://:@a.com/client.json",
+    "https://user@a.com/client.json",
+    "https://user:pw@a.com/client.json",
   ])("rejects %j", (clientId) => {
     expect(() => assertValidCimdClientId(clientId)).toThrow(
       /invalid_client_metadata/,
     );
+  });
+
+  it("does not treat an @ or # outside the authority and fragment as credentials", () => {
+    expect(() =>
+      assertValidCimdClientId("https://a.com/users/me@example.com/client.json"),
+    ).not.toThrow();
   });
 
   it("accepts a plain https client_id with a path and query", () => {

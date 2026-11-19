@@ -34,8 +34,11 @@ export const assertValidCimdClientId = (clientId: string): URL => {
   if (url.pathname === "/" || url.pathname === "") {
     throw invalid("client_id must contain a path");
   }
-  if (url.hash) throw invalid("client_id must not contain a fragment");
-  if (url.username || url.password) {
+  if (url.hash || clientId.includes("#")) {
+    throw invalid("client_id must not contain a fragment");
+  }
+  const rawAuthority = clientId.replace(/^https:\/\//i, "").split(/[/?#]/)[0];
+  if (url.username || url.password || rawAuthority.includes("@")) {
     throw invalid("client_id must not contain credentials");
   }
   const rawPath = clientId.split(/[?#]/)[0].replace(/^https:\/\/[^/]*/i, "");
