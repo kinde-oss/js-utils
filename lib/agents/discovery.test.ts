@@ -368,14 +368,49 @@ describe("discoverAgentAuth", () => {
     expect(result.authorizationServer.issuer).toBe(serverMetadata.issuer);
   });
 
-  it("rejects non-401 responses", async () => {
-    await expect(
-      discoverAgentAuth({
-        response: new Response(null, { status: 200 }),
-        resourceUrl: prm.resource,
-        fetch: mockFetch(routes),
-      }),
-    ).rejects.toMatchObject({ code: "not_unauthorized" });
+  it.each([200, 204, 400, 404, 500])(
+    "rejects a %i response",
+    async (status) => {
+      await expect(
+        discoverAgentAuth({
+          response: new Response(null, { status }),
+          resourceUrl: prm.resource,
+          fetch: mockFetch(routes),
+        }),
+      ).rejects.toMatchObject({ code: "not_unauthorized", status });
+    },
+  );
+
+  it("discovers from a 403 insufficient_scope response and uses the scope it asks for", async () => {
+    const response = new Response(null, {
+      status: 403,
+      headers: {
+        "WWW-Authenticate":
+          'Bearer error="insufficient_scope", scope="read write admin", resource_metadata="https://api.example.com/meta"',
+      },
+    });
+    const result = await discoverAgentAuth({
+      response,
+      resourceUrl: prm.resource,
+      fetch: mockFetch((url) =>
+        url === "https://api.example.com/meta"
+          ? jsonResponse({ ...prm, scopes_supported: ["read"] })
+          : routes(url),
+      ),
+    });
+    expect(result.resource).toBe(prm.resource);
+    expect(result.scope).toBe("read write admin");
+  });
+
+  it("accepts a 403 without a challenge and falls back to the well-known url", async () => {
+    const result = await discoverAgentAuth({
+      response: new Response(null, { status: 403 }),
+      resourceUrl: prm.resource,
+      fetch: mockFetch(routes),
+    });
+    expect(result.resourceMetadataUrl).toBe(
+      "https://api.example.com/.well-known/oauth-protected-resource/mcp",
+    );
   });
 
   it("requires resourceUrl to validate metadata from the challenge", async () => {

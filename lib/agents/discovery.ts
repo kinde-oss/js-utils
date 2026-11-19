@@ -214,10 +214,10 @@ export const discoverAgentAuth = async (
 ): Promise<AgentDiscovery> => {
   const { response, resourceUrl, preferredIssuer } = options;
 
-  if (response && response.status !== 401) {
+  if (response && response.status !== 401 && response.status !== 403) {
     throw new AgentAuthError(
       "not_unauthorized",
-      `Expected a 401 response but received ${response.status}`,
+      `Expected a 401 or 403 response but received ${response.status}`,
       response.status,
     );
   }
