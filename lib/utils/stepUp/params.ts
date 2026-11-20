@@ -44,10 +44,15 @@ export const formatAcrValues = (acrValues: unknown): string | undefined => {
 
 /**
  * Maps `maxAge` to the `max_age` query parameter.
- * `0` is valid. Unset values are omitted. Negative and non-integer values throw.
+ * `0` is sent. Unset, `""`, `null`, and `NaN` are omitted.
+ * A negative or non-integer value throws before a URL is built.
  */
 export const formatMaxAge = (maxAge: unknown): string | undefined => {
-  if (maxAge == null) {
+  if (
+    maxAge == null ||
+    maxAge === "" ||
+    (typeof maxAge === "number" && Number.isNaN(maxAge))
+  ) {
     return undefined;
   }
 
@@ -57,7 +62,7 @@ export const formatMaxAge = (maxAge: unknown): string | undefined => {
     );
   }
 
-  return String(maxAge);
+  return maxAge.toFixed(0);
 };
 
 /**

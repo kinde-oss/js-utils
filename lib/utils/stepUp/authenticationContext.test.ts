@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
 import { clearActiveStorage, setActiveStorage } from "../token";
 import { createMockAccessToken } from "../token/testUtils";
@@ -10,6 +10,23 @@ import {
   type AuthenticationContext,
   type AuthenticationContextRequirement,
 } from "./authenticationContext";
+import { clearStepUpDiscoveryCache } from "./discovery";
+
+beforeEach(() => {
+  clearStepUpDiscoveryCache();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ acr_values_supported: ["mfa", "phr"] }),
+    })),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 const now = 1_716_800_000;
 
@@ -137,6 +154,19 @@ describe("hasAuthenticationContext", () => {
     ).toThrow(/acr must be "mfa" or "phr"/);
   });
 
+  it("rejects a negative, non-integer, or NaN maxAge instead of skipping the check", () => {
+    for (const maxAge of [-1, 1.5, Number.NaN]) {
+      expect(() =>
+        hasAuthenticationContext(context("mfa", now), {
+          maxAge: maxAge as unknown as number,
+        }),
+      ).toThrow(/maxAge must be a non-negative integer/);
+    }
+    expect(hasAuthenticationContext(context("mfa", now - 1), {}, now)).toBe(
+      true,
+    );
+  });
+
   it("requires both arguments when the first value is a context", () => {
     expect(() => hasAuthenticationContext(context(null))).toThrow(
       /needs both the context and the requirement/,
@@ -162,6 +192,45 @@ describe("hasAuthenticationContext", () => {
       true,
     );
     expect(await hasAuthenticationContext({ acr: "phr" })).toBe(false);
+    clearActiveStorage();
+  });
+
+  it("checks acr without reading discovery", async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error("discovery down"));
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({
+        acr: "mfa",
+        auth_time: Math.floor(Date.now() / 1000),
+      }),
+    );
+
+    expect(await hasAuthenticationContext({ acr: "mfa" })).toBe(true);
+    expect(fetch).not.toHaveBeenCalled();
+    clearActiveStorage();
+  });
+
+  it("fails maxAge when discovery fails", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({}),
+    } as Response);
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({
+        acr: "mfa",
+        auth_time: Math.floor(Date.now() / 1000),
+      }),
+    );
+
+    expect(await hasAuthenticationContext({ acr: "mfa", maxAge: 300 })).toBe(
+      false,
+    );
     clearActiveStorage();
   });
 
@@ -290,5 +359,206 @@ describe("getAuthenticationContext", () => {
       amr: [],
       authTime: null,
     });
+  });
+
+  it("keeps acr and returns authTime null when discovery fails", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({}),
+    } as Response);
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({
+        acr: "mfa",
+        amr: ["pwd", "totp"],
+        auth_time: 1716800000,
+      }),
+    );
+
+    expect(await getAuthenticationContext()).toEqual({
+      acr: "mfa",
+      amr: ["pwd", "totp"],
+      authTime: null,
+    });
+  });
+
+  it("returns authTime null when acr_values_supported is absent", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ issuer: "https://kinde.com" }),
+    } as Response);
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({
+        acr: "mfa",
+        amr: ["pwd", "totp"],
+        auth_time: 1716800000,
+      }),
+    );
+
+    expect(await getAuthenticationContext()).toEqual({
+      acr: "mfa",
+      amr: ["pwd", "totp"],
+      authTime: null,
+    });
+    expect(getAuthenticationContextSync()).toEqual({
+      acr: "mfa",
+      amr: ["pwd", "totp"],
+      authTime: null,
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "https://kinde.com/.well-known/openid-configuration",
+      expect.anything(),
+    );
+  });
+
+  it("keeps the token authTime when a supported discovery result expires", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
+    try {
+      const store = new MemoryStorage();
+      setActiveStorage(store);
+      await store.setSessionItem(
+        StorageKeys.idToken,
+        createMockAccessToken({
+          acr: "mfa",
+          auth_time: 1716800000,
+        }),
+      );
+
+      expect(await getAuthenticationContext()).toMatchObject({
+        authTime: 1716800000,
+      });
+      nowSpy.mockReturnValue(1_000 + 60 * 60 * 1000 + 1);
+      expect(getAuthenticationContextSync()).toMatchObject({
+        authTime: 1716800000,
+      });
+    } finally {
+      nowSpy.mockRestore();
+      clearActiveStorage();
+    }
+  });
+
+  it("returns the token authTime until discovery has been checked", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({
+        acr: "mfa",
+        auth_time: 1716800000,
+      }),
+    );
+
+    expect(getAuthenticationContextSync()).toEqual({
+      acr: "mfa",
+      amr: [],
+      authTime: 1716800000,
+    });
+    expect(fetch).not.toHaveBeenCalled();
+    clearActiveStorage();
+  });
+
+  it("keeps filtering authTime when an unsupported discovery result expires", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
+    try {
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({ issuer: "https://kinde.com" }),
+      } as Response);
+      const store = new MemoryStorage();
+      setActiveStorage(store);
+      await store.setSessionItem(
+        StorageKeys.idToken,
+        createMockAccessToken({
+          acr: "mfa",
+          amr: ["pwd"],
+          auth_time: 1716800000,
+        }),
+      );
+
+      expect(await getAuthenticationContext()).toMatchObject({
+        authTime: null,
+      });
+
+      nowSpy.mockReturnValue(1_000 + 60 * 60 * 1000 + 1);
+      expect(getAuthenticationContextSync()).toMatchObject({ authTime: null });
+
+      let resolveJson: (value: unknown) => void = () => {};
+      const jsonStarted = new Promise<void>((started) => {
+        vi.mocked(fetch).mockImplementationOnce(() =>
+          Promise.resolve({
+            ok: true,
+            json: () =>
+              new Promise((resolve) => {
+                resolveJson = resolve;
+                started();
+              }),
+          } as Response),
+        );
+      });
+
+      const refresh = getAuthenticationContext();
+      await jsonStarted;
+      expect(getAuthenticationContextSync()).toMatchObject({ authTime: null });
+      resolveJson({ acr_values_supported: ["mfa"] });
+      expect(await refresh).toMatchObject({ authTime: 1716800000 });
+      expect(getAuthenticationContextSync()).toMatchObject({
+        authTime: 1716800000,
+      });
+    } finally {
+      nowSpy.mockRestore();
+      clearActiveStorage();
+    }
+  });
+
+  it("keeps filtering authTime when a refresh of an unsupported issuer fails", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
+    try {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ issuer: "https://kinde.com" }),
+      } as Response);
+      const store = new MemoryStorage();
+      setActiveStorage(store);
+      await store.setSessionItem(
+        StorageKeys.idToken,
+        createMockAccessToken({
+          acr: "mfa",
+          auth_time: 1716800000,
+        }),
+      );
+      expect(await getAuthenticationContext()).toMatchObject({
+        authTime: null,
+      });
+
+      nowSpy.mockReturnValue(1_000 + 60 * 60 * 1000 + 1);
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({}),
+      } as Response);
+      expect(await getAuthenticationContext()).toMatchObject({
+        acr: "mfa",
+        authTime: null,
+      });
+      expect(getAuthenticationContextSync()).toMatchObject({ authTime: null });
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ acr_values_supported: ["mfa"] }),
+      } as Response);
+      expect(await getAuthenticationContext()).toMatchObject({
+        authTime: 1716800000,
+      });
+      expect(fetch).toHaveBeenCalledTimes(3);
+    } finally {
+      nowSpy.mockRestore();
+      clearActiveStorage();
+    }
   });
 });

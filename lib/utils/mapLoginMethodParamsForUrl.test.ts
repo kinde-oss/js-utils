@@ -169,12 +169,13 @@ describe("mapLoginMethodParamsForUrl", () => {
     expect(JSON.stringify(result)).not.toMatch(/undefined|null|NaN/);
   });
 
-  it("should omit a null maxAge", () => {
-    const result = mapLoginMethodParamsForUrl({
-      maxAge: null as unknown as number,
-    });
-
-    expect(result).not.toHaveProperty("max_age");
+  it("should omit an empty, null, or NaN maxAge", () => {
+    for (const maxAge of ["", null, Number.NaN]) {
+      const result = mapLoginMethodParamsForUrl({
+        maxAge: maxAge as unknown as number,
+      });
+      expect(result).not.toHaveProperty("max_age");
+    }
   });
 
   it("should throw before mapping a negative or non-integer maxAge", () => {
@@ -182,9 +183,6 @@ describe("mapLoginMethodParamsForUrl", () => {
       /non-negative integer/,
     );
     expect(() => mapLoginMethodParamsForUrl({ maxAge: 1.5 })).toThrow(
-      /non-negative integer/,
-    );
-    expect(() => mapLoginMethodParamsForUrl({ maxAge: Number.NaN })).toThrow(
       /non-negative integer/,
     );
   });
