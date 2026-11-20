@@ -51,10 +51,17 @@ const readOpenIdConfiguration = async (
   return configuration;
 };
 
+/** True when discovery includes `acr_values_supported`. A null value does not count. */
+export const acrValuesSupportedPresent = (
+  configuration: OpenIdConfiguration,
+): boolean => configuration.acr_values_supported != null;
+
 /**
  * Fetches the issuer's OpenID configuration. Concurrent calls share one request.
  * A successful result is reused for an hour. A failed request, or one that
  * passes its deadline, is removed so the next call can try again.
+ * A previously discovered unsupported document stays readable by sync callers
+ * across that refresh until a new document arrives.
  */
 const fetchOpenIdConfiguration = async (
   domain: string,
@@ -77,6 +84,9 @@ const fetchOpenIdConfiguration = async (
     configuration: readOpenIdConfiguration(normalized, deadline),
     expiresAt: Infinity,
   };
+  if (cached?.resolved && !acrValuesSupportedPresent(cached.resolved)) {
+    entry.resolved = cached.resolved;
+  }
   discoveryCache.set(normalized, entry);
   try {
     const configuration = await entry.configuration;
@@ -85,7 +95,11 @@ const fetchOpenIdConfiguration = async (
     return configuration;
   } catch (error) {
     if (discoveryCache.get(normalized) === entry) {
-      discoveryCache.delete(normalized);
+      if (entry.resolved && !acrValuesSupportedPresent(entry.resolved)) {
+        entry.expiresAt = 0;
+      } else {
+        discoveryCache.delete(normalized);
+      }
     }
     throw error;
   } finally {
@@ -93,22 +107,26 @@ const fetchOpenIdConfiguration = async (
   }
 };
 
-/** True when discovery includes `acr_values_supported`. A null value does not count. */
-export const acrValuesSupportedPresent = (
-  configuration: OpenIdConfiguration,
-): boolean => configuration.acr_values_supported != null;
-
 /**
  * Cached discovery answer for `domain`, or undefined when it has not been fetched.
- * A false result means `acr_values_supported` is absent.
+ * A false result means `acr_values_supported` is absent. That false result is kept
+ * after the cache expires, including while a refresh is in flight. A supported
+ * result is dropped once the cache expires. An issuer that has never resolved
+ * stays undefined.
  */
 export const cachedStepUpSupported = (domain: string): boolean | undefined => {
   const normalized = sanitizeUrl(domain);
   const cached = discoveryCache.get(normalized);
-  if (!cached?.resolved || !(cached.expiresAt > Date.now())) {
+  if (!cached?.resolved) {
     return undefined;
   }
-  return acrValuesSupportedPresent(cached.resolved);
+  if (!acrValuesSupportedPresent(cached.resolved)) {
+    return false;
+  }
+  if (!(cached.expiresAt > Date.now())) {
+    return undefined;
+  }
+  return true;
 };
 
 /**
