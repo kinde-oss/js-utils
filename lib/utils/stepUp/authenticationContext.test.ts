@@ -154,6 +154,19 @@ describe("hasAuthenticationContext", () => {
     ).toThrow(/acr must be "mfa" or "phr"/);
   });
 
+  it("rejects a negative, non-integer, or NaN maxAge instead of skipping the check", () => {
+    for (const maxAge of [-1, 1.5, Number.NaN]) {
+      expect(() =>
+        hasAuthenticationContext(context("mfa", now), {
+          maxAge: maxAge as unknown as number,
+        }),
+      ).toThrow(/maxAge must be a non-negative integer/);
+    }
+    expect(hasAuthenticationContext(context("mfa", now - 1), {}, now)).toBe(
+      true,
+    );
+  });
+
   it("requires both arguments when the first value is a context", () => {
     expect(() => hasAuthenticationContext(context(null))).toThrow(
       /needs both the context and the requirement/,

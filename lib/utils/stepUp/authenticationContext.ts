@@ -1,7 +1,7 @@
 import { getDecodedToken, getDecodedTokenSync } from "../token";
 import { cachedStepUpSupported, isStepUpSupported } from "./discovery";
 import type { AcrValue } from "./params";
-import { formatMaxAge, highestAcr } from "./params";
+import { highestAcr } from "./params";
 
 export type AuthenticationContext = {
   /** `null` when the token has no `acr` (a single-factor sign-in). */
@@ -159,12 +159,17 @@ const meets = (
     }
   }
 
-  const maxAge = formatMaxAge(requirement.maxAge);
-  if (maxAge !== undefined) {
+  const maxAge = requirement.maxAge;
+  if (maxAge != null) {
+    if (!Number.isInteger(maxAge) || maxAge < 0) {
+      throw new Error(
+        `maxAge must be a non-negative integer number of seconds. Received ${String(maxAge)}.`,
+      );
+    }
     if (ctx.authTime === null || ctx.authTime > now) {
       return false;
     }
-    if (now - ctx.authTime > Number(maxAge)) {
+    if (now - ctx.authTime > maxAge) {
       return false;
     }
   }
