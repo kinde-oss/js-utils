@@ -99,24 +99,30 @@ const applyStepUpSupport = (
   return { ...ctx, authTime: null };
 };
 
+const readSessionContext = async (
+  needsAuthTime: boolean,
+): Promise<AuthenticationContext | null> => {
+  const idToken = await getDecodedToken<AuthenticationClaims>("idToken");
+  const accessToken =
+    await getDecodedToken<AuthenticationClaims>("accessToken");
+  const ctx = readAuthenticationContext({ idToken, accessToken });
+  const issuer = issuerFrom(idToken, accessToken);
+  if (!ctx || !issuer || !needsAuthTime) {
+    return ctx;
+  }
+
+  const supported = await isStepUpSupported(issuer).catch(() => false);
+  return applyStepUpSupport(ctx, supported);
+};
+
 /**
  * Authentication context of the current session.
  * `authTime` comes from the ID token when one exists, otherwise the access token.
- * The issuer is read the same way. When `acr_values_supported` is absent,
- * `authTime` is `null` because that claim may be the token issue time.
+ * The issuer is read the same way. When discovery fails or `acr_values_supported`
+ * is absent, `authTime` is `null` because the token value may be unreliable.
  */
 export const getAuthenticationContext =
-  async (): Promise<AuthenticationContext | null> => {
-    const idToken = await getDecodedToken<AuthenticationClaims>("idToken");
-    const accessToken =
-      await getDecodedToken<AuthenticationClaims>("accessToken");
-    const ctx = readAuthenticationContext({ idToken, accessToken });
-    const issuer = issuerFrom(idToken, accessToken);
-    if (!ctx || !issuer) {
-      return ctx;
-    }
-    return applyStepUpSupport(ctx, await isStepUpSupported(issuer));
-  };
+  (): Promise<AuthenticationContext | null> => readSessionContext(true);
 
 /**
  * Synchronous `getAuthenticationContext`. Throws when the active storage is async-only.
@@ -216,7 +222,8 @@ export function hasAuthenticationContext(
     );
   }
 
-  return getAuthenticationContext().then((ctx) => {
+  const needsAuthTime = ctxOrRequirement.maxAge != null;
+  return readSessionContext(needsAuthTime).then((ctx) => {
     if (!ctx) {
       return false;
     }

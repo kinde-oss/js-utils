@@ -195,6 +195,45 @@ describe("hasAuthenticationContext", () => {
     clearActiveStorage();
   });
 
+  it("checks acr without reading discovery", async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error("discovery down"));
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({
+        acr: "mfa",
+        auth_time: Math.floor(Date.now() / 1000),
+      }),
+    );
+
+    expect(await hasAuthenticationContext({ acr: "mfa" })).toBe(true);
+    expect(fetch).not.toHaveBeenCalled();
+    clearActiveStorage();
+  });
+
+  it("fails maxAge when discovery fails", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({}),
+    } as Response);
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({
+        acr: "mfa",
+        auth_time: Math.floor(Date.now() / 1000),
+      }),
+    );
+
+    expect(await hasAuthenticationContext({ acr: "mfa", maxAge: 300 })).toBe(
+      false,
+    );
+    clearActiveStorage();
+  });
+
   it("measures maxAge after the session read resolves", async () => {
     vi.useFakeTimers();
     try {
@@ -318,6 +357,30 @@ describe("getAuthenticationContext", () => {
     ).toEqual({
       acr: "mfa",
       amr: [],
+      authTime: null,
+    });
+  });
+
+  it("keeps acr and returns authTime null when discovery fails", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({}),
+    } as Response);
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({
+        acr: "mfa",
+        amr: ["pwd", "totp"],
+        auth_time: 1716800000,
+      }),
+    );
+
+    expect(await getAuthenticationContext()).toEqual({
+      acr: "mfa",
+      amr: ["pwd", "totp"],
       authTime: null,
     });
   });
@@ -479,7 +542,10 @@ describe("getAuthenticationContext", () => {
         status: 503,
         json: async () => ({}),
       } as Response);
-      await expect(getAuthenticationContext()).rejects.toThrow(/503/);
+      expect(await getAuthenticationContext()).toMatchObject({
+        acr: "mfa",
+        authTime: null,
+      });
       expect(getAuthenticationContextSync()).toMatchObject({ authTime: null });
 
       vi.mocked(fetch).mockResolvedValueOnce({
