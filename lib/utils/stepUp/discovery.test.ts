@@ -41,6 +41,38 @@ describe("isStepUpSupported", () => {
     );
   });
 
+  it("treats a non-object discovery body as a failed fetch", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
+    try {
+      for (const body of [null, [], "openid", 1, true]) {
+        clearStepUpDiscoveryCache();
+        vi.mocked(fetch).mockClear();
+        vi.mocked(fetch).mockResolvedValue({
+          ok: true,
+          json: async () => body,
+        } as Response);
+
+        await expect(
+          isStepUpSupported("https://bad.example.com"),
+        ).rejects.toThrow(/not an object/);
+        expect(cachedStepUpSupported("https://bad.example.com")).toBe(false);
+        await expect(
+          isStepUpSupported("https://bad.example.com"),
+        ).rejects.toThrow(/not an object/);
+        expect(fetch).toHaveBeenCalledTimes(1);
+
+        nowSpy.mockReturnValue(1_000 + DISCOVERY_FAILURE_TTL_MS);
+        await expect(
+          isStepUpSupported("https://bad.example.com"),
+        ).rejects.toThrow(/not an object/);
+        expect(fetch).toHaveBeenCalledTimes(2);
+        nowSpy.mockReturnValue(1_000);
+      }
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   it("is false when acr_values_supported is missing", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,

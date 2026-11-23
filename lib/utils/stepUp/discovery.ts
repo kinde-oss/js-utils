@@ -51,12 +51,17 @@ const readOpenIdConfiguration = async (
       `Failed to read OpenID configuration from ${domain}: ${response.status}`,
     );
   }
-  const configuration = (await deadline.readBody(() =>
-    response.json(),
-  )) as OpenIdConfiguration;
+  const configuration: unknown = await deadline.readBody(() => response.json());
   deadline.assertWithinDeadline();
+  if (!isOpenIdConfiguration(configuration)) {
+    throw new Error(`OpenID configuration from ${domain} was not an object`);
+  }
   return configuration;
 };
+
+/** A discovery document is a JSON object. Null, arrays, and scalars are not. */
+const isOpenIdConfiguration = (value: unknown): value is OpenIdConfiguration =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 /** True when discovery includes `acr_values_supported`. A null value does not count. */
 export const acrValuesSupportedPresent = (
