@@ -10,7 +10,10 @@ import {
   type AuthenticationContext,
   type AuthenticationContextRequirement,
 } from "./authenticationContext";
-import { clearStepUpDiscoveryCache } from "./discovery";
+import {
+  clearStepUpDiscoveryCache,
+  DISCOVERY_FAILURE_TTL_MS,
+} from "./discovery";
 
 beforeEach(() => {
   clearStepUpDiscoveryCache();
@@ -671,7 +674,45 @@ describe("getAuthenticationContext", () => {
     }
   });
 
+  it("reuses a failed discovery fetch instead of waiting again", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
+    try {
+      vi.mocked(fetch).mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: async () => ({}),
+      } as Response);
+      const store = new MemoryStorage();
+      setActiveStorage(store);
+      await store.setSessionItem(
+        StorageKeys.idToken,
+        createMockAccessToken({
+          acr: "mfa",
+          auth_time: 1716800000,
+        }),
+      );
+
+      expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
+        authTime: null,
+      });
+      expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
+        authTime: null,
+      });
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      nowSpy.mockReturnValue(1_000 + DISCOVERY_FAILURE_TTL_MS);
+      expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
+        authTime: null,
+      });
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      nowSpy.mockRestore();
+      clearActiveStorage();
+    }
+  });
+
   it("clears authTime on the sync reader after discovery fails, until a document arrives", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
       status: 503,
@@ -687,38 +728,43 @@ describe("getAuthenticationContext", () => {
       }),
     );
 
-    expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
-      authTime: null,
-    });
-    expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
-      authTime: null,
-    });
+    try {
+      expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
+        authTime: null,
+      });
+      expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
+        authTime: null,
+      });
+      nowSpy.mockReturnValue(1_000 + DISCOVERY_FAILURE_TTL_MS);
 
-    let resolveJson: (value: unknown) => void = () => {};
-    const jsonStarted = new Promise<void>((started) => {
-      vi.mocked(fetch).mockImplementationOnce(() =>
-        Promise.resolve({
-          ok: true,
-          json: () =>
-            new Promise((resolve) => {
-              resolveJson = resolve;
-              started();
-            }),
-        } as Response),
-      );
-    });
+      let resolveJson: (value: unknown) => void = () => {};
+      const jsonStarted = new Promise<void>((started) => {
+        vi.mocked(fetch).mockImplementationOnce(() =>
+          Promise.resolve({
+            ok: true,
+            json: () =>
+              new Promise((resolve) => {
+                resolveJson = resolve;
+                started();
+              }),
+          } as Response),
+        );
+      });
 
-    const refresh = getAuthenticationContext(configuredDomain);
-    await jsonStarted;
-    expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
-      authTime: null,
-    });
-    resolveJson({ acr_values_supported: ["mfa"] });
-    expect(await refresh).toMatchObject({ authTime: 1716800000 });
-    expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
-      authTime: 1716800000,
-    });
-    clearActiveStorage();
+      const refresh = getAuthenticationContext(configuredDomain);
+      await jsonStarted;
+      expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
+        authTime: null,
+      });
+      resolveJson({ acr_values_supported: ["mfa"] });
+      expect(await refresh).toMatchObject({ authTime: 1716800000 });
+      expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
+        authTime: 1716800000,
+      });
+    } finally {
+      nowSpy.mockRestore();
+      clearActiveStorage();
+    }
   });
 
   it("clears authTime on the sync reader when a refresh of a supported issuer fails", async () => {
@@ -775,7 +821,8 @@ describe("getAuthenticationContext", () => {
         authTime: null,
       });
 
-      nowSpy.mockReturnValue(1_000 + 60 * 60 * 1000 + 1);
+      const expiredAt = 1_000 + 60 * 60 * 1000 + 1;
+      nowSpy.mockReturnValue(expiredAt);
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 503,
@@ -789,6 +836,7 @@ describe("getAuthenticationContext", () => {
         authTime: null,
       });
 
+      nowSpy.mockReturnValue(expiredAt + DISCOVERY_FAILURE_TTL_MS);
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ acr_values_supported: ["mfa"] }),

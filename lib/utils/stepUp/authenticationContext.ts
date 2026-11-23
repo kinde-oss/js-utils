@@ -165,6 +165,8 @@ const readSessionContext = async (
  * Discovery is read for `domain` only when the token issuer is that same origin.
  * When the issuer does not match, discovery fails, or `acr_values_supported`
  * is absent, `authTime` is `null` because the token value may be unreliable.
+ * A failed discovery fetch is reused briefly, so a later read does not wait
+ * on an unreachable host.
  */
 export const getAuthenticationContext = (
   domain: string,

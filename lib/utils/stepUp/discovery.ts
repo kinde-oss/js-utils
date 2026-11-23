@@ -21,6 +21,8 @@ type CacheEntry = {
 const DISCOVERY_TTL_MS = 60 * 60 * 1000;
 /** Bounds a discovery fetch and its JSON body. A stalled attempt must not stay cached. */
 export const DISCOVERY_TIMEOUT_MS = 30_000;
+/** How long a failed fetch is reused before the next try. */
+export const DISCOVERY_FAILURE_TTL_MS = 30_000;
 
 const discoveryCache = new Map<string, CacheEntry>();
 
@@ -64,9 +66,9 @@ export const acrValuesSupportedPresent = (
 /**
  * Fetches the issuer's OpenID configuration. Concurrent calls share one request.
  * A successful result is reused for an hour. A failed request, or one that
- * passes its deadline, is not reused, so the next call can try again.
- * That failure stays visible to sync callers until a document arrives,
- * including while the retry is in flight.
+ * passes its deadline, is reused for a short time so the next call does not
+ * wait on an unreachable host. That failure stays visible to sync callers
+ * until a document arrives, including while the retry is in flight.
  * A previously discovered unsupported document stays readable the same way.
  */
 const fetchOpenIdConfiguration = async (
@@ -104,11 +106,9 @@ const fetchOpenIdConfiguration = async (
     return configuration;
   } catch (error) {
     if (discoveryCache.get(normalized) === entry) {
-      if (entry.resolved && !acrValuesSupportedPresent(entry.resolved)) {
-        entry.expiresAt = 0;
-      } else {
+      entry.expiresAt = Date.now() + DISCOVERY_FAILURE_TTL_MS;
+      if (!(entry.resolved && !acrValuesSupportedPresent(entry.resolved))) {
         entry.failed = true;
-        entry.expiresAt = 0;
       }
     }
     throw error;

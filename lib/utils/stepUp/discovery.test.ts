@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cachedStepUpSupported,
   clearStepUpDiscoveryCache,
+  DISCOVERY_FAILURE_TTL_MS,
   DISCOVERY_TIMEOUT_MS,
   isStepUpSupported,
 } from "./discovery";
@@ -179,6 +180,12 @@ describe("isStepUpSupported", () => {
     expect(stalledSignal?.aborted).toBe(true);
     expect(cachedStepUpSupported("https://stall.example.com")).toBe(false);
 
+    await expect(
+      isStepUpSupported("https://stall.example.com"),
+    ).rejects.toMatchObject({ name: "TimeoutError" });
+    expect(fetches).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(DISCOVERY_FAILURE_TTL_MS);
     await expect(isStepUpSupported("https://stall.example.com")).resolves.toBe(
       true,
     );
@@ -213,6 +220,7 @@ describe("isStepUpSupported", () => {
     await vi.advanceTimersByTimeAsync(DISCOVERY_TIMEOUT_MS);
     resolveJson({ acr_values_supported: ["mfa"] });
     await failed;
+    await vi.advanceTimersByTimeAsync(DISCOVERY_FAILURE_TTL_MS);
     await expect(isStepUpSupported("https://body.example.com")).resolves.toBe(
       true,
     );
@@ -251,40 +259,54 @@ describe("isStepUpSupported", () => {
     expect(fetches).toBe(2);
   });
 
-  it("retries a failed discovery fetch and keeps it visible to sync readers", async () => {
+  it("reuses a failed discovery fetch briefly and keeps it visible to sync readers", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
       status: 503,
       json: async () => ({}),
     } as Response);
 
-    expect(cachedStepUpSupported("https://down.example.com")).toBeUndefined();
-    await expect(isStepUpSupported("https://down.example.com")).rejects.toThrow(
-      /503/,
-    );
-    expect(cachedStepUpSupported("https://down.example.com")).toBe(false);
-    await expect(isStepUpSupported("https://down.example.com")).rejects.toThrow(
-      /503/,
-    );
-    expect(fetch).toHaveBeenCalledTimes(2);
-    expect(cachedStepUpSupported("https://down.example.com")).toBe(false);
+    try {
+      expect(cachedStepUpSupported("https://down.example.com")).toBeUndefined();
+      await expect(
+        isStepUpSupported("https://down.example.com"),
+      ).rejects.toThrow(/503/);
+      expect(cachedStepUpSupported("https://down.example.com")).toBe(false);
+      await expect(
+        isStepUpSupported("https://down.example.com"),
+      ).rejects.toThrow(/503/);
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(cachedStepUpSupported("https://down.example.com")).toBe(false);
+
+      nowSpy.mockReturnValue(1_000 + DISCOVERY_FAILURE_TTL_MS);
+      await expect(
+        isStepUpSupported("https://down.example.com"),
+      ).rejects.toThrow(/503/);
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(cachedStepUpSupported("https://down.example.com")).toBe(false);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   it("keeps a failed discovery visible to sync readers until a document arrives", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
       status: 503,
       json: async () => ({}),
     } as Response);
 
-    await expect(isStepUpSupported("https://down.example.com")).rejects.toThrow(
-      /503/,
-    );
+    try {
+      await expect(
+        isStepUpSupported("https://down.example.com"),
+      ).rejects.toThrow(/503/);
+      nowSpy.mockReturnValue(1_000 + DISCOVERY_FAILURE_TTL_MS);
 
-    let resolveJson: (value: unknown) => void = () => {};
-    const jsonStarted = new Promise<void>((started) => {
-      vi.mocked(fetch).mockImplementationOnce(
-        () =>
+      let resolveJson: (value: unknown) => void = () => {};
+      const jsonStarted = new Promise<void>((started) => {
+        vi.mocked(fetch).mockImplementationOnce(() =>
           Promise.resolve({
             ok: true,
             json: () =>
@@ -293,14 +315,17 @@ describe("isStepUpSupported", () => {
                 started();
               }),
           } as Response),
-      );
-    });
+        );
+      });
 
-    const retry = isStepUpSupported("https://down.example.com");
-    await jsonStarted;
-    expect(cachedStepUpSupported("https://down.example.com")).toBe(false);
-    resolveJson({ acr_values_supported: ["mfa"] });
-    await expect(retry).resolves.toBe(true);
-    expect(cachedStepUpSupported("https://down.example.com")).toBe(true);
+      const retry = isStepUpSupported("https://down.example.com");
+      await jsonStarted;
+      expect(cachedStepUpSupported("https://down.example.com")).toBe(false);
+      resolveJson({ acr_values_supported: ["mfa"] });
+      await expect(retry).resolves.toBe(true);
+      expect(cachedStepUpSupported("https://down.example.com")).toBe(true);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 });
