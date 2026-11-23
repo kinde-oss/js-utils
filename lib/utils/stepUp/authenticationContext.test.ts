@@ -212,6 +212,28 @@ describe("hasAuthenticationContext", () => {
     clearActiveStorage();
   });
 
+  it("fails maxAge when the token has no issuer", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    for (const iss of [undefined, ""]) {
+      await store.setSessionItem(
+        StorageKeys.idToken,
+        createMockAccessToken({
+          iss,
+          acr: "mfa",
+          auth_time: Math.floor(Date.now() / 1000),
+        }),
+      );
+
+      expect(await hasAuthenticationContext({ acr: "mfa", maxAge: 300 })).toBe(
+        false,
+      );
+      expect(await hasAuthenticationContext({ acr: "mfa" })).toBe(true);
+    }
+    expect(fetch).not.toHaveBeenCalled();
+    clearActiveStorage();
+  });
+
   it("fails maxAge when discovery fails", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
@@ -359,6 +381,63 @@ describe("getAuthenticationContext", () => {
       amr: [],
       authTime: null,
     });
+  });
+
+  it("returns authTime null when the token has no issuer", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    for (const iss of [undefined, ""]) {
+      await store.setSessionItem(
+        StorageKeys.idToken,
+        createMockAccessToken({
+          iss,
+          acr: "mfa",
+          amr: ["pwd", "totp"],
+          auth_time: 1716800000,
+        }),
+      );
+
+      expect(await getAuthenticationContext()).toEqual({
+        acr: "mfa",
+        amr: ["pwd", "totp"],
+        authTime: null,
+      });
+      expect(getAuthenticationContextSync()).toEqual({
+        acr: "mfa",
+        amr: ["pwd", "totp"],
+        authTime: null,
+      });
+    }
+    expect(fetch).not.toHaveBeenCalled();
+    clearActiveStorage();
+  });
+
+  it("uses the access token issuer when the ID token has none", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setItems({
+      [StorageKeys.idToken]: createMockAccessToken({
+        iss: undefined,
+        acr: "mfa",
+        auth_time: 1716800000,
+      }),
+      [StorageKeys.accessToken]: createMockAccessToken({
+        auth_time: 111,
+      }),
+    });
+
+    expect(await getAuthenticationContext()).toMatchObject({
+      acr: "mfa",
+      authTime: 1716800000,
+    });
+    expect(getAuthenticationContextSync()).toMatchObject({
+      authTime: 1716800000,
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "https://kinde.com/.well-known/openid-configuration",
+      expect.anything(),
+    );
+    clearActiveStorage();
   });
 
   it("keeps acr and returns authTime null when discovery fails", async () => {

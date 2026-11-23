@@ -106,9 +106,13 @@ const readSessionContext = async (
   const accessToken =
     await getDecodedToken<AuthenticationClaims>("accessToken");
   const ctx = readAuthenticationContext({ idToken, accessToken });
-  const issuer = issuerFrom(idToken, accessToken);
-  if (!ctx || !issuer || !needsAuthTime) {
+  if (!ctx || !needsAuthTime) {
     return ctx;
+  }
+
+  const issuer = issuerFrom(idToken, accessToken);
+  if (!issuer) {
+    return applyStepUpSupport(ctx, false);
   }
 
   const supported = await isStepUpSupported(issuer).catch(() => false);
@@ -118,8 +122,9 @@ const readSessionContext = async (
 /**
  * Authentication context of the current session.
  * `authTime` comes from the ID token when one exists, otherwise the access token.
- * The issuer is read the same way. When discovery fails or `acr_values_supported`
- * is absent, `authTime` is `null` because the token value may be unreliable.
+ * The issuer is read the same way. When the token has no issuer, discovery fails,
+ * or `acr_values_supported` is absent, `authTime` is `null` because the token
+ * value may be unreliable.
  */
 export const getAuthenticationContext =
   (): Promise<AuthenticationContext | null> => readSessionContext(true);
@@ -127,8 +132,9 @@ export const getAuthenticationContext =
 /**
  * Synchronous `getAuthenticationContext`. Throws when the active storage is async-only.
  * Uses the cached discovery document. Until discovery has resolved or failed,
- * `authTime` is the token value. A failed fetch or a cached unsupported result
- * clears `authTime`, including after it expires and while discovery retries.
+ * `authTime` is the token value. A missing issuer, a failed fetch, or a cached
+ * unsupported result clears `authTime`, including after it expires and while
+ * discovery retries.
  */
 export const getAuthenticationContextSync =
   (): AuthenticationContext | null => {
@@ -136,11 +142,14 @@ export const getAuthenticationContextSync =
     const accessToken =
       getDecodedTokenSync<AuthenticationClaims>("accessToken");
     const ctx = readAuthenticationContext({ idToken, accessToken });
-    const issuer = issuerFrom(idToken, accessToken);
-    if (!ctx || !issuer) {
-      return ctx;
+    if (!ctx) {
+      return null;
     }
-    return applyStepUpSupport(ctx, cachedStepUpSupported(issuer));
+    const issuer = issuerFrom(idToken, accessToken);
+    return applyStepUpSupport(
+      ctx,
+      issuer ? cachedStepUpSupported(issuer) : false,
+    );
   };
 
 /**

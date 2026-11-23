@@ -143,7 +143,7 @@ try {
 
 `login_required` throws `LoginRequiredError` with the same fields. A callback that does not use `exchangeAuthCode` can call `readCallbackAuthenticationError` instead. State is checked before either error is reported.
 
-`getAuthenticationContext()` returns `{ acr, amr, authTime }` for the current session. `acr` is `null` for a single-factor sign-in, and `amr` is `[]` when the token has none. `authTime` is taken from the ID token when there is one, otherwise the access token. The issuer is read the same way, and `isStepUpSupported` is checked. When discovery fails or `acr_values_supported` is absent, `authTime` is `null`. Passing only a requirement reads the session the same way, and skips discovery when `maxAge` is unset. `hasAuthenticationContext(ctx, { acr, maxAge })` is the pure check: ordering is none < `mfa` < `phr`, so `phr` meets `mfa`. `amr` is informational and is not consulted. A `maxAge` check fails when `authTime` is missing or older than `maxAge`.
+`getAuthenticationContext()` returns `{ acr, amr, authTime }` for the current session. `acr` is `null` for a single-factor sign-in, and `amr` is `[]` when the token has none. `authTime` is taken from the ID token when there is one, otherwise the access token. The issuer is read the same way, and `isStepUpSupported` is checked. When the token has no issuer, discovery fails, or `acr_values_supported` is absent, `authTime` is `null`. Passing only a requirement reads the session the same way, and skips discovery when `maxAge` is unset. `hasAuthenticationContext(ctx, { acr, maxAge })` is the pure check: ordering is none < `mfa` < `phr`, so `phr` meets `mfa`. `amr` is informational and is not consulted. A `maxAge` check fails when `authTime` is missing or older than `maxAge`.
 
 `isStepUpSupported(domain)` is true when `acr_values_supported` is present on `/.well-known/openid-configuration`. The document is cached. When it is absent, `stepUp({ acr })` throws and `stepUp({ maxAge })` sends `prompt=login` instead of `max_age`. That fallback cannot satisfy a `maxAge` check, because `authTime` stays `null`. Do not retry the same `maxAge` step-up for an unsupported issuer.
 
@@ -153,7 +153,7 @@ This package does not navigate, and it does not attach framework middleware. `re
 
 Other differences from the shared SDK shape:
 
-- `getAuthenticationContextSync` uses the cached discovery document. Until discovery has resolved or failed, it returns the token's `authTime`. A failed fetch clears `authTime`, including while a retry is in flight. The async helper always checks discovery.
+- `getAuthenticationContextSync` uses the cached discovery document. Until discovery has resolved or failed, it returns the token's `authTime`. A missing issuer or a failed fetch clears `authTime`, including while a retry is in flight. The async helper always checks discovery.
 - The `maxAge` comparison has no clock tolerance. This package has no existing token leeway. A future `authTime` fails a `maxAge` check.
 - `buildStepUpChallenge` always sets `Access-Control-Expose-Headers: WWW-Authenticate`, so a browser can read the challenge when CORS is enabled. Do not put token contents in `errorDescription`.
 
