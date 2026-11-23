@@ -29,6 +29,7 @@ afterEach(() => {
 });
 
 const now = 1_716_800_000;
+const configuredDomain = "https://kinde.com";
 
 const context = (
   acr: AuthenticationContext["acr"],
@@ -45,13 +46,7 @@ const hasSessionContextAt = (
   requirement: AuthenticationContextRequirement,
   checkedAt: number,
 ): Promise<boolean> =>
-  (
-    hasAuthenticationContext as (
-      requirement: AuthenticationContextRequirement,
-      omitted: undefined,
-      now: number,
-    ) => Promise<boolean>
-  )(requirement, undefined, checkedAt);
+  hasAuthenticationContext(requirement, configuredDomain, checkedAt);
 
 const holdIdTokenRead = async (authTime: number): Promise<() => void> => {
   const store = new MemoryStorage();
@@ -173,6 +168,15 @@ describe("hasAuthenticationContext", () => {
     );
   });
 
+  it("requires the configured domain before a maxAge check", () => {
+    expect(() => hasAuthenticationContext({ maxAge: 300 })).toThrow(
+      /configured domain/,
+    );
+    expect(() =>
+      getAuthenticationContext(undefined as unknown as string),
+    ).toThrow(/configured domain/);
+  });
+
   it("reads the current session when only a requirement is passed", async () => {
     const store = new MemoryStorage();
     setActiveStorage(store);
@@ -188,9 +192,12 @@ describe("hasAuthenticationContext", () => {
       }),
     );
 
-    expect(await hasAuthenticationContext({ acr: "mfa", maxAge: 300 })).toBe(
-      true,
-    );
+    expect(
+      await hasAuthenticationContext(
+        { acr: "mfa", maxAge: 300 },
+        configuredDomain,
+      ),
+    ).toBe(true);
     expect(await hasAuthenticationContext({ acr: "phr" })).toBe(false);
     clearActiveStorage();
   });
@@ -225,9 +232,12 @@ describe("hasAuthenticationContext", () => {
         }),
       );
 
-      expect(await hasAuthenticationContext({ acr: "mfa", maxAge: 300 })).toBe(
-        false,
-      );
+      expect(
+        await hasAuthenticationContext(
+          { acr: "mfa", maxAge: 300 },
+          configuredDomain,
+        ),
+      ).toBe(false);
       expect(await hasAuthenticationContext({ acr: "mfa" })).toBe(true);
     }
     expect(fetch).not.toHaveBeenCalled();
@@ -250,9 +260,12 @@ describe("hasAuthenticationContext", () => {
       }),
     );
 
-    expect(await hasAuthenticationContext({ acr: "mfa", maxAge: 300 })).toBe(
-      false,
-    );
+    expect(
+      await hasAuthenticationContext(
+        { acr: "mfa", maxAge: 300 },
+        configuredDomain,
+      ),
+    ).toBe(false);
     clearActiveStorage();
   });
 
@@ -263,7 +276,7 @@ describe("hasAuthenticationContext", () => {
       vi.setSystemTime(startedAt * 1000);
       const release = await holdIdTokenRead(startedAt);
 
-      const check = hasAuthenticationContext({ maxAge: 0 });
+      const check = hasAuthenticationContext({ maxAge: 0 }, configuredDomain);
       vi.setSystemTime((startedAt + 1) * 1000);
       release();
 
@@ -300,7 +313,7 @@ describe("getAuthenticationContext", () => {
 
   it("returns null when there is no token", async () => {
     setActiveStorage(new MemoryStorage());
-    expect(await getAuthenticationContext()).toBeNull();
+    expect(await getAuthenticationContext(configuredDomain)).toBeNull();
   });
 
   it("returns null acr and an empty amr when the claims are absent", async () => {
@@ -311,7 +324,7 @@ describe("getAuthenticationContext", () => {
       createMockAccessToken({ auth_time: 1716800000 }),
     );
 
-    expect(await getAuthenticationContext()).toEqual({
+    expect(await getAuthenticationContext(configuredDomain)).toEqual({
       acr: null,
       amr: [],
       authTime: 1716800000,
@@ -334,12 +347,12 @@ describe("getAuthenticationContext", () => {
       }),
     });
 
-    expect(await getAuthenticationContext()).toEqual({
+    expect(await getAuthenticationContext(configuredDomain)).toEqual({
       acr: "mfa",
       amr: ["pwd", "totp"],
       authTime: 1716800000,
     });
-    expect(getAuthenticationContextSync()).toEqual({
+    expect(getAuthenticationContextSync(configuredDomain)).toEqual({
       acr: "mfa",
       amr: ["pwd", "totp"],
       authTime: 1716800000,
@@ -397,12 +410,12 @@ describe("getAuthenticationContext", () => {
         }),
       );
 
-      expect(await getAuthenticationContext()).toEqual({
+      expect(await getAuthenticationContext(configuredDomain)).toEqual({
         acr: "mfa",
         amr: ["pwd", "totp"],
         authTime: null,
       });
-      expect(getAuthenticationContextSync()).toEqual({
+      expect(getAuthenticationContextSync(configuredDomain)).toEqual({
         acr: "mfa",
         amr: ["pwd", "totp"],
         authTime: null,
@@ -426,13 +439,67 @@ describe("getAuthenticationContext", () => {
       }),
     });
 
-    expect(await getAuthenticationContext()).toMatchObject({
+    expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
       acr: "mfa",
       authTime: 1716800000,
     });
-    expect(getAuthenticationContextSync()).toMatchObject({
+    expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
       authTime: 1716800000,
     });
+    expect(fetch).toHaveBeenCalledWith(
+      "https://kinde.com/.well-known/openid-configuration",
+      expect.anything(),
+    );
+    clearActiveStorage();
+  });
+
+  it("does not fetch a token issuer that differs from the configured domain", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    for (const iss of [
+      "https://evil.example",
+      "https://kinde.com.evil.example",
+      "https://kinde.com@evil.example",
+      "http://169.254.169.254",
+    ]) {
+      vi.mocked(fetch).mockClear();
+      await store.setSessionItem(
+        StorageKeys.idToken,
+        createMockAccessToken({
+          iss,
+          acr: "mfa",
+          auth_time: 1716800000,
+        }),
+      );
+
+      expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
+        acr: "mfa",
+        authTime: null,
+      });
+      expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
+        authTime: null,
+      });
+      expect(fetch).not.toHaveBeenCalled();
+    }
+    clearActiveStorage();
+  });
+
+  it("fetches the configured domain when the issuer is the same origin", async () => {
+    const store = new MemoryStorage();
+    setActiveStorage(store);
+    await store.setSessionItem(
+      StorageKeys.idToken,
+      createMockAccessToken({
+        iss: "https://kinde.com/internal",
+        acr: "mfa",
+        auth_time: 1716800000,
+      }),
+    );
+
+    expect(
+      await getAuthenticationContext(`${configuredDomain}/`),
+    ).toMatchObject({ authTime: 1716800000 });
+    expect(fetch).toHaveBeenCalledTimes(1);
     expect(fetch).toHaveBeenCalledWith(
       "https://kinde.com/.well-known/openid-configuration",
       expect.anything(),
@@ -457,12 +524,12 @@ describe("getAuthenticationContext", () => {
       }),
     );
 
-    expect(await getAuthenticationContext()).toEqual({
+    expect(await getAuthenticationContext(configuredDomain)).toEqual({
       acr: "mfa",
       amr: ["pwd", "totp"],
       authTime: null,
     });
-    expect(getAuthenticationContextSync()).toEqual({
+    expect(getAuthenticationContextSync(configuredDomain)).toEqual({
       acr: "mfa",
       amr: ["pwd", "totp"],
       authTime: null,
@@ -485,12 +552,12 @@ describe("getAuthenticationContext", () => {
       }),
     );
 
-    expect(await getAuthenticationContext()).toEqual({
+    expect(await getAuthenticationContext(configuredDomain)).toEqual({
       acr: "mfa",
       amr: ["pwd", "totp"],
       authTime: null,
     });
-    expect(getAuthenticationContextSync()).toEqual({
+    expect(getAuthenticationContextSync(configuredDomain)).toEqual({
       acr: "mfa",
       amr: ["pwd", "totp"],
       authTime: null,
@@ -514,11 +581,11 @@ describe("getAuthenticationContext", () => {
         }),
       );
 
-      expect(await getAuthenticationContext()).toMatchObject({
+      expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
         authTime: 1716800000,
       });
       nowSpy.mockReturnValue(1_000 + 60 * 60 * 1000 + 1);
-      expect(getAuthenticationContextSync()).toMatchObject({
+      expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
         authTime: 1716800000,
       });
     } finally {
@@ -538,7 +605,7 @@ describe("getAuthenticationContext", () => {
       }),
     );
 
-    expect(getAuthenticationContextSync()).toEqual({
+    expect(getAuthenticationContextSync(configuredDomain)).toEqual({
       acr: "mfa",
       amr: [],
       authTime: 1716800000,
@@ -565,12 +632,14 @@ describe("getAuthenticationContext", () => {
         }),
       );
 
-      expect(await getAuthenticationContext()).toMatchObject({
+      expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
         authTime: null,
       });
 
       nowSpy.mockReturnValue(1_000 + 60 * 60 * 1000 + 1);
-      expect(getAuthenticationContextSync()).toMatchObject({ authTime: null });
+      expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
+        authTime: null,
+      });
 
       let resolveJson: (value: unknown) => void = () => {};
       const jsonStarted = new Promise<void>((started) => {
@@ -586,12 +655,14 @@ describe("getAuthenticationContext", () => {
         );
       });
 
-      const refresh = getAuthenticationContext();
+      const refresh = getAuthenticationContext(configuredDomain);
       await jsonStarted;
-      expect(getAuthenticationContextSync()).toMatchObject({ authTime: null });
+      expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
+        authTime: null,
+      });
       resolveJson({ acr_values_supported: ["mfa"] });
       expect(await refresh).toMatchObject({ authTime: 1716800000 });
-      expect(getAuthenticationContextSync()).toMatchObject({
+      expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
         authTime: 1716800000,
       });
     } finally {
@@ -616,8 +687,12 @@ describe("getAuthenticationContext", () => {
       }),
     );
 
-    expect(await getAuthenticationContext()).toMatchObject({ authTime: null });
-    expect(getAuthenticationContextSync()).toMatchObject({ authTime: null });
+    expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
+      authTime: null,
+    });
+    expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
+      authTime: null,
+    });
 
     let resolveJson: (value: unknown) => void = () => {};
     const jsonStarted = new Promise<void>((started) => {
@@ -633,12 +708,14 @@ describe("getAuthenticationContext", () => {
       );
     });
 
-    const refresh = getAuthenticationContext();
+    const refresh = getAuthenticationContext(configuredDomain);
     await jsonStarted;
-    expect(getAuthenticationContextSync()).toMatchObject({ authTime: null });
+    expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
+      authTime: null,
+    });
     resolveJson({ acr_values_supported: ["mfa"] });
     expect(await refresh).toMatchObject({ authTime: 1716800000 });
-    expect(getAuthenticationContextSync()).toMatchObject({
+    expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
       authTime: 1716800000,
     });
     clearActiveStorage();
@@ -656,7 +733,7 @@ describe("getAuthenticationContext", () => {
           auth_time: 1716800000,
         }),
       );
-      expect(await getAuthenticationContext()).toMatchObject({
+      expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
         authTime: 1716800000,
       });
 
@@ -666,10 +743,12 @@ describe("getAuthenticationContext", () => {
         status: 503,
         json: async () => ({}),
       } as Response);
-      expect(await getAuthenticationContext()).toMatchObject({
+      expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
         authTime: null,
       });
-      expect(getAuthenticationContextSync()).toMatchObject({ authTime: null });
+      expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
+        authTime: null,
+      });
     } finally {
       nowSpy.mockRestore();
       clearActiveStorage();
@@ -692,7 +771,7 @@ describe("getAuthenticationContext", () => {
           auth_time: 1716800000,
         }),
       );
-      expect(await getAuthenticationContext()).toMatchObject({
+      expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
         authTime: null,
       });
 
@@ -702,17 +781,19 @@ describe("getAuthenticationContext", () => {
         status: 503,
         json: async () => ({}),
       } as Response);
-      expect(await getAuthenticationContext()).toMatchObject({
+      expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
         acr: "mfa",
         authTime: null,
       });
-      expect(getAuthenticationContextSync()).toMatchObject({ authTime: null });
+      expect(getAuthenticationContextSync(configuredDomain)).toMatchObject({
+        authTime: null,
+      });
 
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ acr_values_supported: ["mfa"] }),
       } as Response);
-      expect(await getAuthenticationContext()).toMatchObject({
+      expect(await getAuthenticationContext(configuredDomain)).toMatchObject({
         authTime: 1716800000,
       });
       expect(fetch).toHaveBeenCalledTimes(3);

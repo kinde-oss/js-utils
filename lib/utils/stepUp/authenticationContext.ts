@@ -85,6 +85,42 @@ const issuerFrom = (
   return typeof issuer === "string" && issuer !== "" ? issuer : null;
 };
 
+/** http(s) origin, or null when `value` is not an absolute http(s) URL. */
+const httpOrigin = (value: string): string | null => {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    return null;
+  }
+  if (url.username !== "" || url.password !== "") {
+    return null;
+  }
+  return url.origin;
+};
+
+/**
+ * True when `issuer` and `domain` are the same http(s) origin.
+ * Discovery is requested from `domain` only, so the token cannot choose the host.
+ */
+const issuerMatchesDomain = (issuer: string, domain: string): boolean => {
+  const tokenOrigin = httpOrigin(issuer);
+  const configuredOrigin = httpOrigin(domain);
+  return tokenOrigin !== null && tokenOrigin === configuredOrigin;
+};
+
+const requireConfiguredDomain = (domain: unknown): string => {
+  if (typeof domain !== "string" || domain === "") {
+    throw new Error(
+      "A configured domain is required. Discovery is not read from the token issuer.",
+    );
+  }
+  return domain;
+};
+
 /**
  * Drops `authTime` when discovery says step-up is unsupported.
  * `undefined` means the issuer has not been checked, so the token value stays.
@@ -101,6 +137,7 @@ const applyStepUpSupport = (
 
 const readSessionContext = async (
   needsAuthTime: boolean,
+  domain?: string,
 ): Promise<AuthenticationContext | null> => {
   const idToken = await getDecodedToken<AuthenticationClaims>("idToken");
   const accessToken =
@@ -110,47 +147,55 @@ const readSessionContext = async (
     return ctx;
   }
 
+  const configuredDomain = requireConfiguredDomain(domain);
   const issuer = issuerFrom(idToken, accessToken);
-  if (!issuer) {
+  if (!issuer || !issuerMatchesDomain(issuer, configuredDomain)) {
     return applyStepUpSupport(ctx, false);
   }
 
-  const supported = await isStepUpSupported(issuer).catch(() => false);
+  const supported = await isStepUpSupported(configuredDomain).catch(
+    () => false,
+  );
   return applyStepUpSupport(ctx, supported);
 };
 
 /**
  * Authentication context of the current session.
  * `authTime` comes from the ID token when one exists, otherwise the access token.
- * The issuer is read the same way. When the token has no issuer, discovery fails,
- * or `acr_values_supported` is absent, `authTime` is `null` because the token
- * value may be unreliable.
+ * Discovery is read for `domain` only when the token issuer is that same origin.
+ * When the issuer does not match, discovery fails, or `acr_values_supported`
+ * is absent, `authTime` is `null` because the token value may be unreliable.
  */
-export const getAuthenticationContext =
-  (): Promise<AuthenticationContext | null> => readSessionContext(true);
+export const getAuthenticationContext = (
+  domain: string,
+): Promise<AuthenticationContext | null> =>
+  readSessionContext(true, requireConfiguredDomain(domain));
 
 /**
  * Synchronous `getAuthenticationContext`. Throws when the active storage is async-only.
- * Uses the cached discovery document. Until discovery has resolved or failed,
- * `authTime` is the token value. A missing issuer, a failed fetch, or a cached
- * unsupported result clears `authTime`, including after it expires and while
- * discovery retries.
+ * Uses the cached discovery document for `domain` when the token issuer matches it.
+ * Until that check has resolved or failed, `authTime` is the token value.
+ * A mismatched issuer, a failed fetch, or a cached unsupported result clears
+ * `authTime`, including after it expires and while discovery retries.
  */
-export const getAuthenticationContextSync =
-  (): AuthenticationContext | null => {
-    const idToken = getDecodedTokenSync<AuthenticationClaims>("idToken");
-    const accessToken =
-      getDecodedTokenSync<AuthenticationClaims>("accessToken");
-    const ctx = readAuthenticationContext({ idToken, accessToken });
-    if (!ctx) {
-      return null;
-    }
-    const issuer = issuerFrom(idToken, accessToken);
-    return applyStepUpSupport(
-      ctx,
-      issuer ? cachedStepUpSupported(issuer) : false,
-    );
-  };
+export const getAuthenticationContextSync = (
+  domain: string,
+): AuthenticationContext | null => {
+  const configuredDomain = requireConfiguredDomain(domain);
+  const idToken = getDecodedTokenSync<AuthenticationClaims>("idToken");
+  const accessToken = getDecodedTokenSync<AuthenticationClaims>("accessToken");
+  const ctx = readAuthenticationContext({ idToken, accessToken });
+  if (!ctx) {
+    return null;
+  }
+  const issuer = issuerFrom(idToken, accessToken);
+  return applyStepUpSupport(
+    ctx,
+    issuer && issuerMatchesDomain(issuer, configuredDomain)
+      ? cachedStepUpSupported(configuredDomain)
+      : false,
+  );
+};
 
 /**
  * Whether `ctx` meets `requirement` at `now` (seconds).
@@ -203,7 +248,8 @@ const isAuthenticationContext = (
  * Ordering is none < mfa < phr. `phr` meets an `mfa` requirement.
  * `amr` is never consulted. A missing `authTime` fails a `maxAge` check.
  *
- * Pass a requirement alone to read the current session.
+ * Pass a requirement to read the current session. A `maxAge` check also needs
+ * the configured domain, and discovery is fetched for that domain only.
  */
 export function hasAuthenticationContext(
   ctx: AuthenticationContext,
@@ -212,28 +258,37 @@ export function hasAuthenticationContext(
 ): boolean;
 export function hasAuthenticationContext(
   requirement: AuthenticationContextRequirement,
+  domain?: string,
+  now?: number,
 ): Promise<boolean>;
 export function hasAuthenticationContext(
   ctxOrRequirement: AuthenticationContext | AuthenticationContextRequirement,
-  requirement?: AuthenticationContextRequirement,
+  requirementOrDomain?: AuthenticationContextRequirement | string,
   now?: number,
 ): boolean | Promise<boolean> {
-  if (requirement !== undefined) {
+  if (isAuthenticationContext(ctxOrRequirement)) {
+    if (
+      requirementOrDomain === undefined ||
+      typeof requirementOrDomain === "string"
+    ) {
+      throw new Error(
+        "hasAuthenticationContext(ctx, requirement) needs both the context and the requirement.",
+      );
+    }
     return meets(
-      ctxOrRequirement as AuthenticationContext,
-      requirement,
+      ctxOrRequirement,
+      requirementOrDomain,
       now ?? Math.floor(Date.now() / 1000),
     );
   }
 
-  if (isAuthenticationContext(ctxOrRequirement)) {
-    throw new Error(
-      "hasAuthenticationContext(ctx, requirement) needs both the context and the requirement.",
-    );
-  }
-
   const needsAuthTime = ctxOrRequirement.maxAge != null;
-  return readSessionContext(needsAuthTime).then((ctx) => {
+  const domain =
+    typeof requirementOrDomain === "string" ? requirementOrDomain : undefined;
+  if (needsAuthTime) {
+    requireConfiguredDomain(domain);
+  }
+  return readSessionContext(needsAuthTime, domain).then((ctx) => {
     if (!ctx) {
       return false;
     }
