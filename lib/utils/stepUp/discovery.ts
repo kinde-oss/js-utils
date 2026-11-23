@@ -9,6 +9,11 @@ type CacheEntry = {
   configuration: Promise<OpenIdConfiguration>;
   /** Set once the request succeeds, so a sync reader can use the cache. */
   resolved?: OpenIdConfiguration;
+  /**
+   * The last completed fetch failed and left no document.
+   * Sync readers treat that as unsupported until a document arrives.
+   */
+  failed?: boolean;
   /** Epoch ms. Infinity while the request is in flight. */
   expiresAt: number;
 };
@@ -59,9 +64,10 @@ export const acrValuesSupportedPresent = (
 /**
  * Fetches the issuer's OpenID configuration. Concurrent calls share one request.
  * A successful result is reused for an hour. A failed request, or one that
- * passes its deadline, is removed so the next call can try again.
- * A previously discovered unsupported document stays readable by sync callers
- * across that refresh until a new document arrives.
+ * passes its deadline, is not reused, so the next call can try again.
+ * That failure stays visible to sync callers until a document arrives,
+ * including while the retry is in flight.
+ * A previously discovered unsupported document stays readable the same way.
  */
 const fetchOpenIdConfiguration = async (
   domain: string,
@@ -86,11 +92,14 @@ const fetchOpenIdConfiguration = async (
   };
   if (cached?.resolved && !acrValuesSupportedPresent(cached.resolved)) {
     entry.resolved = cached.resolved;
+  } else if (cached?.failed) {
+    entry.failed = true;
   }
   discoveryCache.set(normalized, entry);
   try {
     const configuration = await entry.configuration;
     entry.resolved = configuration;
+    entry.failed = false;
     entry.expiresAt = Date.now() + DISCOVERY_TTL_MS;
     return configuration;
   } catch (error) {
@@ -98,7 +107,8 @@ const fetchOpenIdConfiguration = async (
       if (entry.resolved && !acrValuesSupportedPresent(entry.resolved)) {
         entry.expiresAt = 0;
       } else {
-        discoveryCache.delete(normalized);
+        entry.failed = true;
+        entry.expiresAt = 0;
       }
     }
     throw error;
@@ -108,25 +118,28 @@ const fetchOpenIdConfiguration = async (
 };
 
 /**
- * Cached discovery answer for `domain`, or undefined when it has not been fetched.
- * A false result means `acr_values_supported` is absent. That false result is kept
- * after the cache expires, including while a refresh is in flight. A supported
- * result is dropped once the cache expires. An issuer that has never resolved
- * stays undefined.
+ * Cached discovery answer for `domain`.
+ * Undefined means it has not been fetched, or a supported result has expired.
+ * False means `acr_values_supported` is absent, or the last fetch failed.
+ * Both stay visible after the entry expires, including while a refresh is in flight.
+ * An issuer that has never resolved and has not failed stays undefined.
  */
 export const cachedStepUpSupported = (domain: string): boolean | undefined => {
   const normalized = sanitizeUrl(domain);
   const cached = discoveryCache.get(normalized);
-  if (!cached?.resolved) {
-    return undefined;
+  if (cached?.resolved) {
+    if (!acrValuesSupportedPresent(cached.resolved)) {
+      return false;
+    }
+    if (!(cached.expiresAt > Date.now())) {
+      return undefined;
+    }
+    return true;
   }
-  if (!acrValuesSupportedPresent(cached.resolved)) {
+  if (cached?.failed) {
     return false;
   }
-  if (!(cached.expiresAt > Date.now())) {
-    return undefined;
-  }
-  return true;
+  return undefined;
 };
 
 /**

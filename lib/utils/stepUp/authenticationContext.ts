@@ -126,8 +126,9 @@ export const getAuthenticationContext =
 
 /**
  * Synchronous `getAuthenticationContext`. Throws when the active storage is async-only.
- * Uses the cached discovery document. Until that cache exists, `authTime` is the token value.
- * A cached unsupported result still clears `authTime` after it expires, including while discovery refreshes.
+ * Uses the cached discovery document. Until discovery has resolved or failed,
+ * `authTime` is the token value. A failed fetch or a cached unsupported result
+ * clears `authTime`, including after it expires and while discovery retries.
  */
 export const getAuthenticationContextSync =
   (): AuthenticationContext | null => {

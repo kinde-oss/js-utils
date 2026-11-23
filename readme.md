@@ -153,7 +153,7 @@ This package does not navigate, and it does not attach framework middleware. `re
 
 Other differences from the shared SDK shape:
 
-- `getAuthenticationContextSync` uses the cached discovery document. Until that cache exists it returns the token's `authTime`. The async helper always checks discovery.
+- `getAuthenticationContextSync` uses the cached discovery document. Until discovery has resolved or failed, it returns the token's `authTime`. A failed fetch clears `authTime`, including while a retry is in flight. The async helper always checks discovery.
 - The `maxAge` comparison has no clock tolerance. This package has no existing token leeway. A future `authTime` fails a `maxAge` check.
 - `buildStepUpChallenge` always sets `Access-Control-Expose-Headers: WWW-Authenticate`, so a browser can read the challenge when CORS is enabled. Do not put token contents in `errorDescription`.
 
