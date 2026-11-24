@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  cachedStepUpSupported,
   clearStepUpDiscoveryCache,
+  DISCOVERY_FAILURE_TTL_MS,
   DISCOVERY_TIMEOUT_MS,
   isStepUpSupported,
 } from "./discovery";
@@ -39,6 +41,38 @@ describe("isStepUpSupported", () => {
     );
   });
 
+  it("treats a non-object discovery body as a failed fetch", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
+    try {
+      for (const body of [null, [], "openid", 1, true]) {
+        clearStepUpDiscoveryCache();
+        vi.mocked(fetch).mockClear();
+        vi.mocked(fetch).mockResolvedValue({
+          ok: true,
+          json: async () => body,
+        } as Response);
+
+        await expect(
+          isStepUpSupported("https://bad.example.com"),
+        ).rejects.toThrow(/not an object/);
+        expect(cachedStepUpSupported("https://bad.example.com")).toBe(false);
+        await expect(
+          isStepUpSupported("https://bad.example.com"),
+        ).rejects.toThrow(/not an object/);
+        expect(fetch).toHaveBeenCalledTimes(1);
+
+        nowSpy.mockReturnValue(1_000 + DISCOVERY_FAILURE_TTL_MS);
+        await expect(
+          isStepUpSupported("https://bad.example.com"),
+        ).rejects.toThrow(/not an object/);
+        expect(fetch).toHaveBeenCalledTimes(2);
+        nowSpy.mockReturnValue(1_000);
+      }
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   it("is false when acr_values_supported is missing", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
@@ -50,7 +84,7 @@ describe("isStepUpSupported", () => {
     );
   });
 
-  it("is true for phr alone and false when no recognised value is advertised", async () => {
+  it("is true whenever acr_values_supported is present", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ acr_values_supported: ["phr"] }),
@@ -65,6 +99,24 @@ describe("isStepUpSupported", () => {
       json: async () => ({ acr_values_supported: ["otp"] }),
     } as Response);
     await expect(isStepUpSupported("https://otp.example.com")).resolves.toBe(
+      true,
+    );
+
+    clearStepUpDiscoveryCache();
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ acr_values_supported: [] }),
+    } as Response);
+    await expect(isStepUpSupported("https://empty.example.com")).resolves.toBe(
+      true,
+    );
+
+    clearStepUpDiscoveryCache();
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ acr_values_supported: null }),
+    } as Response);
+    await expect(isStepUpSupported("https://null.example.com")).resolves.toBe(
       false,
     );
   });
@@ -139,6 +191,7 @@ describe("isStepUpSupported", () => {
 
     const first = isStepUpSupported("https://stall.example.com");
     const second = isStepUpSupported("https://stall.example.com");
+    expect(cachedStepUpSupported("https://stall.example.com")).toBeUndefined();
     const settled = Promise.allSettled([first, second]);
     await vi.advanceTimersByTimeAsync(DISCOVERY_TIMEOUT_MS);
 
@@ -157,10 +210,18 @@ describe("isStepUpSupported", () => {
       });
     }
     expect(stalledSignal?.aborted).toBe(true);
+    expect(cachedStepUpSupported("https://stall.example.com")).toBe(false);
 
+    await expect(
+      isStepUpSupported("https://stall.example.com"),
+    ).rejects.toMatchObject({ name: "TimeoutError" });
+    expect(fetches).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(DISCOVERY_FAILURE_TTL_MS);
     await expect(isStepUpSupported("https://stall.example.com")).resolves.toBe(
       true,
     );
+    expect(cachedStepUpSupported("https://stall.example.com")).toBe(true);
     expect(fetches).toBe(2);
   });
 
@@ -191,6 +252,7 @@ describe("isStepUpSupported", () => {
     await vi.advanceTimersByTimeAsync(DISCOVERY_TIMEOUT_MS);
     resolveJson({ acr_values_supported: ["mfa"] });
     await failed;
+    await vi.advanceTimersByTimeAsync(DISCOVERY_FAILURE_TTL_MS);
     await expect(isStepUpSupported("https://body.example.com")).resolves.toBe(
       true,
     );
@@ -229,19 +291,73 @@ describe("isStepUpSupported", () => {
     expect(fetches).toBe(2);
   });
 
-  it("drops a failed discovery response from the cache", async () => {
+  it("reuses a failed discovery fetch briefly and keeps it visible to sync readers", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
       status: 503,
       json: async () => ({}),
     } as Response);
 
-    await expect(isStepUpSupported("https://down.example.com")).rejects.toThrow(
-      /503/,
-    );
-    await expect(isStepUpSupported("https://down.example.com")).rejects.toThrow(
-      /503/,
-    );
-    expect(fetch).toHaveBeenCalledTimes(2);
+    try {
+      expect(cachedStepUpSupported("https://down.example.com")).toBeUndefined();
+      await expect(
+        isStepUpSupported("https://down.example.com"),
+      ).rejects.toThrow(/503/);
+      expect(cachedStepUpSupported("https://down.example.com")).toBe(false);
+      await expect(
+        isStepUpSupported("https://down.example.com"),
+      ).rejects.toThrow(/503/);
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(cachedStepUpSupported("https://down.example.com")).toBe(false);
+
+      nowSpy.mockReturnValue(1_000 + DISCOVERY_FAILURE_TTL_MS);
+      await expect(
+        isStepUpSupported("https://down.example.com"),
+      ).rejects.toThrow(/503/);
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(cachedStepUpSupported("https://down.example.com")).toBe(false);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it("keeps a failed discovery visible to sync readers until a document arrives", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000);
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      json: async () => ({}),
+    } as Response);
+
+    try {
+      await expect(
+        isStepUpSupported("https://down.example.com"),
+      ).rejects.toThrow(/503/);
+      nowSpy.mockReturnValue(1_000 + DISCOVERY_FAILURE_TTL_MS);
+
+      let resolveJson: (value: unknown) => void = () => {};
+      const jsonStarted = new Promise<void>((started) => {
+        vi.mocked(fetch).mockImplementationOnce(() =>
+          Promise.resolve({
+            ok: true,
+            json: () =>
+              new Promise((resolve) => {
+                resolveJson = resolve;
+                started();
+              }),
+          } as Response),
+        );
+      });
+
+      const retry = isStepUpSupported("https://down.example.com");
+      await jsonStarted;
+      expect(cachedStepUpSupported("https://down.example.com")).toBe(false);
+      resolveJson({ acr_values_supported: ["mfa"] });
+      await expect(retry).resolves.toBe(true);
+      expect(cachedStepUpSupported("https://down.example.com")).toBe(true);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 });

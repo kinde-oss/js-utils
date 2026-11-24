@@ -101,8 +101,9 @@ import {
 } from "@kinde/js-utils";
 
 // Require MFA in the last 5 minutes.
-if (!(await hasAuthenticationContext({ acr: "mfa", maxAge: 300 }))) {
-  const { url } = await stepUp("https://example.kinde.com", {
+const domain = "https://example.kinde.com";
+if (!(await hasAuthenticationContext({ acr: "mfa", maxAge: 300 }, domain))) {
+  const { url } = await stepUp(domain, {
     clientId,
     redirectURL,
     acr: "mfa",
@@ -143,9 +144,9 @@ try {
 
 `login_required` throws `LoginRequiredError` with the same fields. A callback that does not use `exchangeAuthCode` can call `readCallbackAuthenticationError` instead. State is checked before either error is reported.
 
-`getAuthenticationContext()` returns `{ acr, amr, authTime }` for the current session. `acr` is `null` for a single-factor sign-in, and `amr` is `[]` when the token has none. `authTime` is taken from the ID token when there is one. `hasAuthenticationContext(ctx, { acr, maxAge })` is the pure check: ordering is none < `mfa` < `phr`, so `phr` meets `mfa`. `amr` is informational and is not consulted. A `maxAge` check fails when `authTime` is missing.
+`getAuthenticationContext(domain)` returns `{ acr, amr, authTime }` for the current session. `acr` is `null` for a single-factor sign-in, and `amr` is `[]` when the token has none. `authTime` is taken from the ID token when there is one, otherwise the access token. Discovery is requested for `domain` only when the token `iss` is that same origin, so the token cannot choose the host. When the issuer does not match, discovery fails, or `acr_values_supported` is absent, `authTime` is `null`. Passing a requirement reads the session the same way. An `acr`-only check skips discovery. A `maxAge` check also takes `domain`. `hasAuthenticationContext(ctx, { acr, maxAge })` is the pure check: ordering is none < `mfa` < `phr`, so `phr` meets `mfa`. `amr` is informational and is not consulted. A `maxAge` check fails when `authTime` is missing or older than `maxAge`.
 
-`isStepUpSupported(domain)` reads `acr_values_supported` from `/.well-known/openid-configuration`. When that list is absent, `stepUp({ acr })` throws and `stepUp({ maxAge })` sends `prompt=login` instead of `max_age`.
+`isStepUpSupported(domain)` is true when `acr_values_supported` is present on `/.well-known/openid-configuration`. The document is cached for an hour. A failed fetch is reused for 30 seconds, so a later check does not wait on an unreachable host. When `acr_values_supported` is absent, `stepUp({ acr })` throws and `stepUp({ maxAge })` sends `prompt=login` instead of `max_age`. That fallback cannot satisfy a `maxAge` check, because `authTime` stays `null`. Do not retry the same `maxAge` step-up for an unsupported issuer.
 
 An API that protects a route checks a verified token with `hasAuthenticationContext`, then answers with `buildStepUpChallenge({ acr, maxAge })`: status `401` and `WWW-Authenticate: Bearer error="insufficient_user_authentication"`. Clients read that with `parseStepUpChallenge(response)` or `stepUpRequiredFromResponse(response)`. A `401` without that error is unchanged.
 
@@ -153,8 +154,8 @@ This package does not navigate, and it does not attach framework middleware. `re
 
 Other differences from the shared SDK shape:
 
-- `authTime` is the value on the token. `getAuthenticationContext` does not call discovery. On an issuer that omits `acr_values_supported`, do not use `authTime` for recency.
-- The `maxAge` comparison has no clock tolerance. This package has no existing token leeway.
+- `getAuthenticationContext(domain)` and `getAuthenticationContextSync(domain)` take the configured domain. Discovery is fetched for that domain only when `iss` is the same origin. Until that check has resolved or failed, the sync helper returns the token's `authTime`. A mismatched issuer or a failed fetch clears `authTime`, including while a retry is in flight.
+- The `maxAge` comparison has no clock tolerance. This package has no existing token leeway. A future `authTime` fails a `maxAge` check.
 - `buildStepUpChallenge` always sets `Access-Control-Expose-Headers: WWW-Authenticate`, so a browser can read the challenge when CORS is enabled. Do not put token contents in `errorDescription`.
 
 ## Kinde documentation

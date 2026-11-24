@@ -7,6 +7,13 @@ type OpenIdConfiguration = {
 
 type CacheEntry = {
   configuration: Promise<OpenIdConfiguration>;
+  /** Set once the request succeeds, so a sync reader can use the cache. */
+  resolved?: OpenIdConfiguration;
+  /**
+   * The last completed fetch failed and left no document.
+   * Sync readers treat that as unsupported until a document arrives.
+   */
+  failed?: boolean;
   /** Epoch ms. Infinity while the request is in flight. */
   expiresAt: number;
 };
@@ -14,6 +21,8 @@ type CacheEntry = {
 const DISCOVERY_TTL_MS = 60 * 60 * 1000;
 /** Bounds a discovery fetch and its JSON body. A stalled attempt must not stay cached. */
 export const DISCOVERY_TIMEOUT_MS = 30_000;
+/** How long a failed fetch is reused before the next try. */
+export const DISCOVERY_FAILURE_TTL_MS = 30_000;
 
 const discoveryCache = new Map<string, CacheEntry>();
 
@@ -42,17 +51,30 @@ const readOpenIdConfiguration = async (
       `Failed to read OpenID configuration from ${domain}: ${response.status}`,
     );
   }
-  const configuration = (await deadline.readBody(() =>
-    response.json(),
-  )) as OpenIdConfiguration;
+  const configuration: unknown = await deadline.readBody(() => response.json());
   deadline.assertWithinDeadline();
+  if (!isOpenIdConfiguration(configuration)) {
+    throw new Error(`OpenID configuration from ${domain} was not an object`);
+  }
   return configuration;
 };
+
+/** A discovery document is a JSON object. Null, arrays, and scalars are not. */
+const isOpenIdConfiguration = (value: unknown): value is OpenIdConfiguration =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** True when discovery includes `acr_values_supported`. A null value does not count. */
+export const acrValuesSupportedPresent = (
+  configuration: OpenIdConfiguration,
+): boolean => configuration.acr_values_supported != null;
 
 /**
  * Fetches the issuer's OpenID configuration. Concurrent calls share one request.
  * A successful result is reused for an hour. A failed request, or one that
- * passes its deadline, is removed so the next call can try again.
+ * passes its deadline, is reused for a short time so the next call does not
+ * wait on an unreachable host. That failure stays visible to sync callers
+ * until a document arrives, including while the retry is in flight.
+ * A previously discovered unsupported document stays readable the same way.
  */
 const fetchOpenIdConfiguration = async (
   domain: string,
@@ -75,14 +97,24 @@ const fetchOpenIdConfiguration = async (
     configuration: readOpenIdConfiguration(normalized, deadline),
     expiresAt: Infinity,
   };
+  if (cached?.resolved && !acrValuesSupportedPresent(cached.resolved)) {
+    entry.resolved = cached.resolved;
+  } else if (cached?.failed) {
+    entry.failed = true;
+  }
   discoveryCache.set(normalized, entry);
   try {
     const configuration = await entry.configuration;
+    entry.resolved = configuration;
+    entry.failed = false;
     entry.expiresAt = Date.now() + DISCOVERY_TTL_MS;
     return configuration;
   } catch (error) {
     if (discoveryCache.get(normalized) === entry) {
-      discoveryCache.delete(normalized);
+      entry.expiresAt = Date.now() + DISCOVERY_FAILURE_TTL_MS;
+      if (!(entry.resolved && !acrValuesSupportedPresent(entry.resolved))) {
+        entry.failed = true;
+      }
     }
     throw error;
   } finally {
@@ -91,15 +123,36 @@ const fetchOpenIdConfiguration = async (
 };
 
 /**
- * Whether the issuer advertises `acr_values_supported` with `mfa` or `phr`.
- * When this is false, Kinde ignores `acr_values` and `max_age`.
+ * Cached discovery answer for `domain`.
+ * Undefined means it has not been fetched, or a supported result has expired.
+ * False means `acr_values_supported` is absent, or the last fetch failed.
+ * Both stay visible after the entry expires, including while a refresh is in flight.
+ * An issuer that has never resolved and has not failed stays undefined.
+ */
+export const cachedStepUpSupported = (domain: string): boolean | undefined => {
+  const normalized = sanitizeUrl(domain);
+  const cached = discoveryCache.get(normalized);
+  if (cached?.resolved) {
+    if (!acrValuesSupportedPresent(cached.resolved)) {
+      return false;
+    }
+    if (!(cached.expiresAt > Date.now())) {
+      return undefined;
+    }
+    return true;
+  }
+  if (cached?.failed) {
+    return false;
+  }
+  return undefined;
+};
+
+/**
+ * Whether `acr_values_supported` is present on `/.well-known/openid-configuration`.
+ * The document is cached. When this is false, Kinde ignores `acr_values` and `max_age`,
+ * and `auth_time` must not be used for recency.
  */
 export const isStepUpSupported = async (domain: string): Promise<boolean> => {
   const configuration = await fetchOpenIdConfiguration(domain);
-  if (!Array.isArray(configuration.acr_values_supported)) {
-    return false;
-  }
-  return configuration.acr_values_supported.some(
-    (value) => value === "mfa" || value === "phr",
-  );
+  return acrValuesSupportedPresent(configuration);
 };
