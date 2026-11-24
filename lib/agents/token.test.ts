@@ -51,7 +51,9 @@ describe("exchangeCode", () => {
   });
 
   it("sends client_secret only when provided", async () => {
-    const fetchMock = mockFetch(() => jsonResponse({ access_token: "at" }));
+    const fetchMock = mockFetch(() =>
+      jsonResponse({ access_token: "at", token_type: "Bearer" }),
+    );
     await exchangeCode({
       tokenEndpoint,
       clientId: "c1",
@@ -108,7 +110,9 @@ describe("private network policy", () => {
   const privateEndpoint = "https://10.0.0.5/oauth2/token";
 
   it("blocks token endpoints on private addresses without calling fetch", async () => {
-    const fetchMock = mockFetch(() => jsonResponse({ access_token: "at" }));
+    const fetchMock = mockFetch(() =>
+      jsonResponse({ access_token: "at", token_type: "Bearer" }),
+    );
     await expect(
       exchangeCode({
         tokenEndpoint: privateEndpoint,
@@ -141,7 +145,9 @@ describe("private network policy", () => {
   });
 
   it("allows private token endpoints when explicitly enabled", async () => {
-    const fetchMock = mockFetch(() => jsonResponse({ access_token: "at" }));
+    const fetchMock = mockFetch(() =>
+      jsonResponse({ access_token: "at", token_type: "Bearer" }),
+    );
     const tokens = await exchangeCode({
       tokenEndpoint: privateEndpoint,
       clientId: "c1",
@@ -158,7 +164,9 @@ describe("private network policy", () => {
 
 describe("refreshAccessToken", () => {
   it("keeps the old refresh token when none is rotated", async () => {
-    const fetchMock = mockFetch(() => jsonResponse({ access_token: "at2" }));
+    const fetchMock = mockFetch(() =>
+      jsonResponse({ access_token: "at2", token_type: "Bearer" }),
+    );
     const tokens = await refreshAccessToken({
       tokenEndpoint,
       clientId: "c1",
@@ -188,7 +196,11 @@ describe("refreshAccessToken", () => {
         resource: "https://api.example.com/mcp",
         refreshToken: "rt1",
         fetch: mockFetch(() =>
-          jsonResponse({ access_token: "at2", refresh_token }),
+          jsonResponse({
+            access_token: "at2",
+            token_type: "Bearer",
+            refresh_token,
+          }),
         ),
       });
       expect(tokens.refreshToken).toBe("rt1");
@@ -204,13 +216,17 @@ describe("refreshAccessToken", () => {
       redirectUri: "https://app.example.com/callback",
       resource: "https://api.example.com/mcp",
       fetch: mockFetch(() =>
-        jsonResponse({ access_token: "at", refresh_token: "" }),
+        jsonResponse({
+          access_token: "at",
+          token_type: "Bearer",
+          refresh_token: "",
+        }),
       ),
     });
     expect(tokens).not.toHaveProperty("refreshToken");
   });
 
-  it("ignores malformed token_type and scope and rejects a non-string access token", async () => {
+  it("ignores a malformed scope and rejects a non-string access token", async () => {
     const tokens = await exchangeCode({
       tokenEndpoint,
       clientId: "c1",
@@ -219,7 +235,11 @@ describe("refreshAccessToken", () => {
       redirectUri: "https://app.example.com/callback",
       resource: "https://api.example.com/mcp",
       fetch: mockFetch(() =>
-        jsonResponse({ access_token: "at", token_type: 5, scope: { a: 1 } }),
+        jsonResponse({
+          access_token: "at",
+          token_type: "Bearer",
+          scope: { a: 1 },
+        }),
       ),
     });
     expect(tokens.tokenType).toBe("Bearer");
@@ -233,9 +253,76 @@ describe("refreshAccessToken", () => {
         codeVerifier: "v",
         redirectUri: "https://app.example.com/callback",
         resource: "https://api.example.com/mcp",
-        fetch: mockFetch(() => jsonResponse({ access_token: 123 })),
+        fetch: mockFetch(() =>
+          jsonResponse({ access_token: 123, token_type: "Bearer" }),
+        ),
       }),
     ).rejects.toMatchObject({ code: "invalid_response" });
+  });
+
+  describe("token_type", () => {
+    const bodies: [string, Record<string, unknown>][] = [
+      ["missing", { access_token: "at" }],
+      ["an empty string", { access_token: "at", token_type: "" }],
+      ["a number", { access_token: "at", token_type: 5 }],
+      ["null", { access_token: "at", token_type: null }],
+      ["an object", { access_token: "at", token_type: {} }],
+      ["DPoP", { access_token: "at", token_type: "DPoP" }],
+      ["mac", { access_token: "at", token_type: "mac" }],
+    ];
+
+    it.each(bodies)(
+      "rejects a code exchange whose token_type is %s",
+      async (_label, body) => {
+        await expect(
+          exchangeCode({
+            tokenEndpoint,
+            clientId: "c1",
+            code: "x",
+            codeVerifier: "v",
+            redirectUri: "https://app.example.com/callback",
+            resource: "https://api.example.com/mcp",
+            fetch: mockFetch(() => jsonResponse(body)),
+          }),
+        ).rejects.toMatchObject({
+          code: "invalid_response",
+          description: expect.stringContaining("token_type"),
+        });
+      },
+    );
+
+    it.each(bodies)(
+      "rejects a refresh whose token_type is %s",
+      async (_label, body) => {
+        await expect(
+          refreshAccessToken({
+            tokenEndpoint,
+            clientId: "c1",
+            refreshToken: "rt1",
+            resource: "https://api.example.com/mcp",
+            fetch: mockFetch(() => jsonResponse(body)),
+          }),
+        ).rejects.toMatchObject({ code: "invalid_response" });
+      },
+    );
+
+    it.each(["Bearer", "bearer", "BEARER"])(
+      "accepts %s case-insensitively and reports Bearer",
+      async (token_type) => {
+        const tokens = await exchangeCode({
+          tokenEndpoint,
+          clientId: "c1",
+          code: "x",
+          codeVerifier: "v",
+          redirectUri: "https://app.example.com/callback",
+          resource: "https://api.example.com/mcp",
+          fetch: mockFetch(() =>
+            jsonResponse({ access_token: "at", token_type }),
+          ),
+        });
+        expect(tokens.tokenType).toBe("Bearer");
+      },
+    );
   });
 
   it("uses a rotated refresh token", async () => {
@@ -245,14 +332,20 @@ describe("refreshAccessToken", () => {
       resource: "https://api.example.com/mcp",
       refreshToken: "rt1",
       fetch: mockFetch(() =>
-        jsonResponse({ access_token: "at2", refresh_token: "rt2" }),
+        jsonResponse({
+          access_token: "at2",
+          token_type: "Bearer",
+          refresh_token: "rt2",
+        }),
       ),
     });
     expect(tokens.refreshToken).toBe("rt2");
   });
 
   it("sends the normalized scope", async () => {
-    const fetchMock = mockFetch(() => jsonResponse({ access_token: "at2" }));
+    const fetchMock = mockFetch(() =>
+      jsonResponse({ access_token: "at2", token_type: "Bearer" }),
+    );
     await refreshAccessToken({
       tokenEndpoint,
       clientId: "c1",
@@ -266,7 +359,9 @@ describe("refreshAccessToken", () => {
   });
 
   it("omits scope when none is given", async () => {
-    const fetchMock = mockFetch(() => jsonResponse({ access_token: "at2" }));
+    const fetchMock = mockFetch(() =>
+      jsonResponse({ access_token: "at2", token_type: "Bearer" }),
+    );
     await refreshAccessToken({
       tokenEndpoint,
       clientId: "c1",
@@ -281,7 +376,9 @@ describe("refreshAccessToken", () => {
   it.each(["openid", "read openid", "openid read write"])(
     "refuses the openid scope %j without calling fetch",
     async (scope) => {
-      const fetchMock = mockFetch(() => jsonResponse({ access_token: "at2" }));
+      const fetchMock = mockFetch(() =>
+        jsonResponse({ access_token: "at2", token_type: "Bearer" }),
+      );
       await expect(
         refreshAccessToken({
           tokenEndpoint,

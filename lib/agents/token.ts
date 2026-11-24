@@ -38,6 +38,15 @@ const parseTokenResponse = async (
       `${label} response is missing access_token`,
     );
   }
+  if (
+    typeof data.token_type !== "string" ||
+    data.token_type.toLowerCase() !== "bearer"
+  ) {
+    throw new AgentAuthError(
+      "invalid_response",
+      `${label} response has a missing or unsupported token_type`,
+    );
+  }
   const expiresIn =
     typeof data.expires_in === "number" ? data.expires_in : undefined;
   const refreshToken =
@@ -47,10 +56,7 @@ const parseTokenResponse = async (
 
   return {
     accessToken: data.access_token,
-    tokenType:
-      typeof data.token_type === "string" && data.token_type
-        ? data.token_type
-        : "Bearer",
+    tokenType: "Bearer",
     ...(refreshToken && { refreshToken }),
     ...(expiresIn !== undefined && {
       expiresIn,
