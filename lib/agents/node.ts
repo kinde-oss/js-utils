@@ -246,6 +246,16 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
     let body: Buffer | undefined;
     if (init?.body !== undefined && init.body !== null) {
       body = toBody(init.body);
+      if (!("content-type" in headers)) {
+        if (init.body instanceof URLSearchParams) {
+          headers = {
+            ...headers,
+            "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
+          };
+        } else if (typeof init.body === "string") {
+          headers = { ...headers, "content-type": "text/plain;charset=UTF-8" };
+        }
+      }
     } else if (
       original &&
       original.body &&

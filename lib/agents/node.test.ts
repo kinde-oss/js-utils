@@ -249,6 +249,75 @@ describe("createSafeFetch transport", () => {
       expect(seen[0].body).toBe("from-init");
     });
 
+    it("sends a form content type for a URLSearchParams body", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      await createSafeFetch(options)(
+        `http://pinned.example.com:${port}/token`,
+        {
+          method: "POST",
+          body: new URLSearchParams({ grant_type: "refresh_token", a: "b c" }),
+        },
+      );
+      expect(seen[0].headers["content-type"]).toBe(
+        "application/x-www-form-urlencoded;charset=UTF-8",
+      );
+      expect(seen[0].body).toBe("grant_type=refresh_token&a=b+c");
+    });
+
+    it("sends a text content type for a string body", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      await createSafeFetch(options)(`http://pinned.example.com:${port}/`, {
+        method: "POST",
+        body: "plain",
+      });
+      expect(seen[0].headers["content-type"]).toBe("text/plain;charset=UTF-8");
+    });
+
+    it.each([
+      ["Content-Type", "application/json"],
+      ["content-type", "application/json"],
+      ["CONTENT-TYPE", "application/vnd.custom+json"],
+    ])("keeps a caller-supplied %s", async (name, value) => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      await createSafeFetch(options)(`http://pinned.example.com:${port}/`, {
+        method: "POST",
+        headers: { [name]: value },
+        body: new URLSearchParams({ a: "1" }),
+      });
+      expect(seen[0].headers["content-type"]).toBe(value);
+    });
+
+    it("does not invent a content type for a binary body or no body", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const safe = createSafeFetch(options);
+      await safe(`http://pinned.example.com:${port}/`, {
+        method: "POST",
+        body: new Uint8Array([1, 2, 3]),
+      });
+      await safe(`http://pinned.example.com:${port}/`);
+      expect(seen[0].headers["content-type"]).toBeUndefined();
+      expect(seen[1].headers["content-type"]).toBeUndefined();
+    });
+
+    it("keeps the content type of a Request built from URLSearchParams", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      await createSafeFetch(options)(
+        new Request(`http://pinned.example.com:${port}/token`, {
+          method: "POST",
+          body: new URLSearchParams({ a: "1" }),
+        }),
+      );
+      expect(seen[0].headers["content-type"]).toBe(
+        "application/x-www-form-urlencoded;charset=UTF-8",
+      );
+      expect(seen[0].body).toBe("a=1");
+    });
+
     it("keeps URL plus init behaviour unchanged", async () => {
       resolveTo("pinned.example.com", ["127.0.0.1", 4]);
       const seen = record();
