@@ -227,6 +227,15 @@ export const discoverAgentAuth = async (
     options.wwwAuthenticate ?? response?.headers.get("www-authenticate");
   const challenge = parseWwwAuthenticate(header);
 
+  const requiredScopes = normalizeScope(challenge?.scope);
+  const challengeScopes = stripOpenId(requiredScopes);
+  if (requiredScopes.length && !challengeScopes.length) {
+    throw new AgentAuthError(
+      "openid_scope_not_allowed",
+      "The server requires only the openid scope, which agents cannot request",
+    );
+  }
+
   if (!resourceUrl) {
     throw new AgentAuthError(
       "missing_resource_url",
@@ -299,7 +308,6 @@ export const discoverAgentAuth = async (
     options,
   );
 
-  const challengeScopes = stripOpenId(normalizeScope(challenge?.scope));
   const scope = (
     challengeScopes.length
       ? challengeScopes

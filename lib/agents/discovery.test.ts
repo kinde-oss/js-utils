@@ -188,17 +188,52 @@ describe("discoverAgentAuth", () => {
     expect(result.scope).toBe("read write");
   });
 
-  it("falls back to scopes_supported when the challenge scope is only openid", async () => {
+  it.each(['scope="openid"', 'scope="openid openid"', 'scope=" openid "'])(
+    "rejects a challenge whose only scope is openid and does not fall back (%s)",
+    async (challengeScope) => {
+      const fetchMock = mockFetch((url) =>
+        url.includes("oauth-protected-resource")
+          ? jsonResponse({ ...prm, scopes_supported: ["admin"] })
+          : routes(url),
+      );
+      await expect(
+        discoverAgentAuth({
+          wwwAuthenticate: `Bearer ${challengeScope}`,
+          resourceUrl: prm.resource,
+          fetch: fetchMock,
+        }),
+      ).rejects.toMatchObject({ code: "openid_scope_not_allowed" });
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("still requests the usable scopes when the challenge mixes openid with others", async () => {
     const result = await discoverAgentAuth({
-      wwwAuthenticate: 'Bearer scope="openid"',
+      wwwAuthenticate: 'Bearer scope="read openid write"',
       resourceUrl: prm.resource,
       fetch: mockFetch((url) =>
         url.includes("oauth-protected-resource")
-          ? jsonResponse({ ...prm, scopes_supported: ["read"] })
+          ? jsonResponse({ ...prm, scopes_supported: ["admin"] })
           : routes(url),
       ),
     });
-    expect(result.scope).toBe("read");
+    expect(result.scope).toBe("read write");
+  });
+
+  it("falls back to scopes_supported only when the challenge has no scope", async () => {
+    const withScopes = (wwwAuthenticate: string) =>
+      discoverAgentAuth({
+        wwwAuthenticate,
+        resourceUrl: prm.resource,
+        fetch: mockFetch((url) =>
+          url.includes("oauth-protected-resource")
+            ? jsonResponse({ ...prm, scopes_supported: ["read"] })
+            : routes(url),
+        ),
+      });
+    expect((await withScopes("Bearer")).scope).toBe("read");
+    expect((await withScopes('Bearer scope=""')).scope).toBe("read");
+    expect((await withScopes('Bearer scope="write"')).scope).toBe("write");
   });
 
   it("omits scope when neither the challenge nor the metadata provides one", async () => {
