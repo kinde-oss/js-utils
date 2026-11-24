@@ -1,6 +1,50 @@
 # Changelog
 
 
+## 0.32.2...0.33.0
+
+[compare changes](https://github.com/kinde-oss/js-utils/compare/0.32.2...0.33.0)
+
+### 🚀 Enhancements
+
+- Add RFC 9470 step-up authentication ([8514154](https://github.com/kinde-oss/js-utils/commit/8514154))
+- Add RFC 9470 step-up authentication ([bc4b861](https://github.com/kinde-oss/js-utils/commit/bc4b861))
+- Export token session lock ([9ad72ff](https://github.com/kinde-oss/js-utils/commit/9ad72ff))
+
+### 🩹 Fixes
+
+- Serialize token writes so stale refreshes cannot overwrite sign-in ([2ed5e6b](https://github.com/kinde-oss/js-utils/commit/2ed5e6b))
+- Allow innerState to support state value set to an empty string ([e2d0d20](https://github.com/kinde-oss/js-utils/commit/e2d0d20))
+- Serialize refresh and sign-in with a session lock ([509e521](https://github.com/kinde-oss/js-utils/commit/509e521))
+- Reject nested token session locks so refresh handlers cannot hang ([3f65511](https://github.com/kinde-oss/js-utils/commit/3f65511))
+- Abort stalled token requests so the session lock cannot hang ([0fa17d9](https://github.com/kinde-oss/js-utils/commit/0fa17d9))
+- Abort the token deadline when a late body read is rejected ([657cb85](https://github.com/kinde-oss/js-utils/commit/657cb85))
+- Time out a stalled custom refresh handler so the session lock is released ([4468bad](https://github.com/kinde-oss/js-utils/commit/4468bad))
+- Keep step-up challenge headers printable ASCII so localized descriptions cannot throw ([25850b8](https://github.com/kinde-oss/js-utils/commit/25850b8))
+- Time out a stalled discovery fetch so later step-up attempts can recover ([2f57b76](https://github.com/kinde-oss/js-utils/commit/2f57b76))
+- Clear the token session owner when the operation ends so refresh timers are not rejected as nested ([91a4df4](https://github.com/kinde-oss/js-utils/commit/91a4df4))
+- Measure maxAge after the session read so a slow store cannot skip reauthentication ([d29216e](https://github.com/kinde-oss/js-utils/commit/d29216e))
+- Keep an explicit now when measuring maxAge after the session read ([fb63667](https://github.com/kinde-oss/js-utils/commit/fb63667))
+- Drop authTime when discovery does not advertise step-up ([fc4343e](https://github.com/kinde-oss/js-utils/commit/fc4343e))
+- Keep clearing authTime after an unsupported discovery result expires ([38592d0](https://github.com/kinde-oss/js-utils/commit/38592d0))
+- Validate maxAge in the context check so NaN does not skip it ([5638a0d](https://github.com/kinde-oss/js-utils/commit/5638a0d))
+- Skip discovery for acr-only checks and clear authTime when it fails ([fc4fa86](https://github.com/kinde-oss/js-utils/commit/fc4fa86))
+- Document that the maxAge fallback cannot pass on unsupported issuers. ([19766fb](https://github.com/kinde-oss/js-utils/commit/19766fb))
+- Clear authTime on the sync reader after a discovery fetch fails ([905e7c6](https://github.com/kinde-oss/js-utils/commit/905e7c6))
+- Clear authTime when the token has no issuer ([8976125](https://github.com/kinde-oss/js-utils/commit/8976125))
+- Fetch step-up discovery from the configured domain ([6a96a5d](https://github.com/kinde-oss/js-utils/commit/6a96a5d))
+- Reuse a failed step-up discovery fetch for 30 seconds ([0c3acae](https://github.com/kinde-oss/js-utils/commit/0c3acae))
+- Reject a non-object step-up discovery body ([066fbd0](https://github.com/kinde-oss/js-utils/commit/066fbd0))
+
+### ✅ Tests
+
+- Cover step-up edge cases to reach full coverage ([0cecd95](https://github.com/kinde-oss/js-utils/commit/0cecd95))
+
+### ❤️ Contributors
+
+- Alexis Pesicka ([@pesickaa](https://github.com/pesickaa))
+- Victor Eronmosele <victoreronmosele@gmail.com>
+
 ## 0.32.1...0.32.2
 
 [compare changes](https://github.com/kinde-oss/js-utils/compare/0.32.1...0.32.2)
