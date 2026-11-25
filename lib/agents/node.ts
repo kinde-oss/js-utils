@@ -246,6 +246,12 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
         : undefined;
     const redirect = init?.redirect ?? original?.redirect ?? "follow";
     const method = (init?.method ?? original?.method ?? "GET").toUpperCase();
+    const hasBody =
+      (init?.body !== undefined && init.body !== null) ||
+      Boolean(original?.body);
+    if (hasBody && (method === "GET" || method === "HEAD")) {
+      throw new TypeError(`Request with ${method} method cannot have a body`);
+    }
     let headers = Object.fromEntries(
       new Headers(init?.headers ?? original?.headers).entries(),
     );
@@ -263,12 +269,7 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
           headers = { ...headers, "content-type": "text/plain;charset=UTF-8" };
         }
       }
-    } else if (
-      original &&
-      original.body &&
-      method !== "GET" &&
-      method !== "HEAD"
-    ) {
+    } else if (original?.body) {
       body = Buffer.from(await original.arrayBuffer());
     }
     let target = toUrl(input);

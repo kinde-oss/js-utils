@@ -346,6 +346,77 @@ describe("createSafeFetch transport", () => {
       expect(response.status).toBe(302);
     });
 
+    it.each(["GET", "HEAD"])(
+      "rejects a %s override of a Request that has a body, before sending anything",
+      async (method) => {
+        resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+        const seen = record();
+        const request = new Request(`http://pinned.example.com:${port}/`, {
+          method: "POST",
+          body: "payload",
+        });
+        await expect(
+          createSafeFetch(options)(request, { method }),
+        ).rejects.toBeInstanceOf(TypeError);
+        expect(seen).toHaveLength(0);
+        expect(lookupSpy).not.toHaveBeenCalled();
+        expect(request.bodyUsed).toBe(false);
+      },
+    );
+
+    it.each(["GET", "HEAD"])(
+      "rejects a %s request given an init body, as fetch does",
+      async (method) => {
+        resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+        const seen = record();
+        await expect(
+          createSafeFetch(options)(`http://pinned.example.com:${port}/`, {
+            method,
+            body: "payload",
+          }),
+        ).rejects.toBeInstanceOf(TypeError);
+        expect(seen).toHaveLength(0);
+      },
+    );
+
+    it("rejects a GET override even when init supplies a replacement body", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const request = new Request(`http://pinned.example.com:${port}/`, {
+        method: "POST",
+        body: "from-request",
+      });
+      await expect(
+        createSafeFetch(options)(request, { method: "GET", body: "other" }),
+      ).rejects.toBeInstanceOf(TypeError);
+      expect(seen).toHaveLength(0);
+    });
+
+    it("still accepts bodyless GET and HEAD requests and replacement bodies", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const safe = createSafeFetch(options);
+      const url = `http://pinned.example.com:${port}/`;
+      await safe(url, { method: "GET" });
+      await safe(url, { method: "HEAD" });
+      await safe(url, { method: "GET", body: null });
+      await safe(new Request(url, { method: "POST", body: "old" }), {
+        body: "new",
+      });
+      await safe(new Request(url, { method: "POST", body: "kept" }), {
+        method: "PUT",
+      });
+      expect(seen.map((entry) => entry.method)).toEqual([
+        "GET",
+        "HEAD",
+        "GET",
+        "POST",
+        "PUT",
+      ]);
+      expect(seen[3].body).toBe("new");
+      expect(seen[4].body).toBe("kept");
+    });
+
     it("sends a GET Request without a body", async () => {
       resolveTo("pinned.example.com", ["127.0.0.1", 4]);
       const seen = record();
