@@ -191,28 +191,39 @@ type LimitOptions = Pick<
   "allowPrivateNetworks" | "timeoutMs" | "maxResponseBytes"
 >;
 
-const withDeadline = async <T>(
+const deadlineExceeded = (cause?: unknown) =>
+  new AgentAuthError(
+    "request_timeout",
+    "Request exceeded its deadline",
+    undefined,
+    cause === undefined ? undefined : { cause },
+  );
+
+const throwIfExpired = (signal: AbortSignal): void => {
+  if (signal.aborted) throw deadlineExceeded();
+};
+
+const withDeadline = <T>(
   timeoutMs: number,
   run: (signal: AbortSignal) => Promise<T>,
-): Promise<T> => {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await run(controller.signal);
-  } catch (error) {
-    if (controller.signal.aborted) {
-      throw new AgentAuthError(
-        "request_timeout",
-        `Request exceeded ${timeoutMs}ms`,
-        undefined,
-        { cause: error },
+): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort();
+      reject(
+        new AgentAuthError(
+          "request_timeout",
+          `Request exceeded ${timeoutMs}ms`,
+        ),
       );
-    }
-    throw error;
-  } finally {
-    clearTimeout(timer);
-  }
-};
+    }, timeoutMs);
+    run(controller.signal)
+      .then(resolve, (error) =>
+        reject(controller.signal.aborted ? deadlineExceeded(error) : error),
+      )
+      .finally(() => clearTimeout(timer));
+  });
 
 const tooLarge = (maxBytes: number) =>
   new AgentAuthError(
@@ -223,7 +234,9 @@ const tooLarge = (maxBytes: number) =>
 const bufferResponse = async (
   response: Response,
   maxBytes: number,
+  signal: AbortSignal,
 ): Promise<Response> => {
+  throwIfExpired(signal);
   const declared = Number(response.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > maxBytes) {
     await response.body?.cancel().catch(() => undefined);
@@ -237,6 +250,10 @@ const bufferResponse = async (
     let total = 0;
     for (;;) {
       const { done, value } = await reader.read();
+      if (signal.aborted) {
+        await reader.cancel().catch(() => undefined);
+        throw deadlineExceeded();
+      }
       if (done) break;
       total += value.byteLength;
       if (total > maxBytes) {
@@ -253,6 +270,7 @@ const bufferResponse = async (
     }
   } else {
     bytes = new Uint8Array(await response.arrayBuffer());
+    throwIfExpired(signal);
     if (bytes.byteLength > maxBytes) throw tooLarge(maxBytes);
   }
 
@@ -280,6 +298,7 @@ export const fetchJson = async <T>(
     async (signal) => {
       let current = url;
       for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+        throwIfExpired(signal);
         assertAllowedUrl(current, label, options);
         const response = await fetchImpl(current, {
           method: "GET",
@@ -287,6 +306,7 @@ export const fetchJson = async <T>(
           signal,
           headers: { Accept: "application/json" },
         });
+        throwIfExpired(signal);
 
         if (
           response.type === "opaqueredirect" ||
@@ -314,7 +334,7 @@ export const fetchJson = async <T>(
         }
 
         if (response.url) assertAllowedUrl(response.url, label, options);
-        const buffered = await bufferResponse(response, maxBytes);
+        const buffered = await bufferResponse(response, maxBytes, signal);
         if (!buffered.ok) {
           throw await toOAuthError(buffered, label);
         }
@@ -337,18 +357,20 @@ const post = (
   body: string,
   options: PostOptions,
 ): Promise<Response> =>
-  withDeadline(options.timeoutMs ?? DEFAULT_TIMEOUT_MS, async (signal) =>
-    bufferResponse(
-      await fetchImpl(url, {
-        method: "POST",
-        redirect: "error",
-        signal,
-        headers,
-        body,
-      }),
+  withDeadline(options.timeoutMs ?? DEFAULT_TIMEOUT_MS, async (signal) => {
+    const response = await fetchImpl(url, {
+      method: "POST",
+      redirect: "error",
+      signal,
+      headers,
+      body,
+    });
+    return bufferResponse(
+      response,
       options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
-    ),
-  );
+      signal,
+    );
+  });
 
 export const postForm = async (
   fetchImpl: FetchLike,

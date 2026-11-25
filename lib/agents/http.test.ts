@@ -214,6 +214,132 @@ describe("request limits", () => {
     ).rejects.toMatchObject({ code: "request_timeout" });
   });
 
+  describe("a fetch that ignores the abort signal", () => {
+    const pending = <T>() => new Promise<T>(() => undefined);
+
+    const stallingIgnoringAbort = () =>
+      Promise.resolve(
+        new Response(new ReadableStream({ start: () => undefined }), {
+          status: 200,
+        }),
+      );
+
+    it.each([
+      ["never answers", () => pending<Response>()],
+      ["returns a stalled body", stallingIgnoringAbort],
+    ])(
+      "fetchJson still rejects with request_timeout when the server %s",
+      async (_label, handler) => {
+        const started = Date.now();
+        await expect(
+          fetchJson(
+            mockFetch(handler),
+            "https://a.example.com/meta",
+            "Metadata",
+            { timeoutMs: 40 },
+          ),
+        ).rejects.toMatchObject({ code: "request_timeout" });
+        expect(Date.now() - started).toBeLessThan(1000);
+      },
+    );
+
+    it.each([
+      [
+        "postForm",
+        (f: typeof fetch) =>
+          postForm(
+            f,
+            "https://a.example.com/token",
+            { a: "1" },
+            { timeoutMs: 40 },
+          ),
+      ],
+      [
+        "postJson",
+        (f: typeof fetch) =>
+          postJson(
+            f,
+            "https://a.example.com/register",
+            { a: 1 },
+            { timeoutMs: 40 },
+          ),
+      ],
+    ])("%s still rejects with request_timeout", async (_name, send) => {
+      await expect(
+        send(mockFetch(() => pending<Response>())),
+      ).rejects.toMatchObject({ code: "request_timeout" });
+      await expect(
+        send(mockFetch(stallingIgnoringAbort)),
+      ).rejects.toMatchObject({ code: "request_timeout" });
+    });
+
+    it("does not follow another redirect after the deadline has passed", async () => {
+      const fetchMock = mockFetch(
+        (url) =>
+          new Promise<Response>((resolve) => {
+            if (url === "https://a.example.com/meta") {
+              setTimeout(
+                () =>
+                  resolve(
+                    new Response(null, {
+                      status: 302,
+                      headers: { Location: "https://b.example.com/meta" },
+                    }),
+                  ),
+                120,
+              );
+            } else {
+              resolve(jsonResponse({ leaked: true }));
+            }
+          }),
+      );
+      await expect(
+        fetchJson(fetchMock, "https://a.example.com/meta", "Metadata", {
+          timeoutMs: 30,
+        }),
+      ).rejects.toMatchObject({ code: "request_timeout" });
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not read a late body after the deadline has passed", async () => {
+      const late = new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode("{}"));
+            controller.close();
+          },
+        }),
+        { status: 200 },
+      );
+      const getReader = vi.spyOn(late.body as ReadableStream, "getReader");
+      const fetchMock = mockFetch(
+        () =>
+          new Promise<Response>((resolve) => {
+            setTimeout(() => resolve(late), 120);
+          }),
+      );
+      await expect(
+        fetchJson(fetchMock, "https://a.example.com/meta", "Metadata", {
+          timeoutMs: 30,
+        }),
+      ).rejects.toMatchObject({ code: "request_timeout" });
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      expect(getReader).not.toHaveBeenCalled();
+    });
+
+    it("does not reject a request that finishes before the deadline", async () => {
+      await expect(
+        fetchJson(
+          mockFetch(() => jsonResponse({ ok: true })),
+          "https://a.example.com/meta",
+          "Metadata",
+          { timeoutMs: 500 },
+        ),
+      ).resolves.toEqual({ ok: true });
+    });
+  });
+
   it("passes an abort signal to every request", async () => {
     const fetchMock = mockFetch(() => jsonResponse({ ok: true }));
     await fetchJson(fetchMock, "https://a.example.com/meta", "Metadata");
