@@ -148,8 +148,15 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
             ...(signal && { signal }),
           },
           (incoming) => {
+            const canCarryBody =
+              method !== "HEAD" &&
+              !NULL_BODY_STATUSES.has(incoming.statusCode ?? 0);
             const declared = Number(incoming.headers["content-length"]);
-            if (Number.isFinite(declared) && declared > maxResponseBytes) {
+            if (
+              canCarryBody &&
+              Number.isFinite(declared) &&
+              declared > maxResponseBytes
+            ) {
               incoming.destroy();
               fail(
                 new AgentAuthError(

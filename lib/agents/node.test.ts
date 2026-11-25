@@ -584,6 +584,54 @@ describe("createSafeFetch transport", () => {
     expect(Date.now() - started).toBeLessThan(2000);
   });
 
+  it("does not apply the declared-length cap to a HEAD response", async () => {
+    resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+    handler = (_req, res) => {
+      res.setHeader("content-length", "5000");
+      res.end();
+    };
+    const response = await createSafeFetch({
+      ...options,
+      maxResponseBytes: 1000,
+    })(`http://pinned.example.com:${port}/`, { method: "HEAD" });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-length")).toBe("5000");
+    expect(await response.text()).toBe("");
+  });
+
+  it("does not apply the declared-length cap to a 304 response", async () => {
+    resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+    handler = (_req, res) => {
+      res.statusCode = 304;
+      res.setHeader("content-length", "5000");
+      res.end();
+    };
+    const response = await createSafeFetch({
+      ...options,
+      maxResponseBytes: 1000,
+    })(`http://pinned.example.com:${port}/`);
+    expect(response.status).toBe(304);
+    expect(await response.text()).toBe("");
+  });
+
+  it("still applies the declared-length cap to GET and POST responses", async () => {
+    resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+    handler = (_req, res) => {
+      res.setHeader("content-length", "5000");
+      res.flushHeaders();
+    };
+    const safe = createSafeFetch({
+      ...options,
+      maxResponseBytes: 1000,
+      timeoutMs: 5000,
+    });
+    for (const method of ["GET", "POST"]) {
+      await expect(
+        safe(`http://pinned.example.com:${port}/`, { method }),
+      ).rejects.toMatchObject({ code: "response_too_large" });
+    }
+  });
+
   it("caps the response size", async () => {
     resolveTo("pinned.example.com", ["127.0.0.1", 4]);
     handler = (_req, res) => {
