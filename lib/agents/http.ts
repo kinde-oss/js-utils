@@ -331,6 +331,7 @@ export const fetchJson = async <T>(
           REDIRECT_STATUSES.has(response.status)
         ) {
           const location = response.headers.get("location");
+          await response.body?.cancel().catch(() => undefined);
           if (!location) {
             throw new AgentAuthError(
               "redirect_blocked",

@@ -588,3 +588,98 @@ describe("UTF-8 decoding of buffered bodies", () => {
     });
   });
 });
+
+describe("redirect response bodies", () => {
+  const redirectWithBody = (location?: string, status = 302) => {
+    const response = new Response(
+      new ReadableStream({ start: () => undefined }),
+      {
+        status,
+        headers: location ? { Location: location } : {},
+      },
+    );
+    const cancel = vi.spyOn(response.body as ReadableStream, "cancel");
+    return { response, cancel };
+  };
+
+  it("cancels the redirect body before following the redirect", async () => {
+    const { response, cancel } = redirectWithBody("https://b.example.com/meta");
+    const fetchMock = mockFetch((url) =>
+      url === "https://a.example.com/meta"
+        ? response
+        : jsonResponse({ ok: true }),
+    );
+    await expect(
+      fetchJson(fetchMock, "https://a.example.com/meta", "Metadata"),
+    ).resolves.toEqual({ ok: true });
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("cancels the redirect body before rejecting a redirect with no location", async () => {
+    const { response, cancel } = redirectWithBody();
+    await expect(
+      fetchJson(
+        mockFetch(() => response),
+        "https://a.example.com/meta",
+        "Metadata",
+      ),
+    ).rejects.toMatchObject({ code: "redirect_blocked" });
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels the redirect body before rejecting an invalid location", async () => {
+    const { response, cancel } = redirectWithBody("http://[bad");
+    await expect(
+      fetchJson(
+        mockFetch(() => response),
+        "https://a.example.com/meta",
+        "Metadata",
+      ),
+    ).rejects.toMatchObject({ code: "redirect_blocked" });
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not let a failing cancellation replace the redirect outcome", async () => {
+    const followed = redirectWithBody("https://b.example.com/meta");
+    followed.cancel.mockRejectedValue(new Error("cancel failed"));
+    await expect(
+      fetchJson(
+        mockFetch((url) =>
+          url === "https://a.example.com/meta"
+            ? followed.response
+            : jsonResponse({ ok: true }),
+        ),
+        "https://a.example.com/meta",
+        "Metadata",
+      ),
+    ).resolves.toEqual({ ok: true });
+
+    const rejected = redirectWithBody();
+    rejected.cancel.mockRejectedValue(new Error("cancel failed"));
+    await expect(
+      fetchJson(
+        mockFetch(() => rejected.response),
+        "https://a.example.com/meta",
+        "Metadata",
+      ),
+    ).rejects.toMatchObject({ code: "redirect_blocked" });
+  });
+
+  it("still handles a redirect without a body", async () => {
+    await expect(
+      fetchJson(
+        mockFetch((url) =>
+          url === "https://a.example.com/meta"
+            ? new Response(null, {
+                status: 301,
+                headers: { Location: "https://b.example.com/meta" },
+              })
+            : jsonResponse({ ok: true }),
+        ),
+        "https://a.example.com/meta",
+        "Metadata",
+      ),
+    ).resolves.toEqual({ ok: true });
+  });
+});
