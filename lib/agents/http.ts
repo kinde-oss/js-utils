@@ -231,6 +231,26 @@ const tooLarge = (maxBytes: number) =>
     `Response exceeded ${maxBytes} bytes`,
   );
 
+const decodeUtf8 = (bytes: Uint8Array): string => {
+  try {
+    if (typeof TextDecoder !== "undefined") {
+      return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    }
+    const percentEncoded = Array.from(
+      bytes,
+      (byte) => `%${byte.toString(16).padStart(2, "0")}`,
+    ).join("");
+    return decodeURIComponent(percentEncoded).replace(/^\uFEFF/, "");
+  } catch (cause) {
+    throw new AgentAuthError(
+      "invalid_response",
+      "Response body is not valid UTF-8",
+      undefined,
+      { cause },
+    );
+  }
+};
+
 const bufferResponse = async (
   response: Response,
   maxBytes: number,
@@ -275,9 +295,7 @@ const bufferResponse = async (
   }
 
   return new Response(
-    NULL_BODY_STATUSES.has(response.status)
-      ? null
-      : (bytes as unknown as BodyInit),
+    NULL_BODY_STATUSES.has(response.status) ? null : decodeUtf8(bytes),
     {
       status: response.status,
       statusText: response.statusText,

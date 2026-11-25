@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AgentAuthError } from "./errors";
 import { fetchJson, isPrivateHost, postForm, postJson } from "./http";
 import { jsonResponse, mockFetch } from "./testUtils";
@@ -445,5 +445,146 @@ describe("request limits", () => {
     );
     expect(response.status).toBe(204);
     expect(await response.text()).toBe("");
+  });
+});
+
+describe("UTF-8 decoding of buffered bodies", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const text = "Zoë 日本語 🚀 café";
+  const encoded = (value: string) => new TextEncoder().encode(value);
+  const fetchBytes = (bytes: Uint8Array) =>
+    fetchJson<{ name: string }>(
+      mockFetch(
+        () => new Response(bytes as unknown as BodyInit, { status: 200 }),
+      ),
+      "https://a.example.com/meta",
+      "Metadata",
+    );
+
+  it("preserves non-ASCII JSON", async () => {
+    await expect(
+      fetchJson(
+        mockFetch(() => jsonResponse({ name: text })),
+        "https://a.example.com/meta",
+        "Metadata",
+      ),
+    ).resolves.toEqual({ name: text });
+  });
+
+  it("preserves non-ASCII JSON when the response has no readable stream", async () => {
+    const response = jsonResponse({ name: text });
+    Object.defineProperty(response, "body", { value: undefined });
+    await expect(
+      fetchJson(
+        mockFetch(() => response),
+        "https://a.example.com/meta",
+        "Metadata",
+      ),
+    ).resolves.toEqual({ name: text });
+  });
+
+  it("does not depend on the Response implementation decoding bytes", async () => {
+    class Latin1Response {
+      status: number;
+      statusText: string;
+      headers: Headers;
+      ok: boolean;
+      private bytes?: Uint8Array;
+      private value?: string;
+      constructor(body: unknown, init: ResponseInit = {}) {
+        this.status = init.status ?? 200;
+        this.statusText = init.statusText ?? "";
+        this.headers = new Headers(init.headers);
+        this.ok = this.status >= 200 && this.status < 300;
+        if (body instanceof Uint8Array) this.bytes = body;
+        else if (typeof body === "string") this.value = body;
+      }
+      async text() {
+        return (
+          this.value ??
+          Array.from(this.bytes ?? [], (b) => String.fromCharCode(b)).join("")
+        );
+      }
+      async json() {
+        return JSON.parse(await this.text());
+      }
+    }
+    const native = jsonResponse({ name: text });
+    vi.stubGlobal("Response", Latin1Response);
+    await expect(
+      fetchJson(
+        mockFetch(() => native),
+        "https://a.example.com/meta",
+        "Metadata",
+      ),
+    ).resolves.toEqual({ name: text });
+  });
+
+  it.each([
+    ["with TextDecoder", () => undefined],
+    ["without TextDecoder", () => vi.stubGlobal("TextDecoder", undefined)],
+  ])("decodes UTF-8 correctly %s", async (_label, setup) => {
+    setup();
+    await expect(
+      fetchBytes(encoded(JSON.stringify({ name: text }))),
+    ).resolves.toEqual({ name: text });
+  });
+
+  it.each([
+    ["with TextDecoder", () => undefined],
+    ["without TextDecoder", () => vi.stubGlobal("TextDecoder", undefined)],
+  ])("strips a UTF-8 byte order mark %s", async (_label, setup) => {
+    setup();
+    const json = encoded(JSON.stringify({ name: "ok" }));
+    const withBom = new Uint8Array([0xef, 0xbb, 0xbf, ...json]);
+    await expect(fetchBytes(withBom)).resolves.toEqual({ name: "ok" });
+  });
+
+  it.each([
+    ["with TextDecoder", () => undefined],
+    ["without TextDecoder", () => vi.stubGlobal("TextDecoder", undefined)],
+  ])("rejects bytes that are not valid UTF-8 %s", async (_label, setup) => {
+    setup();
+    await expect(
+      fetchBytes(new Uint8Array([0x7b, 0x22, 0xff, 0xfe, 0x22, 0x7d])),
+    ).rejects.toMatchObject({
+      code: "invalid_response",
+      description: expect.stringContaining("UTF-8"),
+    });
+  });
+
+  it("still enforces the cap in bytes, not characters", async () => {
+    const body = JSON.stringify({ name: "é".repeat(600) });
+    expect(body.length).toBeLessThan(1000);
+    expect(encoded(body).byteLength).toBeGreaterThan(1000);
+    await expect(
+      fetchJson(
+        mockFetch(() => new Response(body, { status: 200 })),
+        "https://a.example.com/meta",
+        "Metadata",
+        { maxResponseBytes: 1000 },
+      ),
+    ).rejects.toMatchObject({ code: "response_too_large" });
+  });
+
+  it("decodes error bodies the same way", async () => {
+    await expect(
+      fetchJson(
+        mockFetch(() =>
+          jsonResponse(
+            { error: "invalid_request", error_description: "Fehler: Größe" },
+            { status: 400 },
+          ),
+        ),
+        "https://a.example.com/meta",
+        "Metadata",
+      ),
+    ).rejects.toMatchObject({
+      code: "invalid_request",
+      description: "Fehler: Größe",
+    });
   });
 });
