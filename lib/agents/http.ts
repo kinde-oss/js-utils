@@ -367,7 +367,9 @@ export const fetchJson = async <T>(
   );
 };
 
-type PostOptions = Pick<FetchOptions, "timeoutMs" | "maxResponseBytes">;
+type PostOptions = Pick<FetchOptions, "timeoutMs" | "maxResponseBytes"> & {
+  discardSuccessBody?: boolean;
+};
 
 const post = (
   fetchImpl: FetchLike,
@@ -384,6 +386,15 @@ const post = (
       headers,
       body,
     });
+    if (options.discardSuccessBody && response.ok) {
+      throwIfExpired(signal);
+      await response.body?.cancel().catch(() => undefined);
+      return new Response(null, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
+    }
     return bufferResponse(
       response,
       options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,

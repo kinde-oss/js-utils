@@ -149,7 +149,7 @@ export const revokeToken = async (
       client_id: options.clientId,
       client_secret: options.clientSecret,
     },
-    options,
+    { ...options, discardSuccessBody: true },
   );
   if (!response.ok) {
     throw await toOAuthError(response, "Token revocation");

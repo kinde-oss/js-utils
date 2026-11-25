@@ -425,6 +425,55 @@ describe("revokeToken", () => {
     });
   });
 
+  it("treats a successful revocation as success even when the body is huge or never ends", async () => {
+    const revoke = (response: () => Response) =>
+      revokeToken({
+        revocationEndpoint: serverMetadata.revocation_endpoint,
+        clientId: "c1",
+        token: "t",
+        maxResponseBytes: 1000,
+        timeoutMs: 40,
+        fetch: mockFetch(response),
+      });
+    await expect(
+      revoke(
+        () =>
+          new Response("x".repeat(5000), {
+            status: 200,
+            headers: { "content-length": "5000" },
+          }),
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      revoke(
+        () =>
+          new Response(new ReadableStream({ start: () => undefined }), {
+            status: 200,
+          }),
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it("still reports the error details of a failed revocation", async () => {
+    await expect(
+      revokeToken({
+        revocationEndpoint: serverMetadata.revocation_endpoint,
+        clientId: "c1",
+        token: "t",
+        fetch: mockFetch(() =>
+          jsonResponse(
+            { error: "invalid_client", error_description: "bad client" },
+            { status: 401 },
+          ),
+        ),
+      }),
+    ).rejects.toMatchObject({
+      code: "invalid_client",
+      description: "bad client",
+      status: 401,
+    });
+  });
+
   it("fails without an endpoint or on server error", async () => {
     await expect(
       revokeToken({ clientId: "c1", token: "t" }),

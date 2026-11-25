@@ -683,3 +683,102 @@ describe("redirect response bodies", () => {
     ).resolves.toEqual({ ok: true });
   });
 });
+
+describe("discarding a successful response body", () => {
+  const largeOk = () => {
+    const response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array(600).fill(120));
+          controller.enqueue(new Uint8Array(600).fill(120));
+          controller.close();
+        },
+      }),
+      { status: 200 },
+    );
+    const getReader = vi.spyOn(response.body as ReadableStream, "getReader");
+    const cancel = vi.spyOn(response.body as ReadableStream, "cancel");
+    return { response, getReader, cancel };
+  };
+
+  it("accepts a successful response whose body is above the cap without reading it", async () => {
+    const { response, getReader, cancel } = largeOk();
+    const result = await postForm(
+      mockFetch(() => response),
+      "https://a.example.com/revoke",
+      { token: "t" },
+      { maxResponseBytes: 1000, discardSuccessBody: true },
+    );
+    expect(result.ok).toBe(true);
+    expect(result.status).toBe(200);
+    expect(getReader).not.toHaveBeenCalled();
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts a successful response whose body never ends", async () => {
+    const result = await postForm(
+      mockFetch(
+        () =>
+          new Response(new ReadableStream({ start: () => undefined }), {
+            status: 200,
+          }),
+      ),
+      "https://a.example.com/revoke",
+      { token: "t" },
+      { timeoutMs: 40, discardSuccessBody: true },
+    );
+    expect(result.status).toBe(200);
+  });
+
+  it("is not affected by a failing cancellation", async () => {
+    const { response, cancel } = largeOk();
+    cancel.mockRejectedValue(new Error("cancel failed"));
+    const result = await postForm(
+      mockFetch(() => response),
+      "https://a.example.com/revoke",
+      { token: "t" },
+      { discardSuccessBody: true },
+    );
+    expect(result.status).toBe(200);
+  });
+
+  it("still reads a bounded body for error responses", async () => {
+    const result = await postForm(
+      mockFetch(() =>
+        jsonResponse({ error: "invalid_client" }, { status: 401 }),
+      ),
+      "https://a.example.com/revoke",
+      { token: "t" },
+      { discardSuccessBody: true },
+    );
+    expect(result.status).toBe(401);
+    expect(await result.json()).toEqual({ error: "invalid_client" });
+
+    await expect(
+      postForm(
+        mockFetch(
+          () =>
+            new Response(new Uint8Array(5000), {
+              status: 500,
+              headers: { "content-length": "5000" },
+            }),
+        ),
+        "https://a.example.com/revoke",
+        { token: "t" },
+        { maxResponseBytes: 1000, discardSuccessBody: true },
+      ),
+    ).rejects.toMatchObject({ code: "response_too_large" });
+  });
+
+  it("keeps the bounded read for operations that need the body", async () => {
+    const { response } = largeOk();
+    await expect(
+      postForm(
+        mockFetch(() => response),
+        "https://a.example.com/token",
+        { a: "1" },
+        { maxResponseBytes: 1000 },
+      ),
+    ).rejects.toMatchObject({ code: "response_too_large" });
+  });
+});
