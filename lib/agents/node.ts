@@ -12,6 +12,7 @@ export interface SafeFetchOptions {
   allowPrivateNetworks?: boolean;
   timeoutMs?: number;
   maxResponseBytes?: number;
+  maxRequestBytes?: number;
   maxRedirects?: number;
 }
 
@@ -85,10 +86,74 @@ const toBody = (body: BodyInit | null | undefined): Buffer | undefined => {
   );
 };
 
+const readRequestBody = async (
+  request: Request,
+  maxBytes: number,
+  timeoutMs: number,
+  signal: AbortSignal | null | undefined,
+): Promise<Buffer> => {
+  const reader = (request.body as ReadableStream<Uint8Array>).getReader();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let onAbort: (() => void) | undefined;
+
+  const guard = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(
+      () =>
+        reject(
+          new AgentAuthError(
+            "request_timeout",
+            `Reading the request body exceeded ${timeoutMs}ms`,
+          ),
+        ),
+      timeoutMs,
+    );
+    if (signal) {
+      onAbort = () =>
+        reject(
+          new AgentAuthError(
+            "request_aborted",
+            "The request was aborted",
+            undefined,
+            { cause: signal.reason },
+          ),
+        );
+      if (signal.aborted) onAbort();
+      else signal.addEventListener("abort", onAbort, { once: true });
+    }
+  });
+
+  const pump = (async () => {
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return Buffer.concat(chunks);
+      total += value.byteLength;
+      if (total > maxBytes) {
+        throw new AgentAuthError(
+          "request_too_large",
+          `Request body exceeded ${maxBytes} bytes`,
+        );
+      }
+      chunks.push(value);
+    }
+  })();
+  pump.catch(() => undefined);
+
+  try {
+    return await Promise.race([pump, guard]);
+  } finally {
+    clearTimeout(timer);
+    if (signal && onAbort) signal.removeEventListener("abort", onAbort);
+    reader.cancel().catch(() => undefined);
+  }
+};
+
 export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
   const allowPrivateNetworks = options.allowPrivateNetworks === true;
   const timeoutMs = options.timeoutMs ?? 10_000;
   const maxResponseBytes = options.maxResponseBytes ?? 1_048_576;
+  const maxRequestBytes = options.maxRequestBytes ?? 1_048_576;
   const maxRedirects = options.maxRedirects ?? 5;
   const lookup = createLookup(allowPrivateNetworks);
 
@@ -252,6 +317,8 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
     if (hasBody && (method === "GET" || method === "HEAD")) {
       throw new TypeError(`Request with ${method} method cannot have a body`);
     }
+    let target = toUrl(input);
+    assertDestination(target);
     let headers = Object.fromEntries(
       new Headers(init?.headers ?? original?.headers).entries(),
     );
@@ -270,9 +337,19 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
         }
       }
     } else if (original?.body) {
-      body = Buffer.from(await original.arrayBuffer());
+      body = await readRequestBody(
+        original,
+        maxRequestBytes,
+        timeoutMs,
+        signal,
+      );
     }
-    let target = toUrl(input);
+    if (body && body.byteLength > maxRequestBytes) {
+      throw new AgentAuthError(
+        "request_too_large",
+        `Request body exceeded ${maxRequestBytes} bytes`,
+      );
+    }
 
     for (let hop = 0; hop <= maxRedirects; hop++) {
       assertDestination(target);

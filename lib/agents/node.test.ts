@@ -431,6 +431,135 @@ describe("createSafeFetch transport", () => {
     });
   });
 
+  describe("Request body bounds", () => {
+    const record = () => {
+      const seen: { method: string; body: string }[] = [];
+      handler = (req, res, body) => {
+        seen.push({ method: req.method ?? "", body });
+        res.end("ok");
+      };
+      return seen;
+    };
+
+    const streamRequest = (
+      url: string,
+      stream: ReadableStream<Uint8Array>,
+    ): Request =>
+      new Request(url, {
+        method: "POST",
+        body: stream,
+        duplex: "half",
+      } as RequestInit);
+
+    const neverClosing = () =>
+      new ReadableStream<Uint8Array>({ start: () => undefined });
+
+    const bytes = (size: number) => new Uint8Array(size).fill(120);
+
+    it("validates the destination before reading the body", async () => {
+      const request = streamRequest("http://10.0.0.5/", neverClosing());
+      const getReader = vi.spyOn(request.body as ReadableStream, "getReader");
+      await expect(createSafeFetch()(request)).rejects.toMatchObject({
+        code: "private_network_blocked",
+      });
+      expect(getReader).not.toHaveBeenCalled();
+      expect(request.bodyUsed).toBe(false);
+    });
+
+    it("times out when the body stream never closes, without contacting the server", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const started = Date.now();
+      await expect(
+        createSafeFetch({ ...options, timeoutMs: 60 })(
+          streamRequest(`http://pinned.example.com:${port}/`, neverClosing()),
+        ),
+      ).rejects.toMatchObject({ code: "request_timeout" });
+      expect(Date.now() - started).toBeLessThan(1500);
+      expect(seen).toHaveLength(0);
+    });
+
+    it("stops reading when the caller aborts", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 30);
+      const started = Date.now();
+      await expect(
+        createSafeFetch({ ...options, timeoutMs: 5000 })(
+          streamRequest(`http://pinned.example.com:${port}/`, neverClosing()),
+          { signal: controller.signal },
+        ),
+      ).rejects.toMatchObject({ code: "request_aborted" });
+      expect(Date.now() - started).toBeLessThan(1500);
+      expect(seen).toHaveLength(0);
+    });
+
+    it("rejects immediately when the signal is already aborted", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const controller = new AbortController();
+      controller.abort();
+      await expect(
+        createSafeFetch({ ...options, timeoutMs: 5000 })(
+          streamRequest(`http://pinned.example.com:${port}/`, neverClosing()),
+          { signal: controller.signal },
+        ),
+      ).rejects.toMatchObject({ code: "request_aborted" });
+      expect(seen).toHaveLength(0);
+    });
+
+    it("enforces an upload limit on streamed Request bodies", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.enqueue(bytes(600));
+        },
+      });
+      await expect(
+        createSafeFetch({ ...options, maxRequestBytes: 1000 })(
+          streamRequest(`http://pinned.example.com:${port}/`, body),
+        ),
+      ).rejects.toMatchObject({ code: "request_too_large" });
+      expect(seen).toHaveLength(0);
+    });
+
+    it("enforces the upload limit on init bodies and Request bodies alike", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const safe = createSafeFetch({ ...options, maxRequestBytes: 1000 });
+      const url = `http://pinned.example.com:${port}/`;
+      await expect(
+        safe(url, { method: "POST", body: "x".repeat(1001) }),
+      ).rejects.toMatchObject({ code: "request_too_large" });
+      await expect(
+        safe(new Request(url, { method: "POST", body: "x".repeat(1001) })),
+      ).rejects.toMatchObject({ code: "request_too_large" });
+      await safe(url, { method: "POST", body: "x".repeat(1000) });
+      expect(seen).toHaveLength(1);
+      expect(seen[0].body).toHaveLength(1000);
+    });
+
+    it("still sends finite streamed Request bodies", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const encoder = new TextEncoder();
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode("hello "));
+          controller.enqueue(encoder.encode("world"));
+          controller.close();
+        },
+      });
+      const response = await createSafeFetch(options)(
+        streamRequest(`http://pinned.example.com:${port}/`, body),
+      );
+      expect(await response.text()).toBe("ok");
+      expect(seen).toEqual([{ method: "POST", body: "hello world" }]);
+    });
+  });
+
   describe("credentials on redirects", () => {
     const sensitive = {
       authorization: "Bearer secret",
