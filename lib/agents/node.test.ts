@@ -430,10 +430,14 @@ describe("createSafeFetch transport", () => {
         );
         res.end();
       };
-      await createSafeFetch(options)(`http://first.example.com:${port}/start`, {
-        headers: sensitive,
-      });
-      await new Promise<void>((resolve) => other.close(() => resolve()));
+      try {
+        await createSafeFetch(options)(
+          `http://first.example.com:${port}/start`,
+          { headers: sensitive },
+        );
+      } finally {
+        await new Promise<void>((resolve) => other.close(() => resolve()));
+      }
       expect(seenOther).toHaveLength(1);
       expect(seenOther[0].authorization).toBeUndefined();
       expect(seenOther[0]["x-keep"]).toBe("yes");
