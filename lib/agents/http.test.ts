@@ -997,3 +997,113 @@ describe("malformed UTF-8 in failed responses", () => {
     ).rejects.toMatchObject({ code: "request_timeout" });
   });
 });
+
+describe("deadline checks against the clock", () => {
+  const blockFor = (ms: number) => {
+    const end = performance.now() + ms;
+    while (performance.now() < end);
+  };
+
+  it("does not follow a redirect that arrives after the deadline but before the timer fires", async () => {
+    const fetchMock = mockFetch((url) => {
+      if (url === "https://a.example.com/meta") {
+        blockFor(80);
+        return new Response(null, {
+          status: 302,
+          headers: { Location: "https://b.example.com/meta" },
+        });
+      }
+      return jsonResponse({ leaked: true });
+    });
+    await expect(
+      fetchJson(fetchMock, "https://a.example.com/meta", "Metadata", {
+        timeoutMs: 30,
+      }),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a final response that arrives after the deadline", async () => {
+    await expect(
+      fetchJson(
+        mockFetch(() => {
+          blockFor(80);
+          return jsonResponse({ ok: true });
+        }),
+        "https://a.example.com/meta",
+        "Metadata",
+        { timeoutMs: 30 },
+      ),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+  });
+
+  it("stops reading a body once the deadline has passed", async () => {
+    let pulls = 0;
+    const response = new Response(
+      new ReadableStream({
+        pull(controller) {
+          pulls += 1;
+          if (pulls === 1) {
+            blockFor(80);
+            controller.enqueue(new TextEncoder().encode('{"ok":'));
+          } else {
+            controller.enqueue(new TextEncoder().encode("true}"));
+            controller.close();
+          }
+        },
+      }),
+      { status: 200 },
+    );
+    await expect(
+      fetchJson(
+        mockFetch(() => response),
+        "https://a.example.com/meta",
+        "Metadata",
+        { timeoutMs: 30 },
+      ),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+  });
+
+  it("applies the same clock check to POST helpers", async () => {
+    await expect(
+      postForm(
+        mockFetch(() => {
+          blockFor(80);
+          return jsonResponse({ access_token: "late" });
+        }),
+        "https://a.example.com/token",
+        { a: "1" },
+        { timeoutMs: 30 },
+      ),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+  });
+
+  it("does not expire a request that finishes inside the deadline", async () => {
+    await expect(
+      fetchJson(
+        mockFetch(() => jsonResponse({ ok: true })),
+        "https://a.example.com/meta",
+        "Metadata",
+        { timeoutMs: 500 },
+      ),
+    ).resolves.toEqual({ ok: true });
+  });
+
+  it("aborts the transport when the clock expiry is detected first", async () => {
+    let seenSignal: AbortSignal | undefined;
+    await expect(
+      fetchJson(
+        mockFetch((_url, init) => {
+          seenSignal = init?.signal as AbortSignal;
+          blockFor(80);
+          return jsonResponse({ ok: true });
+        }),
+        "https://a.example.com/meta",
+        "Metadata",
+        { timeoutMs: 30 },
+      ),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+    expect(seenSignal?.aborted).toBe(true);
+  });
+});

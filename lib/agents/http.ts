@@ -199,8 +199,24 @@ const deadlineExceeded = (cause?: unknown) =>
     cause === undefined ? undefined : { cause },
   );
 
+const deadlines = new WeakMap<
+  AbortSignal,
+  { expiresAt: number; abort: () => void }
+>();
+
+const now = (): number =>
+  typeof performance !== "undefined" ? performance.now() : Date.now();
+
+const isExpired = (signal: AbortSignal): boolean => {
+  const deadline = deadlines.get(signal);
+  if (!signal.aborted && deadline && now() >= deadline.expiresAt) {
+    deadline.abort();
+  }
+  return signal.aborted;
+};
+
 const throwIfExpired = (signal: AbortSignal): void => {
-  if (signal.aborted) throw deadlineExceeded();
+  if (isExpired(signal)) throw deadlineExceeded();
 };
 
 const withDeadline = <T>(
@@ -209,6 +225,10 @@ const withDeadline = <T>(
 ): Promise<T> =>
   new Promise<T>((resolve, reject) => {
     const controller = new AbortController();
+    deadlines.set(controller.signal, {
+      expiresAt: now() + timeoutMs,
+      abort: () => controller.abort(),
+    });
     const timer = setTimeout(() => {
       controller.abort();
       reject(
@@ -276,7 +296,7 @@ const bufferResponse = async (
     try {
       for (;;) {
         const { done, value } = await reader.read();
-        if (signal.aborted) {
+        if (isExpired(signal)) {
           await reader.cancel().catch(() => undefined);
           throw deadlineExceeded();
         }
