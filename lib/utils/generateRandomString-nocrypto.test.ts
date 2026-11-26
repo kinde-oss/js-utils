@@ -1,13 +1,25 @@
 import { generateRandomString } from "./generateRandomString";
-import { describe, it, expect, vi } from "vitest";
-vi.stubGlobal("crypto", undefined);
-Object.defineProperty(global, "crypto", {
-  value: undefined, // Set to undefined to 'clear' crypto
-  writable: true, // Allow the property to be rewritten later if needed
-  configurable: true, // Allow the property definition itself to be changed, enabling resetting in teardown
-});
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 
 describe("generateRandomString - no crypto", () => {
+  beforeEach(() => {
+    vi.stubGlobal("crypto", undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("falls back when the crypto global is absent", () => {
+    Reflect.deleteProperty(globalThis, "crypto");
+    expect("crypto" in globalThis).toBe(false);
+    expect(generateRandomString(10)).toHaveLength(10);
+  });
+
+  it("falls back when crypto has no getRandomValues method", () => {
+    vi.stubGlobal("crypto", {});
+    expect(generateRandomString(10)).toHaveLength(10);
+  });
   it("should generate a string of the specified length", () => {
     const length = 10;
     const result = generateRandomString(length);

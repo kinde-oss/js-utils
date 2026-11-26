@@ -1,9 +1,9 @@
+import { createHash } from "node:crypto";
 import { describe, it, expect, vi } from "vitest";
 import { IssuerRouteTypes, LoginOptions, PromptTypes, Scopes } from "../types";
 import { generateAuthUrl, generatePKCEPair } from "./generateAuthUrl";
 import { MemoryStorage, StorageKeys } from "../sessionManager";
 import { setActiveStorage } from "./token";
-import { base64UrlEncode } from "./base64UrlEncode";
 
 describe("generateAuthUrl", () => {
   it("should generate the correct auth URL with required parameters", async () => {
@@ -665,51 +665,11 @@ describe("generatePKCEPair", () => {
     expect(pair1.codeChallenge).not.toBe(pair2.codeChallenge);
   });
 
-  it("should generate code challenge correctly based on crypto availability", async () => {
+  it("derives the S256 challenge from the verifier", async () => {
     const { codeVerifier, codeChallenge } = await generatePKCEPair();
-
-    // base64UrlEncode returns base64url (URL-safe); direct encoding matches
-    const directEncode = base64UrlEncode(codeVerifier);
-
-    // Check if crypto.subtle is available and working (Web Crypto API)
-    const hasWebCrypto =
-      typeof crypto !== "undefined" &&
-      crypto &&
-      crypto.subtle &&
-      typeof crypto.subtle.digest === "function";
-
-    // Test if crypto.subtle.digest actually works
-    let webCryptoWorks = false;
-    if (hasWebCrypto) {
-      try {
-        const testData = new TextEncoder().encode("test");
-        await crypto.subtle.digest("SHA-256", testData.buffer);
-        webCryptoWorks = true;
-      } catch {
-        webCryptoWorks = false;
-      }
-    }
-
-    if (webCryptoWorks) {
-      // When crypto.subtle is available and working, codeChallenge should be the SHA-256 hash
-      // The hash-based challenge should be different from direct encoding
-      expect(codeChallenge).not.toBe(directEncode);
-
-      // The hash-based challenge should be 43 characters (SHA-256 hash = 32 bytes = 43 base64 chars without padding)
-      // But it could be 42 or 43 depending on padding removal
-      expect(codeChallenge.length).toBeGreaterThanOrEqual(42);
-      expect(codeChallenge.length).toBeLessThanOrEqual(43);
-    } else {
-      // If crypto.subtle is not available or not working, it should use direct encoding (fallback)
-      // Direct encoding of 52-char string should be around 69-70 chars, but after URL-safe replacement it varies
-      expect(codeChallenge).toBe(directEncode);
-      expect(codeChallenge.length).toBeGreaterThan(0);
-    }
-
-    // In all cases, the challenge should be URL-safe
-    expect(codeChallenge).not.toContain("+");
-    expect(codeChallenge).not.toContain("/");
-    expect(codeChallenge).not.toMatch(/=$/);
+    expect(codeChallenge).toBe(
+      createHash("sha256").update(codeVerifier).digest("base64url"),
+    );
   });
 
   it("should return both codeVerifier and codeChallenge", async () => {

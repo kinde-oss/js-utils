@@ -1,6 +1,6 @@
 import { base64UrlEncode, getInsecureStorage, StorageKeys } from "../main";
 import { IssuerRouteTypes, LoginOptions, PromptTypes } from "../types";
-import { generateRandomString } from "./generateRandomString";
+import { generateSecureRandomString } from "./generateRandomString";
 import { mapLoginMethodParamsForUrl } from "./mapLoginMethodParamsForUrl";
 import { rememberStepUpRequest } from "./stepUp/params";
 import { snakeToCamelCase } from "./snakeToCamelCase";
@@ -115,7 +115,7 @@ export const generateAuthUrl = async (
   };
 
   if (!loginOptions.state) {
-    loginOptions.state = generateRandomString(32);
+    loginOptions.state = generateSecureRandomString(32);
   }
   if (activeStorage) {
     activeStorage.setSessionItem(StorageKeys.state, loginOptions.state);
@@ -123,7 +123,7 @@ export const generateAuthUrl = async (
   searchParams["state"] = loginOptions.state;
 
   if (!loginOptions.nonce) {
-    loginOptions.nonce = generateRandomString(16);
+    loginOptions.nonce = generateSecureRandomString(16);
   }
   searchParams["nonce"] = loginOptions.nonce;
   if (activeStorage) {
@@ -179,17 +179,15 @@ export async function generatePKCEPair(): Promise<{
   codeVerifier: string;
   codeChallenge: string;
 }> {
-  const codeVerifier = generateRandomString(52);
-  const data = new TextEncoder().encode(codeVerifier);
-  let codeChallenge: string;
-  if (!crypto) {
-    codeChallenge = base64UrlEncode(codeVerifier);
-  } else {
-    const hashed = await crypto.subtle.digest("SHA-256", data);
-    codeChallenge = base64UrlEncode(hashed);
+  const codeVerifier = generateSecureRandomString(52);
+  const subtle = globalThis.crypto?.subtle;
+  if (typeof subtle?.digest !== "function") {
+    throw new Error("Generating a PKCE challenge requires SHA-256.");
   }
+  const data = new TextEncoder().encode(codeVerifier);
+  const hashed = await subtle.digest("SHA-256", data);
   return {
     codeVerifier,
-    codeChallenge,
+    codeChallenge: base64UrlEncode(hashed),
   };
 }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PromptTypes } from "../../types";
 import { MemoryStorage, StorageKeys } from "../../sessionManager";
 import { clearActiveStorage, setActiveStorage } from "../token";
@@ -30,13 +30,19 @@ describe("stepUp", () => {
     vi.stubGlobal("fetch", vi.fn());
   });
 
-  it("builds an interactive request and does not send prompt=none", async () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("builds an interactive request from supplied values without Web Crypto", async () => {
     supportStepUp();
+    vi.stubGlobal("crypto", undefined);
     const store = new MemoryStorage();
     setActiveStorage(store);
 
     const result = await stepUp(domain, {
       ...loginOptions,
+      nonce: "nonce123",
       acr: "mfa",
       maxAge: 300,
     });
@@ -47,6 +53,7 @@ describe("stepUp", () => {
     expect(result.url.searchParams.get("prompt")).toBeNull();
     expect(result.url.searchParams.get("code_challenge")).toBe("challenge123");
     expect(result.url.searchParams.get("state")).toBe("state123");
+    expect(result.url.searchParams.get("nonce")).toBe("nonce123");
     expect(await store.getSessionItem(StorageKeys.state)).toBe("state123");
     expect(await store.getSessionItem(StorageKeys.stepUpAcr)).toBe("mfa");
     expect(await store.getSessionItem(StorageKeys.stepUpMaxAge)).toBe("300");
@@ -125,6 +132,21 @@ describe("stepUp", () => {
     });
     expect(result.url.searchParams.get("state")).toBe(result.state);
     expect(readStepUpState("state123")).toEqual({ state: "state123" });
+  });
+
+  it("requires secure randomness to generate state for returnTo", async () => {
+    supportStepUp();
+    vi.stubGlobal("crypto", undefined);
+
+    await expect(
+      stepUp(domain, {
+        ...loginOptions,
+        acr: "mfa",
+        state: undefined,
+        nonce: "nonce123",
+        returnTo: "https://app.example.com/payouts",
+      }),
+    ).rejects.toThrow("Secure randomness requires crypto.getRandomValues.");
   });
 
   it("throws when discovery does not advertise acr_values_supported", async () => {
