@@ -140,6 +140,7 @@ export const createPopup = async ({
   let removeMessageListener = () => {};
   let finishCancellation = () => {};
   let closeWatchTimer: ReturnType<typeof setTimeout> | undefined;
+  const closeCheckToken = crypto.randomUUID();
 
   const stopWatchingPopup = () => {
     if (closeWatchTimer !== undefined) {
@@ -147,6 +148,32 @@ export const createPopup = async ({
       closeWatchTimer = undefined;
     }
   };
+
+  // Resolves on the posted-message task source, after any KINDE_AUTH_RESULT
+  // already queued. Timer tasks are not ordered against message events.
+  const waitForQueuedMessages = () =>
+    new Promise<void>((resolve) => {
+      const onCloseCheck = (event: MessageEvent) => {
+        if (event.origin && event.origin !== window.location.origin) {
+          return;
+        }
+        const data = event.data;
+        if (
+          !data ||
+          data.type !== "kinde:popup-close-check" ||
+          data.token !== closeCheckToken
+        ) {
+          return;
+        }
+        window.removeEventListener("message", onCloseCheck);
+        resolve();
+      };
+      window.addEventListener("message", onCloseCheck);
+      window.postMessage(
+        { type: "kinde:popup-close-check", token: closeCheckToken },
+        window.location.origin,
+      );
+    });
 
   const waitForMessage = () => {
     return new Promise<void>((resolve) => {
@@ -182,13 +209,11 @@ export const createPopup = async ({
           closeWatchTimer = setTimeout(checkClosed, 100);
           return;
         }
-        // The popup posts KINDE_AUTH_RESULT and then closes. Yield so a
-        // message already queued is applied before this close is a cancel.
-        closeWatchTimer = setTimeout(() => {
+        void waitForQueuedMessages().then(() => {
           if (authenticationReceived) return;
           removeMessageListener();
           reject(new Error("Popup closed before authentication completed"));
-        }, 0);
+        });
       };
       checkClosed();
     });

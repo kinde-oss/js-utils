@@ -10,6 +10,9 @@ import {
 describe("navigateToKinde", () => {
   let mockPopup: Window;
   let messageHandler: ((event: MessageEvent) => void) | null = null;
+  let messageHandlers: Array<(event: MessageEvent) => void> = [];
+  let addWindowListener: typeof window.addEventListener;
+  let removeWindowListener: typeof window.removeEventListener;
 
   beforeEach(() => {
     // Mock window.open
@@ -32,18 +35,29 @@ describe("navigateToKinde", () => {
 
     // Reset message handler
     messageHandler = null;
+    messageHandlers = [];
+    addWindowListener = window.addEventListener.bind(window);
+    removeWindowListener = window.removeEventListener.bind(window);
 
-    // Mock addEventListener to capture message handler
+    // Capture message handlers and keep them registered so a queued
+    // postMessage is delivered in order with the close check.
     vi.spyOn(window, "addEventListener").mockImplementation(
       (event, handler) => {
-        if (event === "message") {
-          messageHandler = handler as (event: MessageEvent) => void;
+        if (event === "message" && typeof handler === "function") {
+          const listener = handler as (event: MessageEvent) => void;
+          messageHandler = listener;
+          messageHandlers.push(listener);
+          addWindowListener(event, listener);
         }
       },
     );
   });
 
   afterEach(() => {
+    for (const listener of messageHandlers) {
+      removeWindowListener("message", listener);
+    }
+    messageHandlers = [];
     vi.clearAllMocks();
     vi.restoreAllMocks();
   });
@@ -298,6 +312,43 @@ describe("navigateToKinde", () => {
       finishResult();
       await done;
       expect(settled).toBe(true);
+    });
+
+    it("handles a queued auth result dispatched after the popup closes", async () => {
+      const popup = { closed: true } as Window;
+      vi.spyOn(window, "open").mockReturnValue(popup);
+      const handleResult = vi.fn().mockResolvedValue(undefined);
+      const queued: unknown[] = [];
+      vi.spyOn(window, "postMessage").mockImplementation((data) => {
+        queued.push(data);
+      });
+
+      window.postMessage(
+        {
+          type: "KINDE_AUTH_RESULT",
+          result: { code: "auth_code_123", state: "state_123" },
+        },
+        window.location.origin,
+      );
+
+      const pending = createPopup({
+        url: "https://auth.example.com",
+        handleResult,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(handleResult).not.toHaveBeenCalled();
+
+      for (const data of queued) {
+        for (const listener of [...messageHandlers]) {
+          listener({ origin: window.location.origin, data } as MessageEvent);
+        }
+      }
+
+      await pending;
+      expect(handleResult).toHaveBeenCalledTimes(1);
+      expect(handleResult.mock.calls[0][0].get("code")).toBe("auth_code_123");
+      expect(handleResult.mock.calls[0][0].get("state")).toBe("state_123");
     });
 
     it("should throw 'Popup authentication failed' when the message listener throws", async () => {
