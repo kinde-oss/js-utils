@@ -95,6 +95,7 @@ export const navigateToKinde = async ({
  * @param options - Configuration options for the popup
  * @returns A promise that resolves with the popup window reference, or null if blocked
  * @throws {Error} When the popup is blocked by the browser
+ * @throws {Error} When the popup closes before a result arrives
  * @throws {Error} When authentication fails
  *
  * @example
@@ -135,6 +136,18 @@ export const createPopup = async ({
     throw new Error("Popup was blocked by the browser");
   }
 
+  let authenticationReceived = false;
+  let removeMessageListener = () => {};
+  let finishCancellation = () => {};
+  let closeWatchTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const stopWatchingPopup = () => {
+    if (closeWatchTimer !== undefined) {
+      clearTimeout(closeWatchTimer);
+      closeWatchTimer = undefined;
+    }
+  };
+
   const waitForMessage = () => {
     return new Promise<void>((resolve) => {
       const messageHandler = (event: MessageEvent) => {
@@ -142,6 +155,7 @@ export const createPopup = async ({
           return;
         }
         if (event.data && event.data.type === "KINDE_AUTH_RESULT") {
+          authenticationReceived = true;
           window.removeEventListener("message", messageHandler);
           const searchParams = new URLSearchParams();
           Object.entries(event.data.result).forEach(([key, value]) => {
@@ -151,13 +165,49 @@ export const createPopup = async ({
         }
       };
       window.addEventListener("message", messageHandler);
+      removeMessageListener = () => {
+        window.removeEventListener("message", messageHandler);
+      };
+    });
+  };
+
+  // Rejects on close. A received result leaves this pending so Promise.race
+  // keeps awaiting handleResult; finishCancellation settles it afterwards.
+  const waitForCancellation = () => {
+    return new Promise<void>((resolve, reject) => {
+      finishCancellation = resolve;
+      const checkClosed = () => {
+        if (authenticationReceived) return;
+        if (!popup.closed) {
+          closeWatchTimer = setTimeout(checkClosed, 100);
+          return;
+        }
+        // The popup posts KINDE_AUTH_RESULT and then closes. Yield so a
+        // message already queued is applied before this close is a cancel.
+        closeWatchTimer = setTimeout(() => {
+          if (authenticationReceived) return;
+          removeMessageListener();
+          reject(new Error("Popup closed before authentication completed"));
+        }, 0);
+      };
+      checkClosed();
     });
   };
 
   try {
-    await waitForMessage();
+    await Promise.race([waitForMessage(), waitForCancellation()]);
   } catch (error) {
+    removeMessageListener();
+    if (
+      error instanceof Error &&
+      error.message === "Popup closed before authentication completed"
+    ) {
+      throw error;
+    }
     throw new Error("Popup authentication failed", { cause: error });
+  } finally {
+    stopWatchingPopup();
+    finishCancellation();
   }
   return popup;
 };

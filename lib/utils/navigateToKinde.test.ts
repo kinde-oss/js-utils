@@ -240,6 +240,66 @@ describe("navigateToKinde", () => {
       expect(searchParams.get("error_description")).toBe("User denied access");
     });
 
+    it("removes the listener and rejects when the popup closes without a result", async () => {
+      const popup = { closed: true } as Window;
+      vi.spyOn(window, "open").mockReturnValue(popup);
+      const removeEventListener = vi.spyOn(window, "removeEventListener");
+      const handleResult = vi.fn();
+
+      await expect(
+        createPopup({
+          url: "https://auth.example.com",
+          handleResult,
+        }),
+      ).rejects.toThrow("Popup closed before authentication completed");
+
+      expect(handleResult).not.toHaveBeenCalled();
+      expect(removeEventListener).toHaveBeenCalledWith(
+        "message",
+        expect.any(Function),
+      );
+    });
+
+    it("keeps awaiting the auth result when the popup closes afterwards", async () => {
+      const popup = { closed: false } as Window;
+      vi.spyOn(window, "open").mockReturnValue(popup);
+      let finishResult: () => void = () => {};
+      const handleResult = vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            finishResult = resolve;
+          }),
+      );
+
+      const pending = createPopup({
+        url: "https://auth.example.com",
+        handleResult,
+      });
+
+      messageHandler?.({
+        origin: window.location.origin,
+        data: {
+          type: "KINDE_AUTH_RESULT",
+          result: { code: "auth_code_123", state: "state_123" },
+        },
+      } as MessageEvent);
+
+      Object.defineProperty(popup, "closed", { value: true });
+
+      let settled = false;
+      const done = pending.then(() => {
+        settled = true;
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(settled).toBe(false);
+      expect(handleResult).toHaveBeenCalledTimes(1);
+
+      finishResult();
+      await done;
+      expect(settled).toBe(true);
+    });
+
     it("should throw 'Popup authentication failed' when the message listener throws", async () => {
       vi.spyOn(window, "addEventListener").mockImplementationOnce(() => {
         throw new Error("Listener registration failed");
@@ -341,6 +401,18 @@ describe("navigateToKinde", () => {
           append: expect.any(Function),
         }),
       );
+    });
+
+    it("rejects when the popup closes without a result", async () => {
+      const popup = { closed: true } as Window;
+      vi.spyOn(window, "open").mockReturnValue(popup);
+
+      await expect(
+        navigateToKinde({
+          url: "https://auth.example.com",
+          forcePopup: true,
+        }),
+      ).rejects.toThrow("Popup closed before authentication completed");
     });
 
     it("should handle authentication error in popup", async () => {
