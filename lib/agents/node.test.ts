@@ -796,6 +796,7 @@ describe("createSafeFetch transport", () => {
     })(`http://pinned.example.com:${port}/`, { method: "HEAD" });
     expect(response.status).toBe(200);
     expect(response.headers.get("content-length")).toBe("5000");
+    expect(response.body).toBeNull();
     expect(await response.text()).toBe("");
   });
 
@@ -811,7 +812,47 @@ describe("createSafeFetch transport", () => {
       maxResponseBytes: 1000,
     })(`http://pinned.example.com:${port}/`);
     expect(response.status).toBe(304);
+    expect(response.body).toBeNull();
     expect(await response.text()).toBe("");
+  });
+
+  it.each([
+    ["HEAD", 200],
+    ["GET", 204],
+    ["GET", 205],
+    ["GET", 304],
+  ])("gives a %s %i response a null body", async (method, status) => {
+    resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+    handler = (_req, res) => {
+      res.statusCode = status;
+      res.end();
+    };
+    const response = await createSafeFetch(options)(
+      `http://pinned.example.com:${port}/`,
+      { method },
+    );
+    expect(response.status).toBe(status);
+    expect(response.body).toBeNull();
+  });
+
+  it("keeps a readable body on responses that can carry content", async () => {
+    resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+    handler = (_req, res) => {
+      res.setHeader("content-length", "5");
+      res.end("hello");
+    };
+    const safe = createSafeFetch({ ...options, maxResponseBytes: 1000 });
+    const response = await safe(`http://pinned.example.com:${port}/`);
+    expect(response.body).not.toBeNull();
+    expect(await response.text()).toBe("hello");
+
+    handler = (_req, res) => {
+      res.end();
+    };
+    const empty = await safe(`http://pinned.example.com:${port}/`);
+    expect(empty.status).toBe(200);
+    expect(empty.body).not.toBeNull();
+    expect(await empty.text()).toBe("");
   });
 
   it("still applies the declared-length cap to GET and POST responses", async () => {

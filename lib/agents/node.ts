@@ -269,9 +269,9 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
                 }
                 succeed(
                   new Response(
-                    NULL_BODY_STATUSES.has(status)
-                      ? null
-                      : (Buffer.concat(chunks) as unknown as BodyInit),
+                    canCarryBody
+                      ? (Buffer.concat(chunks) as unknown as BodyInit)
+                      : null,
                     {
                       status,
                       statusText: incoming.statusMessage,
