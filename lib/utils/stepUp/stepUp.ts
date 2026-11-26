@@ -1,6 +1,6 @@
 import { IssuerRouteTypes, PromptTypes, type LoginOptions } from "../../types";
 import { applyReauthState, generateAuthUrl } from "../generateAuthUrl";
-import { generateRandomString } from "../generateRandomString";
+import { generateSecureRandomString } from "../generateRandomString";
 import { isStepUpSupported } from "./discovery";
 import type { AcrValue } from "./params";
 import { formatAcrValues, formatMaxAge } from "./params";
@@ -110,9 +110,11 @@ export const stepUp = async <T = Record<string, string>>(
     prompt = PromptTypes.login;
   }
 
-  const innerState = options.state || generateRandomString(32);
   const state = options.returnTo
-    ? encodeStepUpState(innerState, options.returnTo)
+    ? encodeStepUpState(
+        options.state || generateSecureRandomString(32),
+        options.returnTo,
+      )
     : options.state;
 
   return generateAuthUrl(

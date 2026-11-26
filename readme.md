@@ -27,11 +27,11 @@ pnpm install @kinde/js-utils
 
 `mapLoginMethodParamsForUrl` - Maps all the login options to their relevant url query param
 
-`generateAuthUrl` - builds a authentication URL to redirect users to start auth flow
+`generateAuthUrl` - Builds the authorization URL. When Web Crypto is unavailable, supply securely generated `state`, `nonce`, and a PKCE `codeChallenge` instead of asking the SDK to generate them.
 
 `extractAuthResults` - Extracts tokens and expiry from implcit flow response
 
-`generateRandomString` - Generates a random sring of a defined length
+`generateRandomString` - Generates a random string. It may fall back to `Math.random()` when Web Crypto is unavailable, so do not use it for security-sensitive values.
 
 ### Session Managers
 
