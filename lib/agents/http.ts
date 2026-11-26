@@ -295,7 +295,7 @@ const bufferResponse = async (
   throwIfExpiredFor(signal, response);
   const declared = Number(response.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > maxBytes) {
-    await response.body?.cancel().catch(() => undefined);
+    discardBody(response);
     throw tooLarge(maxBytes);
   }
 
@@ -312,13 +312,13 @@ const bufferResponse = async (
       for (;;) {
         const { done, value } = await reader.read();
         if (isExpired(signal)) {
-          await reader.cancel().catch(() => undefined);
+          cancelReader();
           throw deadlineExceeded();
         }
         if (done) break;
         total += value.byteLength;
         if (total > maxBytes) {
-          await reader.cancel().catch(() => undefined);
+          cancelReader();
           throw tooLarge(maxBytes);
         }
         chunks.push(value);
@@ -377,7 +377,7 @@ export const fetchJson = async <T>(
           REDIRECT_STATUSES.has(response.status)
         ) {
           const location = response.headers.get("location");
-          await response.body?.cancel().catch(() => undefined);
+          discardBody(response);
           if (!location) {
             throw new AgentAuthError(
               "redirect_blocked",
@@ -434,7 +434,7 @@ const post = (
     });
     throwIfExpiredFor(signal, response);
     if (options.discardSuccessBody && response.ok) {
-      await response.body?.cancel().catch(() => undefined);
+      discardBody(response);
       return new Response(null, {
         status: response.status,
         statusText: response.statusText,

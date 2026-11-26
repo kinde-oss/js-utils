@@ -1260,3 +1260,132 @@ describe("cancelling the body of a late response", () => {
     expect(cancel).not.toHaveBeenCalled();
   });
 });
+
+describe("a cancellation that never settles", () => {
+  const hungCancel = () => new Promise<void>(() => undefined);
+
+  const hungBody = (
+    pull?: (controller: ReadableStreamDefaultController<Uint8Array>) => void,
+  ) =>
+    new ReadableStream<Uint8Array>({
+      start: pull ? undefined : () => undefined,
+      pull,
+      cancel: hungCancel,
+    });
+
+  const redirectWithHungBody = (location?: string) =>
+    new Response(hungBody(), {
+      status: 302,
+      headers: location ? { Location: location } : {},
+    });
+
+  it("does not delay following a valid redirect", async () => {
+    const fetchMock = mockFetch((url) =>
+      url === "https://a.example.com/meta"
+        ? redirectWithHungBody("https://b.example.com/meta")
+        : jsonResponse({ ok: true }),
+    );
+    const started = performance.now();
+    await expect(
+      fetchJson(fetchMock, "https://a.example.com/meta", "Metadata", {
+        timeoutMs: 600,
+      }),
+    ).resolves.toEqual({ ok: true });
+    expect(performance.now() - started).toBeLessThan(400);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps redirect_blocked for a redirect without a location", async () => {
+    await expect(
+      fetchJson(
+        mockFetch(() => redirectWithHungBody()),
+        "https://a.example.com/meta",
+        "Metadata",
+        { timeoutMs: 600 },
+      ),
+    ).rejects.toMatchObject({ code: "redirect_blocked" });
+  });
+
+  it.each([
+    ["a private address", "https://10.0.0.5/meta", "private_network_blocked"],
+    ["a non-https url", "http://b.example.com/meta", "invalid_url"],
+  ])(
+    "still validates the redirect target before the next fetch (%s)",
+    async (_label, location, code) => {
+      const fetchMock = mockFetch(() => redirectWithHungBody(location));
+      await expect(
+        fetchJson(fetchMock, "https://a.example.com/meta", "Metadata", {
+          timeoutMs: 600,
+        }),
+      ).rejects.toMatchObject({ code });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("keeps response_too_large for a declared length above the cap", async () => {
+    await expect(
+      fetchJson(
+        mockFetch(
+          () =>
+            new Response(hungBody(), {
+              status: 200,
+              headers: { "content-length": "5000" },
+            }),
+        ),
+        "https://a.example.com/meta",
+        "Metadata",
+        { maxResponseBytes: 1000, timeoutMs: 600 },
+      ),
+    ).rejects.toMatchObject({ code: "response_too_large" });
+  });
+
+  it("keeps response_too_large for a streamed body above the cap", async () => {
+    const body = hungBody((controller) =>
+      controller.enqueue(new Uint8Array(600).fill(120)),
+    );
+    const started = performance.now();
+    await expect(
+      fetchJson(
+        mockFetch(() => new Response(body, { status: 200 })),
+        "https://a.example.com/meta",
+        "Metadata",
+        { maxResponseBytes: 1000, timeoutMs: 600 },
+      ),
+    ).rejects.toMatchObject({ code: "response_too_large" });
+    expect(performance.now() - started).toBeLessThan(400);
+  });
+
+  it("still returns success for a revocation whose body is discarded", async () => {
+    const response = await postForm(
+      mockFetch(() => new Response(hungBody(), { status: 200 })),
+      "https://a.example.com/revoke",
+      { token: "t" },
+      { timeoutMs: 600, discardSuccessBody: true },
+    );
+    expect(response.status).toBe(200);
+    expect(response.ok).toBe(true);
+  });
+
+  it("is not changed by a cancellation that throws synchronously", async () => {
+    const response = new Response(
+      new ReadableStream({ start: () => undefined }),
+      { status: 302, headers: { Location: "https://b.example.com/meta" } },
+    );
+    vi.spyOn(response.body as ReadableStream, "cancel").mockImplementation(
+      () => {
+        throw new Error("cancel exploded");
+      },
+    );
+    await expect(
+      fetchJson(
+        mockFetch((url) =>
+          url === "https://a.example.com/meta"
+            ? response
+            : jsonResponse({ ok: true }),
+        ),
+        "https://a.example.com/meta",
+        "Metadata",
+      ),
+    ).resolves.toEqual({ ok: true });
+  });
+});
