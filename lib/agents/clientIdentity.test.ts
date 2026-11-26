@@ -241,6 +241,19 @@ describe("registerClient", () => {
     ).rejects.toMatchObject({ code: "unsupported_token_auth_method" });
   });
 
+  it("reports the HTTP status when a failed registration body is not valid UTF-8", async () => {
+    await expect(
+      registerClient(serverMetadata.registration_endpoint, registration, {
+        fetch: mockFetch(
+          () =>
+            new Response(new Uint8Array([0xff, 0xfe]) as unknown as BodyInit, {
+              status: 502,
+            }),
+        ),
+      }),
+    ).rejects.toMatchObject({ code: "http_error", status: 502 });
+  });
+
   it("rejects openid inside a multi-scope array entry", async () => {
     const fetchMock = dcrFetch();
     await expect(

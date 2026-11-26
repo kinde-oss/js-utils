@@ -883,3 +883,117 @@ describe("cancelling a stalled body reader on timeout", () => {
     );
   });
 });
+
+describe("malformed UTF-8 in failed responses", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const invalid = new Uint8Array([0x7b, 0xff, 0xfe, 0x7d]);
+  const bodyOf = (bytes: Uint8Array) => bytes as unknown as BodyInit;
+
+  it.each([
+    ["with TextDecoder", () => undefined],
+    ["without TextDecoder", () => vi.stubGlobal("TextDecoder", undefined)],
+  ])(
+    "keeps the HTTP status of a failed postJson response %s",
+    async (_label, setup) => {
+      setup();
+      const response = await postJson(
+        mockFetch(() => new Response(bodyOf(invalid), { status: 502 })),
+        "https://a.example.com/register",
+        {},
+      );
+      expect(response.status).toBe(502);
+      expect(response.ok).toBe(false);
+    },
+  );
+
+  it.each([
+    ["with TextDecoder", () => undefined],
+    ["without TextDecoder", () => vi.stubGlobal("TextDecoder", undefined)],
+  ])(
+    "reports http_error with the status through fetchJson %s",
+    async (_label, setup) => {
+      setup();
+      await expect(
+        fetchJson(
+          mockFetch(() => new Response(bodyOf(invalid), { status: 503 })),
+          "https://a.example.com/meta",
+          "Metadata",
+        ),
+      ).rejects.toMatchObject({ code: "http_error", status: 503 });
+    },
+  );
+
+  it("still recovers an OAuth error body that contains a stray invalid byte", async () => {
+    const encoder = new TextEncoder();
+    const bytes = new Uint8Array([
+      ...encoder.encode('{"error":"invalid_request","error_description":"bad '),
+      0xff,
+      ...encoder.encode(' byte"}'),
+    ]);
+    await expect(
+      fetchJson(
+        mockFetch(() => new Response(bodyOf(bytes), { status: 400 })),
+        "https://a.example.com/meta",
+        "Metadata",
+      ),
+    ).rejects.toMatchObject({ code: "invalid_request", status: 400 });
+  });
+
+  it.each([
+    ["with TextDecoder", () => undefined],
+    ["without TextDecoder", () => vi.stubGlobal("TextDecoder", undefined)],
+  ])(
+    "keeps strict decoding for successful responses %s",
+    async (_label, setup) => {
+      setup();
+      await expect(
+        fetchJson(
+          mockFetch(() => new Response(bodyOf(invalid), { status: 200 })),
+          "https://a.example.com/meta",
+          "Metadata",
+        ),
+      ).rejects.toMatchObject({ code: "invalid_response" });
+      await expect(
+        postJson(
+          mockFetch(() => new Response(bodyOf(invalid), { status: 201 })),
+          "https://a.example.com/register",
+          {},
+        ),
+      ).rejects.toMatchObject({ code: "invalid_response" });
+    },
+  );
+
+  it("keeps size-limit and timeout errors distinct on failed responses", async () => {
+    await expect(
+      postJson(
+        mockFetch(
+          () =>
+            new Response(bodyOf(new Uint8Array(5000)), {
+              status: 502,
+              headers: { "content-length": "5000" },
+            }),
+        ),
+        "https://a.example.com/register",
+        {},
+        { maxResponseBytes: 1000 },
+      ),
+    ).rejects.toMatchObject({ code: "response_too_large" });
+
+    await expect(
+      postJson(
+        mockFetch(
+          () =>
+            new Response(new ReadableStream({ start: () => undefined }), {
+              status: 502,
+            }),
+        ),
+        "https://a.example.com/register",
+        {},
+        { timeoutMs: 40 },
+      ),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+  });
+});

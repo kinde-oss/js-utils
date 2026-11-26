@@ -231,10 +231,10 @@ const tooLarge = (maxBytes: number) =>
     `Response exceeded ${maxBytes} bytes`,
   );
 
-const decodeUtf8 = (bytes: Uint8Array): string => {
+const decodeUtf8 = (bytes: Uint8Array, strict = true): string => {
   try {
     if (typeof TextDecoder !== "undefined") {
-      return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      return new TextDecoder("utf-8", { fatal: strict }).decode(bytes);
     }
     const percentEncoded = Array.from(
       bytes,
@@ -242,6 +242,7 @@ const decodeUtf8 = (bytes: Uint8Array): string => {
     ).join("");
     return decodeURIComponent(percentEncoded).replace(/^\uFEFF/, "");
   } catch (cause) {
+    if (!strict) return "";
     throw new AgentAuthError(
       "invalid_response",
       "Response body is not valid UTF-8",
@@ -303,7 +304,9 @@ const bufferResponse = async (
   }
 
   return new Response(
-    NULL_BODY_STATUSES.has(response.status) ? null : decodeUtf8(bytes),
+    NULL_BODY_STATUSES.has(response.status)
+      ? null
+      : decodeUtf8(bytes, response.ok),
     {
       status: response.status,
       statusText: response.statusText,
