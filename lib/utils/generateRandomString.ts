@@ -4,7 +4,8 @@
  * @returns {string} required secret
  */
 export const generateRandomString = (length: number = 28): string => {
-  if (crypto) {
+  const crypto = globalThis.crypto;
+  if (typeof crypto?.getRandomValues === "function") {
     const arr = new Uint8Array(length / 2);
     crypto.getRandomValues(arr);
     return Array.from(arr, dec2hex).join("");
