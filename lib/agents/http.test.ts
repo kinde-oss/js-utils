@@ -1107,3 +1107,156 @@ describe("deadline checks against the clock", () => {
     expect(seenSignal?.aborted).toBe(true);
   });
 });
+
+describe("cancelling the body of a late response", () => {
+  const blockFor = (ms: number) => {
+    const end = performance.now() + ms;
+    while (performance.now() < end);
+  };
+
+  const lateResponse = (init: ResponseInit = { status: 200 }) => {
+    const response = new Response(
+      new ReadableStream({ start: () => undefined }),
+      init,
+    );
+    const cancel = vi.spyOn(response.body as ReadableStream, "cancel");
+    const getReader = vi.spyOn(response.body as ReadableStream, "getReader");
+    return { response, cancel, getReader };
+  };
+
+  const arriveLate = (response: Response) =>
+    mockFetch(() => {
+      blockFor(80);
+      return response;
+    });
+
+  it("cancels a late GET response without reading it", async () => {
+    const { response, cancel, getReader } = lateResponse();
+    await expect(
+      fetchJson(
+        arriveLate(response),
+        "https://a.example.com/meta",
+        "Metadata",
+        { timeoutMs: 30 },
+      ),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(getReader).not.toHaveBeenCalled();
+  });
+
+  it("cancels a late redirect response", async () => {
+    const { response, cancel } = lateResponse({
+      status: 302,
+      headers: { Location: "https://b.example.com/meta" },
+    });
+    const fetchMock = arriveLate(response);
+    await expect(
+      fetchJson(fetchMock, "https://a.example.com/meta", "Metadata", {
+        timeoutMs: 30,
+      }),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [
+      "postForm",
+      (f: typeof fetch) =>
+        postForm(
+          f,
+          "https://a.example.com/token",
+          { a: "1" },
+          { timeoutMs: 30 },
+        ),
+    ],
+    [
+      "postJson",
+      (f: typeof fetch) =>
+        postJson(f, "https://a.example.com/register", {}, { timeoutMs: 30 }),
+    ],
+    [
+      "postForm that discards a successful body",
+      (f: typeof fetch) =>
+        postForm(
+          f,
+          "https://a.example.com/revoke",
+          { token: "t" },
+          { timeoutMs: 30, discardSuccessBody: true },
+        ),
+    ],
+  ])("cancels a late %s response without reading it", async (_name, send) => {
+    const { response, cancel, getReader } = lateResponse();
+    await expect(send(arriveLate(response))).rejects.toMatchObject({
+      code: "request_timeout",
+    });
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(getReader).not.toHaveBeenCalled();
+  });
+
+  it("does not wait for the cancellation to finish", async () => {
+    const { response, cancel } = lateResponse();
+    cancel.mockImplementation(() => new Promise<void>(() => undefined));
+    const started = performance.now();
+    await expect(
+      fetchJson(
+        arriveLate(response),
+        "https://a.example.com/meta",
+        "Metadata",
+        { timeoutMs: 30 },
+      ),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
+  it.each([
+    [
+      "rejects",
+      (cancel: ReturnType<typeof vi.spyOn>) =>
+        cancel.mockRejectedValue(new Error("cancel failed")),
+    ],
+    [
+      "throws synchronously",
+      (cancel: ReturnType<typeof vi.spyOn>) =>
+        cancel.mockImplementation(() => {
+          throw new Error("cancel exploded");
+        }),
+    ],
+  ])(
+    "keeps the timeout error when the cancellation %s",
+    async (_label, break_) => {
+      const { response, cancel } = lateResponse();
+      break_(cancel);
+      await expect(
+        fetchJson(
+          arriveLate(response),
+          "https://a.example.com/meta",
+          "Metadata",
+          { timeoutMs: 30 },
+        ),
+      ).rejects.toMatchObject({ code: "request_timeout" });
+    },
+  );
+
+  it("does not cancel a response that arrives within the deadline", async () => {
+    const response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"ok":true}'));
+          controller.close();
+        },
+      }),
+      { status: 200 },
+    );
+    const cancel = vi.spyOn(response.body as ReadableStream, "cancel");
+    await expect(
+      fetchJson(
+        mockFetch(() => response),
+        "https://a.example.com/meta",
+        "Metadata",
+        { timeoutMs: 500 },
+      ),
+    ).resolves.toEqual({ ok: true });
+    expect(cancel).not.toHaveBeenCalled();
+  });
+});

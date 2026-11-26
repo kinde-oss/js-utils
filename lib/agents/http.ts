@@ -219,6 +219,21 @@ const throwIfExpired = (signal: AbortSignal): void => {
   if (isExpired(signal)) throw deadlineExceeded();
 };
 
+const discardBody = (response: Response): void => {
+  try {
+    response.body?.cancel().catch(() => undefined);
+  } catch {
+    return;
+  }
+};
+
+const throwIfExpiredFor = (signal: AbortSignal, response: Response): void => {
+  if (isExpired(signal)) {
+    discardBody(response);
+    throw deadlineExceeded();
+  }
+};
+
 const withDeadline = <T>(
   timeoutMs: number,
   run: (signal: AbortSignal) => Promise<T>,
@@ -277,7 +292,7 @@ const bufferResponse = async (
   maxBytes: number,
   signal: AbortSignal,
 ): Promise<Response> => {
-  throwIfExpired(signal);
+  throwIfExpiredFor(signal, response);
   const declared = Number(response.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > maxBytes) {
     await response.body?.cancel().catch(() => undefined);
@@ -355,7 +370,7 @@ export const fetchJson = async <T>(
           signal,
           headers: { Accept: "application/json" },
         });
-        throwIfExpired(signal);
+        throwIfExpiredFor(signal, response);
 
         if (
           response.type === "opaqueredirect" ||
@@ -417,8 +432,8 @@ const post = (
       headers,
       body,
     });
+    throwIfExpiredFor(signal, response);
     if (options.discardSuccessBody && response.ok) {
-      throwIfExpired(signal);
       await response.body?.cancel().catch(() => undefined);
       return new Response(null, {
         status: response.status,
