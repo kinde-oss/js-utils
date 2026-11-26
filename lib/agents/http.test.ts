@@ -782,3 +782,104 @@ describe("discarding a successful response body", () => {
     ).rejects.toMatchObject({ code: "response_too_large" });
   });
 });
+
+describe("cancelling a stalled body reader on timeout", () => {
+  const stalledBody = (cancel: () => void) =>
+    new Response(new ReadableStream({ start: () => undefined, cancel }), {
+      status: 200,
+    });
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 60));
+
+  it("cancels the body stream when the deadline expires during a read", async () => {
+    const cancel = vi.fn();
+    await expect(
+      fetchJson(
+        mockFetch(() => stalledBody(cancel)),
+        "https://a.example.com/meta",
+        "Metadata",
+        { timeoutMs: 40 },
+      ),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+    await settle();
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels the body stream for POST helpers too", async () => {
+    const cancel = vi.fn();
+    await expect(
+      postForm(
+        mockFetch(() => stalledBody(cancel)),
+        "https://a.example.com/token",
+        { a: "1" },
+        { timeoutMs: 40 },
+      ),
+    ).rejects.toMatchObject({ code: "request_timeout" });
+    await settle();
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not cancel a body that finishes before the deadline", async () => {
+    const cancel = vi.fn();
+    const response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"ok":true}'));
+          controller.close();
+        },
+        cancel,
+      }),
+      { status: 200 },
+    );
+    await expect(
+      fetchJson(
+        mockFetch(() => response),
+        "https://a.example.com/meta",
+        "Metadata",
+        { timeoutMs: 40 },
+      ),
+    ).resolves.toEqual({ ok: true });
+    await settle();
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it("removes its abort listener when the read finishes", async () => {
+    const added: string[] = [];
+    const removed: string[] = [];
+    const original = AbortSignal.prototype.addEventListener;
+    const originalRemove = AbortSignal.prototype.removeEventListener;
+    vi.spyOn(AbortSignal.prototype, "addEventListener").mockImplementation(
+      function (this: AbortSignal, type: string, ...rest: unknown[]) {
+        added.push(type);
+        return (original as (...args: unknown[]) => void).call(
+          this,
+          type,
+          ...rest,
+        );
+      } as typeof AbortSignal.prototype.addEventListener,
+    );
+    vi.spyOn(AbortSignal.prototype, "removeEventListener").mockImplementation(
+      function (this: AbortSignal, type: string, ...rest: unknown[]) {
+        removed.push(type);
+        return (originalRemove as (...args: unknown[]) => void).call(
+          this,
+          type,
+          ...rest,
+        );
+      } as typeof AbortSignal.prototype.removeEventListener,
+    );
+    try {
+      await fetchJson(
+        mockFetch(() => jsonResponse({ ok: true })),
+        "https://a.example.com/meta",
+        "Metadata",
+      );
+    } finally {
+      vi.restoreAllMocks();
+    }
+    expect(added.filter((type) => type === "abort").length).toBeGreaterThan(0);
+    expect(removed.filter((type) => type === "abort")).toHaveLength(
+      added.filter((type) => type === "abort").length,
+    );
+  });
+});

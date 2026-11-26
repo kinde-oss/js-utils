@@ -268,19 +268,27 @@ const bufferResponse = async (
     const reader = response.body.getReader();
     const chunks: Uint8Array[] = [];
     let total = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (signal.aborted) {
-        await reader.cancel().catch(() => undefined);
-        throw deadlineExceeded();
+    const cancelReader = () => {
+      reader.cancel().catch(() => undefined);
+    };
+    signal.addEventListener("abort", cancelReader, { once: true });
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (signal.aborted) {
+          await reader.cancel().catch(() => undefined);
+          throw deadlineExceeded();
+        }
+        if (done) break;
+        total += value.byteLength;
+        if (total > maxBytes) {
+          await reader.cancel().catch(() => undefined);
+          throw tooLarge(maxBytes);
+        }
+        chunks.push(value);
       }
-      if (done) break;
-      total += value.byteLength;
-      if (total > maxBytes) {
-        await reader.cancel().catch(() => undefined);
-        throw tooLarge(maxBytes);
-      }
-      chunks.push(value);
+    } finally {
+      signal.removeEventListener("abort", cancelReader);
     }
     bytes = new Uint8Array(total);
     let offset = 0;
