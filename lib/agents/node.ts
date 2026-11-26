@@ -86,6 +86,9 @@ const toBody = (body: BodyInit | null | undefined): Buffer | undefined => {
   );
 };
 
+const isUint8Array = (value: unknown): value is Uint8Array =>
+  Object.prototype.toString.call(value) === "[object Uint8Array]";
+
 const readRequestBody = async (
   request: Request,
   maxBytes: number,
@@ -128,6 +131,12 @@ const readRequestBody = async (
     for (;;) {
       const { done, value } = await reader.read();
       if (done) return Buffer.concat(chunks);
+      if (!isUint8Array(value)) {
+        throw new AgentAuthError(
+          "invalid_request_body",
+          "The request body stream produced a chunk that is not a Uint8Array",
+        );
+      }
       total += value.byteLength;
       if (total > maxBytes) {
         throw new AgentAuthError(

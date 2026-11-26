@@ -541,6 +541,85 @@ describe("createSafeFetch transport", () => {
       expect(seen[0].body).toHaveLength(1000);
     });
 
+    it.each([
+      ["a string", "not bytes"],
+      ["a number", 42],
+      ["an object", { a: 1 }],
+      ["an ArrayBuffer", new ArrayBuffer(8)],
+      ["null", null],
+    ])(
+      "rejects a body stream that yields %s with an AgentAuthError",
+      async (_label, chunk) => {
+        resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+        const seen = record();
+        const body = new ReadableStream<unknown>({
+          start(controller) {
+            controller.enqueue(chunk);
+            controller.close();
+          },
+        }) as unknown as ReadableStream<Uint8Array>;
+        const result = createSafeFetch({ ...options, maxRequestBytes: 1000 })(
+          streamRequest(`http://pinned.example.com:${port}/`, body),
+        );
+        await expect(result).rejects.toBeInstanceOf(AgentAuthError);
+        await expect(result).rejects.toMatchObject({
+          code: "invalid_request_body",
+        });
+        expect(seen).toHaveLength(0);
+      },
+    );
+
+    it("rejects an invalid chunk that follows valid ones", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const body = new ReadableStream<unknown>({
+        start(controller) {
+          controller.enqueue(bytes(10));
+          controller.enqueue("late string");
+          controller.close();
+        },
+      }) as unknown as ReadableStream<Uint8Array>;
+      await expect(
+        createSafeFetch(options)(
+          streamRequest(`http://pinned.example.com:${port}/`, body),
+        ),
+      ).rejects.toMatchObject({ code: "invalid_request_body" });
+      expect(seen).toHaveLength(0);
+    });
+
+    it("accepts Buffer and Uint8Array chunks and still enforces the size limit on them", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const safe = createSafeFetch({ ...options, maxRequestBytes: 1000 });
+      const url = `http://pinned.example.com:${port}/`;
+      await safe(
+        streamRequest(
+          url,
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(Buffer.from("abc"));
+              controller.enqueue(new Uint8Array([100, 101]));
+              controller.close();
+            },
+          }),
+        ),
+      );
+      expect(seen[0].body).toBe("abcde");
+      await expect(
+        safe(
+          streamRequest(
+            url,
+            new ReadableStream<Uint8Array>({
+              start(controller) {
+                controller.enqueue(bytes(1001));
+                controller.close();
+              },
+            }),
+          ),
+        ),
+      ).rejects.toMatchObject({ code: "request_too_large" });
+    });
+
     it("still sends finite streamed Request bodies", async () => {
       resolveTo("pinned.example.com", ["127.0.0.1", 4]);
       const seen = record();
