@@ -1153,6 +1153,40 @@ describe("deadline checks against the clock", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("reports a timeout when the deadline passes while parsing an OAuth error body", async () => {
+    const spy = vi
+      .spyOn(Response.prototype, "json")
+      .mockImplementation(async () => {
+        blockFor(80);
+        return { error: "invalid_request" };
+      });
+    try {
+      await expect(
+        fetchJson(
+          mockFetch(() => new Response("{}", { status: 400 })),
+          "https://a.example.com/meta",
+          "Metadata",
+          { timeoutMs: 30 },
+        ),
+      ).rejects.toMatchObject({ code: "request_timeout" });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("still surfaces the OAuth error when the deadline has not passed", async () => {
+    await expect(
+      fetchJson(
+        mockFetch(() =>
+          jsonResponse({ error: "invalid_request" }, { status: 400 }),
+        ),
+        "https://a.example.com/meta",
+        "Metadata",
+        { timeoutMs: 1000 },
+      ),
+    ).rejects.toMatchObject({ code: "invalid_request", status: 400 });
+  });
+
   it("rejects a final response that arrives after the deadline", async () => {
     await expect(
       fetchJson(

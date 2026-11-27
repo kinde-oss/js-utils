@@ -479,7 +479,9 @@ export const fetchJson = async <T>(
         if (response.url) assertAllowedUrl(response.url, label, options);
         const buffered = await bufferResponse(response, maxBytes, signal);
         if (!buffered.ok) {
-          throw await toOAuthError(buffered, label);
+          const error = await toOAuthError(buffered, label);
+          throwIfExpired(signal);
+          throw error;
         }
         const parsed = await readJson<T>(buffered, label);
         throwIfExpired(signal);
