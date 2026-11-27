@@ -152,6 +152,16 @@ const fetchProtectedResourceMetadata = async (
   return metadata;
 };
 
+const isUrlString = (value: unknown): boolean => {
+  if (typeof value !== "string" || !value) return false;
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const fetchAuthorizationServerMetadata = async (
   issuer: string,
   options: FetchOptions,
@@ -180,10 +190,13 @@ const fetchAuthorizationServerMetadata = async (
           `Metadata issuer ${metadata.issuer} does not match ${issuer}`,
         );
       }
-      if (!metadata.authorization_endpoint || !metadata.token_endpoint) {
+      if (
+        !isUrlString(metadata.authorization_endpoint) ||
+        !isUrlString(metadata.token_endpoint)
+      ) {
         throw new AgentAuthError(
           "invalid_response",
-          "Authorization server metadata is missing required endpoints",
+          "Authorization server metadata is missing valid required endpoints",
         );
       }
       return metadata;

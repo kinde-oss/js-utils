@@ -461,6 +461,57 @@ describe("discoverAgentAuth", () => {
     expect(result.authorizationServer.issuer).toBe(serverMetadata.issuer);
   });
 
+  it.each([
+    ["an object authorization_endpoint", { authorization_endpoint: {} }],
+    ["a numeric token_endpoint", { token_endpoint: 5 }],
+    ["an empty token_endpoint", { token_endpoint: "" }],
+    ["a relative authorization_endpoint", { authorization_endpoint: "/auth" }],
+    ["an unparsable token_endpoint", { token_endpoint: "not a url" }],
+  ])(
+    "skips a metadata document with %s and uses the next candidate",
+    async (_name, override) => {
+      const fetchMock = mockFetch((url) => {
+        if (
+          url ===
+          "https://auth.example.com/.well-known/oauth-authorization-server"
+        ) {
+          return jsonResponse({ ...serverMetadata, ...override });
+        }
+        if (
+          url === "https://auth.example.com/.well-known/openid-configuration"
+        ) {
+          return jsonResponse(serverMetadata);
+        }
+        return routes(url);
+      });
+      const result = await discoverAgentAuth({
+        wwwAuthenticate: "Bearer",
+        resourceUrl: "https://api.example.com/mcp",
+        fetch: fetchMock,
+      });
+      expect(result.authorizationServer.authorization_endpoint).toBe(
+        serverMetadata.authorization_endpoint,
+      );
+      expect(result.authorizationServer.token_endpoint).toBe(
+        serverMetadata.token_endpoint,
+      );
+    },
+  );
+
+  it("fails with metadata_unavailable when every candidate has malformed endpoints", async () => {
+    await expect(
+      discoverAgentAuth({
+        wwwAuthenticate: "Bearer",
+        resourceUrl: "https://api.example.com/mcp",
+        fetch: mockFetch((url) =>
+          url.includes("/.well-known/oauth-protected-resource")
+            ? jsonResponse(prm)
+            : jsonResponse({ ...serverMetadata, authorization_endpoint: {} }),
+        ),
+      }),
+    ).rejects.toMatchObject({ code: "metadata_unavailable" });
+  });
+
   it.each([200, 204, 400, 404, 500])(
     "rejects a %i response",
     async (status) => {
