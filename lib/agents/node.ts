@@ -194,10 +194,25 @@ const readRequestBody = async (
     }
   });
 
+  const startedAt = performance.now();
   const pump = (async () => {
     const chunks: Uint8Array[] = [];
     let total = 0;
     for (;;) {
+      if (signal?.aborted) {
+        throw new AgentAuthError(
+          "request_aborted",
+          "The request was aborted",
+          undefined,
+          { cause: signal.reason },
+        );
+      }
+      if (performance.now() - startedAt >= timeoutMs) {
+        throw new AgentAuthError(
+          "request_timeout",
+          `Reading the request body exceeded ${timeoutMs}ms`,
+        );
+      }
       const { done, value } = await reader.read();
       if (done) return Buffer.concat(chunks);
       if (!types.isUint8Array(value)) {
@@ -206,6 +221,7 @@ const readRequestBody = async (
           "The request body stream produced a chunk that is not a Uint8Array",
         );
       }
+      if (value.byteLength === 0) continue;
       total += value.byteLength;
       if (total > maxBytes) {
         throw new AgentAuthError(
@@ -306,30 +322,59 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
               REDIRECT_STATUSES.has(responseStatus) &&
               incoming.headers.location !== undefined
             ) {
-              const redirectInit = {
-                status: responseStatus,
-                statusText: incoming.statusMessage,
-                headers: toResponseHeaders(incoming.headers),
-              };
-              if (discardRedirectBody) {
-                incoming.destroy();
-                succeed(new Response(null, redirectInit));
-              } else {
-                succeed(
-                  new Response(
-                    streamIncoming(
-                      incoming,
-                      maxResponseBytes,
-                      () => clearTimeout(timer),
-                      (handler) => {
-                        streamTimeout = handler;
-                      },
+              try {
+                const redirectInit = {
+                  status: responseStatus,
+                  statusText: incoming.statusMessage,
+                  headers: toResponseHeaders(incoming.headers),
+                };
+                if (discardRedirectBody) {
+                  const redirectResponse = new Response(null, redirectInit);
+                  incoming.destroy();
+                  succeed(redirectResponse);
+                } else {
+                  succeed(
+                    new Response(
+                      streamIncoming(
+                        incoming,
+                        maxResponseBytes,
+                        () => clearTimeout(timer),
+                        (handler) => {
+                          streamTimeout = handler;
+                        },
+                      ),
+                      redirectInit,
                     ),
-                    redirectInit,
+                    true,
+                  );
+                }
+              } catch (cause) {
+                incoming.destroy();
+                fail(
+                  new AgentAuthError(
+                    "invalid_response",
+                    "Server returned a response that could not be read",
+                    undefined,
+                    { cause },
                   ),
-                  true,
                 );
               }
+              return;
+            }
+            const contentEncoding = String(
+              incoming.headers["content-encoding"] ?? "",
+            )
+              .split(",")
+              .map((coding) => coding.trim().toLowerCase())
+              .filter((coding) => coding && coding !== "identity");
+            if (canCarryBody && contentEncoding.length) {
+              incoming.destroy();
+              fail(
+                new AgentAuthError(
+                  "unsupported_content_encoding",
+                  `Server returned a ${contentEncoding.join(", ")} encoded body, which this transport does not decode`,
+                ),
+              );
               return;
             }
             const declared = Number(incoming.headers["content-length"]);
@@ -451,6 +496,9 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
         timeoutMs,
         signal,
       );
+    }
+    if (!("accept-encoding" in headers)) {
+      headers = { ...headers, "accept-encoding": "identity" };
     }
     if (body && body.byteLength > maxRequestBytes) {
       throw new AgentAuthError(

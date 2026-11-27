@@ -372,7 +372,11 @@ const bufferResponse = async (
   signal: AbortSignal,
 ): Promise<Response> => {
   throwIfExpiredFor(signal, response);
-  const declared = Number(response.headers.get("content-length"));
+  const declaredHeader = response.headers.get("content-length");
+  const declared =
+    declaredHeader === null || declaredHeader.trim() === ""
+      ? NaN
+      : Number(declaredHeader);
   if (Number.isFinite(declared) && declared > maxBytes) {
     discardBody(response);
     throw tooLarge(maxBytes);
@@ -412,6 +416,16 @@ const bufferResponse = async (
       offset += chunk.byteLength;
     }
   } else {
+    if (
+      response.body !== null &&
+      !NULL_BODY_STATUSES.has(response.status) &&
+      !Number.isFinite(declared)
+    ) {
+      throw new AgentAuthError(
+        "unbounded_response",
+        `The transport returned a body that cannot be read as a stream and declares no Content-Length, so the ${maxBytes} byte limit cannot be enforced. Use a bounded fetch such as createSafeFetch.`,
+      );
+    }
     bytes = new Uint8Array(await response.arrayBuffer());
     throwIfExpired(signal);
     if (bytes.byteLength > maxBytes) throw tooLarge(maxBytes);

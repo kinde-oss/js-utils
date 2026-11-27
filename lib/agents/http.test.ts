@@ -537,7 +537,11 @@ describe("UTF-8 decoding of buffered bodies", () => {
   });
 
   it("preserves non-ASCII JSON when the response has no readable stream", async () => {
-    const response = jsonResponse({ name: text });
+    const payload = JSON.stringify({ name: text });
+    const response = new Response(payload, {
+      status: 200,
+      headers: { "content-length": String(encoded(payload).byteLength) },
+    });
     Object.defineProperty(response, "body", { value: undefined });
     await expect(
       fetchJson(
@@ -615,6 +619,94 @@ describe("UTF-8 decoding of buffered bodies", () => {
     ).rejects.toMatchObject({
       code: "invalid_response",
       description: expect.stringContaining("UTF-8"),
+    });
+  });
+
+  describe("responses without a readable stream", () => {
+    const streamless = (payload: string, headers: Record<string, string>) => {
+      const response = new Response(payload, { status: 200, headers });
+      Object.defineProperty(response, "body", { value: undefined });
+      const arrayBuffer = vi.spyOn(response, "arrayBuffer");
+      return { response, arrayBuffer };
+    };
+
+    it("refuses to materialize a body that declares no Content-Length", async () => {
+      const { response, arrayBuffer } = streamless('{"ok":true}', {});
+      await expect(
+        fetchJson(
+          mockFetch(() => response),
+          "https://a.example.com/meta",
+          "Metadata",
+        ),
+      ).rejects.toMatchObject({ code: "unbounded_response" });
+      expect(arrayBuffer).not.toHaveBeenCalled();
+    });
+
+    it("rejects a declared length above the cap without materializing the body", async () => {
+      const { response, arrayBuffer } = streamless('{"ok":true}', {
+        "content-length": "5000",
+      });
+      await expect(
+        fetchJson(
+          mockFetch(() => response),
+          "https://a.example.com/meta",
+          "Metadata",
+          { maxResponseBytes: 1000 },
+        ),
+      ).rejects.toMatchObject({ code: "response_too_large" });
+      expect(arrayBuffer).not.toHaveBeenCalled();
+    });
+
+    it("still rejects a body that is larger than it declared", async () => {
+      const { response } = streamless("x".repeat(2000), {
+        "content-length": "10",
+      });
+      await expect(
+        fetchJson(
+          mockFetch(() => response),
+          "https://a.example.com/meta",
+          "Metadata",
+          { maxResponseBytes: 1000 },
+        ),
+      ).rejects.toMatchObject({ code: "response_too_large" });
+    });
+
+    it("reads an under-limit body that declares its length", async () => {
+      const { response } = streamless('{"ok":true}', {
+        "content-length": "11",
+      });
+      await expect(
+        fetchJson(
+          mockFetch(() => response),
+          "https://a.example.com/meta",
+          "Metadata",
+          { maxResponseBytes: 1000 },
+        ),
+      ).resolves.toEqual({ ok: true });
+    });
+
+    it("does not require a length for an empty-body status", async () => {
+      const response = new Response(null, { status: 204 });
+      Object.defineProperty(response, "body", { value: undefined });
+      await expect(
+        postForm(
+          mockFetch(() => response),
+          "https://a.example.com/token",
+          { a: "1" },
+        ),
+      ).resolves.toMatchObject({ status: 204 });
+    });
+
+    it("keeps bounded stream-less POST responses working", async () => {
+      const { response } = streamless('{"access_token":"t"}', {
+        "content-length": "20",
+      });
+      const result = await postForm(
+        mockFetch(() => response),
+        "https://a.example.com/token",
+        { a: "1" },
+      );
+      expect(await result.json()).toEqual({ access_token: "t" });
     });
   });
 
@@ -1762,7 +1854,10 @@ describe("deadline expiring while decoding and parsing", () => {
   );
 
   it("applies the same check when the response has no readable stream", async () => {
-    const response = jsonResponse({ ok: true });
+    const response = new Response('{"ok":true}', {
+      status: 200,
+      headers: { "content-length": "11" },
+    });
     Object.defineProperty(response, "body", { value: undefined });
     const elapsed = await withClockJump(async (advance) => {
       const spy = advanceAfterDecode(advance);

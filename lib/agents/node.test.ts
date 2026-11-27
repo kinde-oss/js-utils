@@ -1,6 +1,8 @@
 import { createServer } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
+import { createServer as createNetServer } from "node:net";
 import type { AddressInfo } from "node:net";
+import { gzipSync } from "node:zlib";
 import { runInNewContext } from "node:vm";
 import {
   afterAll,
@@ -695,6 +697,251 @@ describe("createSafeFetch transport", () => {
       );
       expect(await response.text()).toBe("ok");
       expect(seen).toEqual([{ method: "POST", body: "hello world" }]);
+    });
+  });
+
+  describe("request body read loop", () => {
+    const url = () => `http://127.0.0.1:${port}/`;
+    const upload = (stream: ReadableStream<Uint8Array>) =>
+      new Request(url(), {
+        method: "POST",
+        body: stream,
+        duplex: "half",
+      } as RequestInit);
+
+    it("stops a stream of endless empty chunks at the deadline", async () => {
+      let pulls = 0;
+      const stream = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          pulls += 1;
+          controller.enqueue(new Uint8Array(0));
+        },
+      });
+      handler = (_req, res) => res.end("ok");
+      const startedAt = performance.now();
+      await expect(
+        createSafeFetch({ ...options, timeoutMs: 100 })(upload(stream)),
+      ).rejects.toMatchObject({ code: "request_timeout" });
+      expect(performance.now() - startedAt).toBeLessThan(2000);
+      expect(pulls).toBeGreaterThan(0);
+    });
+
+    it("stops a stream of endless empty chunks when the request is cancelled", async () => {
+      const controller = new AbortController();
+      let pulls = 0;
+      const stream = new ReadableStream<Uint8Array>({
+        pull(source) {
+          pulls += 1;
+          if (pulls === 50) controller.abort();
+          source.enqueue(new Uint8Array(0));
+        },
+      });
+      handler = (_req, res) => res.end("ok");
+      await expect(
+        createSafeFetch({ ...options, timeoutMs: 5000 })(upload(stream), {
+          signal: controller.signal,
+        }),
+      ).rejects.toMatchObject({ code: "request_aborted" });
+    });
+
+    it("sends a finite upload that contains empty chunks", async () => {
+      const seen: string[] = [];
+      handler = (_req, res, body) => {
+        seen.push(body);
+        res.end("ok");
+      };
+      const parts = [
+        new Uint8Array(0),
+        new TextEncoder().encode("ab"),
+        new Uint8Array(0),
+        new Uint8Array(0),
+        new TextEncoder().encode("cd"),
+        new Uint8Array(0),
+      ];
+      const stream = new ReadableStream<Uint8Array>({
+        pull(source) {
+          const next = parts.shift();
+          if (next) source.enqueue(next);
+          else source.close();
+        },
+      });
+      const response = await createSafeFetch({
+        ...options,
+        maxRequestBytes: 4,
+        timeoutMs: 5000,
+      })(upload(stream));
+      expect(await response.text()).toBe("ok");
+      expect(seen).toEqual(["abcd"]);
+    });
+
+    it("does not retain empty chunks of the upload", async () => {
+      handler = (_req, res) => res.end("ok");
+      const parts = [
+        new Uint8Array(0),
+        new TextEncoder().encode("ab"),
+        new Uint8Array(0),
+        new TextEncoder().encode("cd"),
+        new Uint8Array(0),
+      ];
+      const stream = new ReadableStream<Uint8Array>({
+        pull(source) {
+          const next = parts.shift();
+          if (next) source.enqueue(next);
+          else source.close();
+        },
+      });
+      const concat = vi.spyOn(Buffer, "concat");
+      try {
+        await createSafeFetch({ ...options, timeoutMs: 5000 })(upload(stream));
+        const lists = concat.mock.calls.map(
+          ([list]) => list as readonly Uint8Array[],
+        );
+        expect(lists.some((list) => list.length === 2)).toBe(true);
+        expect(
+          lists.some((list) => list.some((chunk) => chunk.byteLength === 0)),
+        ).toBe(false);
+      } finally {
+        concat.mockRestore();
+      }
+    });
+
+    it("does not count empty chunks toward the upload limit", async () => {
+      const seen: string[] = [];
+      handler = (_req, res, body) => {
+        seen.push(body);
+        res.end("ok");
+      };
+      let pulls = 0;
+      const stream = new ReadableStream<Uint8Array>({
+        pull(source) {
+          pulls += 1;
+          if (pulls <= 200) source.enqueue(new Uint8Array(0));
+          else if (pulls === 201) source.enqueue(new TextEncoder().encode("x"));
+          else source.close();
+        },
+      });
+      const response = await createSafeFetch({
+        ...options,
+        maxRequestBytes: 1,
+        timeoutMs: 5000,
+      })(upload(stream));
+      expect(await response.text()).toBe("ok");
+      expect(seen).toEqual(["x"]);
+    });
+  });
+
+  describe("redirect responses with an unreadable reason phrase", () => {
+    const rawServer = async (phrase: string) => {
+      const raw = createNetServer((socket) => {
+        socket.on("data", () => {
+          socket.end(
+            `HTTP/1.1 302 ${phrase}\r\nLocation: /final\r\nContent-Length: 0\r\nConnection: close\r\n\r\n`,
+            "latin1",
+          );
+        });
+      });
+      await new Promise<void>((resolve) => raw.listen(0, "127.0.0.1", resolve));
+      const rawPort = (raw.address() as AddressInfo).port;
+      return {
+        url: `http://127.0.0.1:${rawPort}/`,
+        close: () => new Promise<void>((resolve) => raw.close(() => resolve())),
+      };
+    };
+
+    it.each(["manual", "follow", "error"] as const)(
+      "rejects with invalid_response in %s mode instead of throwing from the callback",
+      async (redirect) => {
+        const raw = await rawServer("Bad\u0001Phrase");
+        try {
+          await expect(
+            createSafeFetch(options)(raw.url, { redirect }),
+          ).rejects.toMatchObject({
+            code: "invalid_response",
+            cause: expect.any(TypeError),
+          });
+        } finally {
+          await raw.close();
+        }
+      },
+    );
+
+    it("still resolves a redirect with a valid reason phrase at its headers", async () => {
+      const raw = await rawServer("Found");
+      try {
+        const response = await createSafeFetch(options)(raw.url, {
+          redirect: "manual",
+        });
+        expect(response.status).toBe(302);
+        expect(response.headers.get("location")).toBe("/final");
+      } finally {
+        await raw.close();
+      }
+    });
+  });
+
+  describe("content-coded responses", () => {
+    const url = () => `http://127.0.0.1:${port}/meta`;
+    const payload = JSON.stringify({ ok: true });
+
+    it("asks for identity encoding unless the caller chose otherwise", async () => {
+      const seen: (string | undefined)[] = [];
+      handler = (req, res) => {
+        seen.push(req.headers["accept-encoding"]);
+        res.end(payload);
+      };
+      const safe = createSafeFetch(options);
+      await safe(url());
+      await safe(url(), { headers: { "Accept-Encoding": "gzip" } });
+      expect(seen).toEqual(["identity", "gzip"]);
+    });
+
+    it.each(["gzip", "br", "deflate", "gzip, identity", "GZIP"])(
+      "rejects a %s encoded body instead of handing the encoded bytes to JSON consumers",
+      async (encoding) => {
+        handler = (_req, res) => {
+          res.setHeader("content-type", "application/json");
+          res.setHeader("content-encoding", encoding);
+          res.end(gzipSync(payload));
+        };
+        await expect(createSafeFetch(options)(url())).rejects.toMatchObject({
+          code: "unsupported_content_encoding",
+        });
+      },
+    );
+
+    it("fails fetchJson with the encoding error instead of invalid UTF-8", async () => {
+      handler = (_req, res) => {
+        res.setHeader("content-type", "application/json");
+        res.setHeader("content-encoding", "gzip");
+        res.end(gzipSync(payload));
+      };
+      await expect(
+        fetchJson(createSafeFetch(options), url(), "Metadata", options),
+      ).rejects.toMatchObject({ code: "unsupported_content_encoding" });
+    });
+
+    it.each([undefined, "identity", "Identity"])(
+      "keeps identity-coded JSON working (%s)",
+      async (encoding) => {
+        handler = (_req, res) => {
+          res.setHeader("content-type", "application/json");
+          if (encoding) res.setHeader("content-encoding", encoding);
+          res.end(payload);
+        };
+        const response = await createSafeFetch(options)(url());
+        expect(await response.json()).toEqual({ ok: true });
+      },
+    );
+
+    it("does not reject a HEAD response that only carries the header", async () => {
+      handler = (_req, res) => {
+        res.setHeader("content-encoding", "gzip");
+        res.end();
+      };
+      const response = await createSafeFetch(options)(url(), {
+        method: "HEAD",
+      });
+      expect(response.status).toBe(200);
     });
   });
 
