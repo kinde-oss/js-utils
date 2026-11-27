@@ -1194,19 +1194,95 @@ describe("cancelling the body of a late response", () => {
     expect(getReader).not.toHaveBeenCalled();
   });
 
-  it("does not wait for the cancellation to finish", async () => {
-    const { response, cancel } = lateResponse();
-    cancel.mockImplementation(() => new Promise<void>(() => undefined));
-    const started = performance.now();
-    await expect(
-      fetchJson(
-        arriveLate(response),
-        "https://a.example.com/meta",
-        "Metadata",
-        { timeoutMs: 30 },
-      ),
-    ).rejects.toMatchObject({ code: "request_timeout" });
-    expect(performance.now() - started).toBeLessThan(1000);
+  describe("when the cancellation never settles", () => {
+    const realNow = performance.now.bind(performance);
+
+    const withClockJump = async (
+      run: (advance: () => void) => Promise<unknown>,
+    ) => {
+      let offset = 0;
+      const spy = vi
+        .spyOn(performance, "now")
+        .mockImplementation(() => realNow() + offset);
+      const started = realNow();
+      try {
+        await run(() => {
+          offset = 60_000;
+        });
+      } finally {
+        spy.mockRestore();
+      }
+      return realNow() - started;
+    };
+
+    const hungLateResponse = () => {
+      const response = new Response(
+        new ReadableStream({
+          start: () => undefined,
+          cancel: () => new Promise<void>(() => undefined),
+        }),
+        { status: 200 },
+      );
+      const cancel = vi.spyOn(response.body as ReadableStream, "cancel");
+      return { response, cancel };
+    };
+
+    it.each([
+      [
+        "fetchJson",
+        (f: typeof fetch) =>
+          fetchJson(f, "https://a.example.com/meta", "Metadata", {
+            timeoutMs: 2000,
+          }),
+      ],
+      [
+        "postForm",
+        (f: typeof fetch) =>
+          postForm(
+            f,
+            "https://a.example.com/token",
+            { a: "1" },
+            { timeoutMs: 2000 },
+          ),
+      ],
+      [
+        "postJson",
+        (f: typeof fetch) =>
+          postJson(
+            f,
+            "https://a.example.com/register",
+            {},
+            { timeoutMs: 2000 },
+          ),
+      ],
+      [
+        "postForm that discards a successful body",
+        (f: typeof fetch) =>
+          postForm(
+            f,
+            "https://a.example.com/revoke",
+            { token: "t" },
+            { timeoutMs: 2000, discardSuccessBody: true },
+          ),
+      ],
+    ])(
+      "%s rejects through the late-response cleanup, not the timer",
+      async (_name, send) => {
+        const { response, cancel } = hungLateResponse();
+        const elapsed = await withClockJump((advance) =>
+          expect(
+            send(
+              mockFetch(() => {
+                advance();
+                return response;
+              }),
+            ),
+          ).rejects.toMatchObject({ code: "request_timeout" }),
+        );
+        expect(cancel).toHaveBeenCalledTimes(1);
+        expect(elapsed).toBeLessThan(500);
+      },
+    );
   });
 
   it.each([
