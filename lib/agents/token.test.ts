@@ -488,3 +488,66 @@ describe("revokeToken", () => {
     ).rejects.toMatchObject({ status: 500 });
   });
 });
+
+describe("expires_in validation", () => {
+  const exchange = (expiresIn: unknown) =>
+    exchangeCode({
+      tokenEndpoint,
+      clientId: "c1",
+      code: "code1",
+      codeVerifier: "v1",
+      redirectUri: "https://app.example.com/callback",
+      resource: "https://api.example.com/mcp",
+      fetch: mockFetch(() =>
+        jsonResponse({
+          access_token: "at",
+          token_type: "Bearer",
+          ...(expiresIn !== undefined && { expires_in: expiresIn }),
+        }),
+      ),
+    });
+
+  it.each([
+    ["an overflowing lifetime", 1e308],
+    ["a negative lifetime", -5],
+    ["a fractional lifetime", 1.5],
+    ["a lifetime beyond the representable date range", 9e15],
+    ["a string lifetime", "60"],
+    ["a null lifetime", null],
+  ])("omits the expiry metadata for %s", async (_name, expiresIn) => {
+    const tokens = await exchange(expiresIn);
+    expect(tokens.accessToken).toBe("at");
+    expect(tokens).not.toHaveProperty("expiresIn");
+    expect(tokens).not.toHaveProperty("expiresAt");
+  });
+
+  it.each([0, 60, 3600])("keeps an ordinary lifetime of %i", async (value) => {
+    const before = Date.now();
+    const tokens = await exchange(value);
+    expect(tokens.expiresIn).toBe(value);
+    expect(tokens.expiresAt).toBeGreaterThanOrEqual(before + value * 1000);
+    expect(Number.isFinite(tokens.expiresAt)).toBe(true);
+  });
+
+  it("keeps a response without a lifetime", async () => {
+    const tokens = await exchange(undefined);
+    expect(tokens).not.toHaveProperty("expiresAt");
+  });
+
+  it("applies the same validation when refreshing", async () => {
+    const tokens = await refreshAccessToken({
+      tokenEndpoint,
+      clientId: "c1",
+      refreshToken: "rt",
+      resource: "https://api.example.com/mcp",
+      fetch: mockFetch(() =>
+        jsonResponse({
+          access_token: "at",
+          token_type: "Bearer",
+          expires_in: 1e308,
+        }),
+      ),
+    });
+    expect(tokens).not.toHaveProperty("expiresAt");
+  });
+});

@@ -273,6 +273,7 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
     body: Buffer | undefined,
     signal: AbortSignal | null | undefined,
     discardRedirectBody: boolean,
+    streamSuccess: boolean,
   ): Promise<Response> =>
     new Promise<Response>((resolve, reject) => {
       let streamTimeout: ((error: Error) => void) | undefined;
@@ -348,6 +349,44 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
                     true,
                   );
                 }
+              } catch (cause) {
+                incoming.destroy();
+                fail(
+                  new AgentAuthError(
+                    "invalid_response",
+                    "Server returned a response that could not be read",
+                    undefined,
+                    { cause },
+                  ),
+                );
+              }
+              return;
+            }
+            if (
+              streamSuccess &&
+              canCarryBody &&
+              responseStatus >= 200 &&
+              responseStatus < 300
+            ) {
+              try {
+                succeed(
+                  new Response(
+                    streamIncoming(
+                      incoming,
+                      maxResponseBytes,
+                      () => clearTimeout(timer),
+                      (handler) => {
+                        streamTimeout = handler;
+                      },
+                    ),
+                    {
+                      status: responseStatus,
+                      statusText: incoming.statusMessage,
+                      headers: toResponseHeaders(incoming.headers),
+                    },
+                  ),
+                  true,
+                );
               } catch (cause) {
                 incoming.destroy();
                 fail(
@@ -476,6 +515,9 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
       new Headers(init?.headers ?? original?.headers).entries(),
     );
     const signal = init?.signal ?? original?.signal;
+    const streamSuccess =
+      (init as { discardSuccessBody?: boolean } | undefined)
+        ?.discardSuccessBody === true;
     let body: Buffer | undefined;
     if (init?.body !== undefined && init.body !== null) {
       body = toBody(init.body);
@@ -516,6 +558,7 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
         body,
         signal,
         redirect !== "manual",
+        streamSuccess,
       );
 
       if (!REDIRECT_STATUSES.has(response.status) || redirect === "manual") {

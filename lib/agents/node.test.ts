@@ -45,6 +45,7 @@ vi.mock("node:dns", async (importOriginal) => {
 import { AgentAuthError } from "./errors";
 import { discoverAgentAuth } from "./discovery";
 import { fetchJson } from "./http";
+import { revokeToken } from "./token";
 import { createSafeFetch } from "./node";
 
 type Handler = (
@@ -876,6 +877,127 @@ describe("createSafeFetch transport", () => {
       } finally {
         await raw.close();
       }
+    });
+  });
+
+  describe("successful bodies that the caller discards", () => {
+    const open: ServerResponse[] = [];
+    afterEach(() => {
+      open.splice(0).forEach((res) => res.destroy());
+    });
+
+    const revocationUrl = () => `http://127.0.0.1:${port}/revoke`;
+    const capped = { ...options, maxResponseBytes: 1000, timeoutMs: 5000 };
+    const revoke = (fetch: ReturnType<typeof createSafeFetch>) =>
+      revokeToken({
+        revocationEndpoint: revocationUrl(),
+        token: "t",
+        clientId: "c",
+        allowPrivateNetworks: true,
+        fetch,
+      });
+
+    it("does not fail a revocation whose successful body exceeds the transport limit", async () => {
+      handler = (_req, res) => {
+        res.statusCode = 200;
+        res.end("x".repeat(5000));
+      };
+      await expect(revoke(createSafeFetch(capped))).resolves.toBeUndefined();
+    });
+
+    it("does not fail a revocation whose successful body declares a length above the limit", async () => {
+      handler = (_req, res) => {
+        res.setHeader("content-length", "500000");
+        res.write("partial");
+        open.push(res);
+      };
+      await expect(revoke(createSafeFetch(capped))).resolves.toBeUndefined();
+    });
+
+    it("does not wait for a successful body that never ends", async () => {
+      let closed = false;
+      handler = (_req, res) => {
+        res.statusCode = 200;
+        res.write("partial");
+        res.on("close", () => {
+          closed = true;
+        });
+        open.push(res);
+      };
+      const startedAt = Date.now();
+      await expect(
+        revoke(createSafeFetch({ ...capped, timeoutMs: 3000 })),
+      ).resolves.toBeUndefined();
+      expect(Date.now() - startedAt).toBeLessThan(1500);
+      await vi.waitFor(() => expect(closed).toBe(true));
+    });
+
+    it("returns the headers of a successful response when the hint is set and cancels the body on discard", async () => {
+      let closed = false;
+      handler = (_req, res) => {
+        res.statusCode = 200;
+        res.setHeader("x-seen", "yes");
+        res.write("partial");
+        res.on("close", () => {
+          closed = true;
+        });
+        open.push(res);
+      };
+      const response = await createSafeFetch(capped)(revocationUrl(), {
+        method: "POST",
+        redirect: "error",
+        discardSuccessBody: true,
+      } as RequestInit);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("x-seen")).toBe("yes");
+      await response.body?.cancel();
+      await vi.waitFor(() => expect(closed).toBe(true));
+    });
+
+    it("keeps bounding a streamed successful body that is read", async () => {
+      handler = (_req, res) => {
+        res.statusCode = 200;
+        res.end("x".repeat(5000));
+      };
+      const response = await createSafeFetch(capped)(revocationUrl(), {
+        method: "POST",
+        discardSuccessBody: true,
+      } as RequestInit);
+      await expect(response.text()).rejects.toMatchObject({
+        code: "response_too_large",
+      });
+    });
+
+    it("keeps bounded reads for error responses of a revocation", async () => {
+      handler = (_req, res) => {
+        res.statusCode = 400;
+        res.end("x".repeat(5000));
+      };
+      await expect(revoke(createSafeFetch(capped))).rejects.toMatchObject({
+        code: "response_too_large",
+      });
+    });
+
+    it("surfaces the OAuth error of a revocation failure through the transport", async () => {
+      handler = (_req, res) => {
+        res.statusCode = 400;
+        res.setHeader("content-type", "application/json");
+        res.end(JSON.stringify({ error: "unsupported_token_type" }));
+      };
+      await expect(revoke(createSafeFetch(capped))).rejects.toMatchObject({
+        code: "unsupported_token_type",
+        status: 400,
+      });
+    });
+
+    it("keeps buffering and capping a successful body without the hint", async () => {
+      handler = (_req, res) => {
+        res.statusCode = 200;
+        res.end("x".repeat(5000));
+      };
+      await expect(
+        createSafeFetch(capped)(revocationUrl(), { method: "POST" }),
+      ).rejects.toMatchObject({ code: "response_too_large" });
     });
   });
 

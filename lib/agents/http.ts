@@ -527,7 +527,8 @@ const post = (
       signal,
       headers,
       body,
-    });
+      ...(options.discardSuccessBody && { discardSuccessBody: true }),
+    } as RequestInit);
     throwIfExpiredFor(signal, response);
     if (options.discardSuccessBody && response.ok) {
       discardBody(response);

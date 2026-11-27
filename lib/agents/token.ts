@@ -48,7 +48,13 @@ const parseTokenResponse = async (
     );
   }
   const expiresIn =
-    typeof data.expires_in === "number" ? data.expires_in : undefined;
+    typeof data.expires_in === "number" &&
+    Number.isInteger(data.expires_in) &&
+    data.expires_in >= 0 &&
+    Number.isFinite(Date.now() + data.expires_in * 1000) &&
+    !Number.isNaN(new Date(Date.now() + data.expires_in * 1000).getTime())
+      ? data.expires_in
+      : undefined;
   const refreshToken =
     typeof data.refresh_token === "string" && data.refresh_token
       ? data.refresh_token
