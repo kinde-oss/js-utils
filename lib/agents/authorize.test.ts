@@ -14,6 +14,24 @@ const options = {
 };
 
 describe("buildAuthorizationUrl", () => {
+  it.each([
+    "/mcp",
+    "api.example.com/mcp",
+    "https://api.example.com/mcp#section",
+    "https://api.example.com/mcp#",
+    "",
+  ])("rejects the invalid resource %j", async (resource) => {
+    await expect(
+      buildAuthorizationUrl({ ...options, resource }),
+    ).rejects.toMatchObject({ code: "invalid_url" });
+  });
+
+  it("keeps a valid resource with a query unchanged", async () => {
+    const resource = "https://api.example.com/mcp?tenant=a";
+    const result = await buildAuthorizationUrl({ ...options, resource });
+    expect(result.url.searchParams.get("resource")).toBe(resource);
+  });
+
   it("builds a PKCE url without nonce or openid", async () => {
     const result = await buildAuthorizationUrl({
       ...options,

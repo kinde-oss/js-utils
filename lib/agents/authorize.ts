@@ -1,6 +1,7 @@
 import { AgentAuthError } from "./errors";
 import {
   assertNoOpenId,
+  assertResourceIdentifier,
   assertSecureUrl,
   normalizeScope,
   parseUrl,
@@ -30,6 +31,8 @@ export const buildAuthorizationUrl = async (
   options: BuildAuthorizationUrlOptions,
 ): Promise<AuthorizationRequest> => {
   const { authorizationServer, clientId, redirectUri, resource } = options;
+
+  assertResourceIdentifier(resource);
 
   const supportedMethods = stringArray(
     authorizationServer.code_challenge_methods_supported,

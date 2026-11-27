@@ -140,6 +140,16 @@ export const normalizeScope = (scope?: string | string[]): string[] => {
   return [...new Set(parts.map((s) => s.trim()).filter(Boolean))];
 };
 
+export const assertResourceIdentifier = (value: string): void => {
+  const url = parseUrl(value, "resource");
+  if (url.hash || value.includes("#")) {
+    throw new AgentAuthError(
+      "invalid_url",
+      "resource must not contain a fragment",
+    );
+  }
+};
+
 export const assertNoOpenId = (scopes: string[]): void => {
   if (scopes.includes("openid")) {
     throw new AgentAuthError(
