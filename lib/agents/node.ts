@@ -4,6 +4,7 @@ import { request as httpRequest } from "node:http";
 import type { ClientRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import type { LookupFunction } from "node:net";
+import { types } from "node:util";
 import { AgentAuthError } from "./errors";
 import { isPrivateHost } from "./http";
 import type { FetchLike } from "./types";
@@ -86,9 +87,6 @@ const toBody = (body: BodyInit | null | undefined): Buffer | undefined => {
   );
 };
 
-const isUint8Array = (value: unknown): value is Uint8Array =>
-  Object.prototype.toString.call(value) === "[object Uint8Array]";
-
 const readRequestBody = async (
   request: Request,
   maxBytes: number,
@@ -131,7 +129,7 @@ const readRequestBody = async (
     for (;;) {
       const { done, value } = await reader.read();
       if (done) return Buffer.concat(chunks);
-      if (!isUint8Array(value)) {
+      if (!types.isUint8Array(value)) {
         throw new AgentAuthError(
           "invalid_request_body",
           "The request body stream produced a chunk that is not a Uint8Array",

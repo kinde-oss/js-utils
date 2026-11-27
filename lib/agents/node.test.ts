@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
+import { runInNewContext } from "node:vm";
 import {
   afterAll,
   afterEach,
@@ -568,6 +569,63 @@ describe("createSafeFetch transport", () => {
         expect(seen).toHaveLength(0);
       },
     );
+
+    it("accepts a real byte array whose display tag was changed", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const chunk = new Uint8Array([97, 98, 99]);
+      Object.defineProperty(chunk, Symbol.toStringTag, { value: "Custom" });
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(chunk);
+          controller.close();
+        },
+      });
+      await createSafeFetch(options)(
+        streamRequest(`http://pinned.example.com:${port}/`, body),
+      );
+      expect(seen).toEqual([{ method: "POST", body: "abc" }]);
+    });
+
+    it("rejects an object that only claims to be a Uint8Array", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const fake = {
+        [Symbol.toStringTag]: "Uint8Array",
+        byteLength: 3,
+      };
+      const body = new ReadableStream<unknown>({
+        start(controller) {
+          controller.enqueue(fake);
+          controller.close();
+        },
+      }) as unknown as ReadableStream<Uint8Array>;
+      await expect(
+        createSafeFetch(options)(
+          streamRequest(`http://pinned.example.com:${port}/`, body),
+        ),
+      ).rejects.toMatchObject({ code: "invalid_request_body" });
+      expect(seen).toHaveLength(0);
+    });
+
+    it("accepts byte arrays created in another realm", async () => {
+      resolveTo("pinned.example.com", ["127.0.0.1", 4]);
+      const seen = record();
+      const foreign = runInNewContext(
+        "new Uint8Array([100, 101])",
+      ) as Uint8Array;
+      expect(foreign instanceof Uint8Array).toBe(false);
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(foreign);
+          controller.close();
+        },
+      });
+      await createSafeFetch(options)(
+        streamRequest(`http://pinned.example.com:${port}/`, body),
+      );
+      expect(seen).toEqual([{ method: "POST", body: "de" }]);
+    });
 
     it("rejects an invalid chunk that follows valid ones", async () => {
       resolveTo("pinned.example.com", ["127.0.0.1", 4]);
