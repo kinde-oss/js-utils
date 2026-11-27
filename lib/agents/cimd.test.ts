@@ -48,6 +48,16 @@ describe("buildClientMetadataDocument", () => {
     ).toThrow();
   });
 
+  it.each([
+    "https://app.example.com/callback#",
+    "myapp://callback#",
+    "http://127.0.0.1:8123/cb#",
+  ])("rejects the empty fragment in %s", (uri) => {
+    expect(() =>
+      buildClientMetadataDocument({ ...base, redirectUris: [uri] }),
+    ).toThrow(/fragment/);
+  });
+
   it("allows loopback http redirects", () => {
     expect(() =>
       buildClientMetadataDocument({

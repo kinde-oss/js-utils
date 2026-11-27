@@ -55,7 +55,9 @@ export const assertValidRedirectUri = (redirectUri: string): void => {
   } catch {
     throw invalid(`redirect_uri is not a valid URL: ${redirectUri}`);
   }
-  if (url.hash) throw invalid("redirect_uri must not contain a fragment");
+  if (url.hash || redirectUri.includes("#")) {
+    throw invalid("redirect_uri must not contain a fragment");
+  }
   if (FORBIDDEN_REDIRECT_SCHEMES.has(url.protocol)) {
     throw invalid(`redirect_uri scheme not allowed: ${url.protocol}`);
   }
