@@ -1105,23 +1105,41 @@ describe("deadline checks against the clock", () => {
     ).rejects.toMatchObject({ code: "request_timeout" });
   });
 
-  it("stops reading a body once the deadline has passed", async () => {
+  it("does not request another chunk once the first read crosses the deadline", async () => {
     let pulls = 0;
     const response = new Response(
-      new ReadableStream({
-        pull(controller) {
-          pulls += 1;
-          if (pulls === 1) {
-            blockFor(80);
-            controller.enqueue(new TextEncoder().encode('{"ok":'));
-          } else {
-            controller.enqueue(new TextEncoder().encode("true}"));
-            controller.close();
-          }
+      new ReadableStream(
+        {
+          pull(controller) {
+            pulls += 1;
+            if (pulls === 1) {
+              blockFor(80);
+              controller.enqueue(new TextEncoder().encode('{"ok":'));
+            } else {
+              controller.enqueue(new TextEncoder().encode("true}"));
+              controller.close();
+            }
+          },
         },
-      }),
+        { highWaterMark: 0 },
+      ),
       { status: 200 },
     );
+    const stream = response.body as ReadableStream<Uint8Array>;
+    const getReader = stream.getReader.bind(
+      stream,
+    ) as () => ReadableStreamDefaultReader<Uint8Array>;
+    let reads = 0;
+    stream.getReader = ((): ReadableStreamDefaultReader<Uint8Array> => {
+      const reader = getReader();
+      const read = reader.read.bind(reader);
+      reader.read = () => {
+        reads += 1;
+        return read();
+      };
+      return reader;
+    }) as typeof stream.getReader;
+
     await expect(
       fetchJson(
         mockFetch(() => response),
@@ -1130,6 +1148,7 @@ describe("deadline checks against the clock", () => {
         { timeoutMs: 30 },
       ),
     ).rejects.toMatchObject({ code: "request_timeout" });
+    expect(reads).toBe(1);
   });
 
   it("applies the same clock check to POST helpers", async () => {
