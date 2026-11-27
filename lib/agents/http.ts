@@ -338,16 +338,15 @@ const bufferResponse = async (
     if (bytes.byteLength > maxBytes) throw tooLarge(maxBytes);
   }
 
-  return new Response(
-    NULL_BODY_STATUSES.has(response.status)
-      ? null
-      : decodeUtf8(bytes, response.ok),
-    {
-      status: response.status,
-      statusText: response.statusText,
-      headers: response.headers,
-    },
-  );
+  const text = NULL_BODY_STATUSES.has(response.status)
+    ? null
+    : decodeUtf8(bytes, response.ok);
+  throwIfExpired(signal);
+  return new Response(text, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
 };
 
 export const fetchJson = async <T>(
@@ -403,7 +402,9 @@ export const fetchJson = async <T>(
         if (!buffered.ok) {
           throw await toOAuthError(buffered, label);
         }
-        return readJson<T>(buffered, label);
+        const parsed = await readJson<T>(buffered, label);
+        throwIfExpired(signal);
+        return parsed;
       }
       throw new AgentAuthError(
         "too_many_redirects",

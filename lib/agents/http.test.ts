@@ -1465,3 +1465,153 @@ describe("a cancellation that never settles", () => {
     ).resolves.toEqual({ ok: true });
   });
 });
+
+describe("deadline expiring while decoding and parsing", () => {
+  const realNow = performance.now.bind(performance);
+
+  const withClockJump = async (
+    run: (advance: () => void) => Promise<unknown>,
+  ) => {
+    let offset = 0;
+    const spy = vi
+      .spyOn(performance, "now")
+      .mockImplementation(() => realNow() + offset);
+    const started = realNow();
+    try {
+      await run(() => {
+        offset = 60_000;
+      });
+    } finally {
+      spy.mockRestore();
+    }
+    return realNow() - started;
+  };
+
+  const advanceAfterJsonParse = (advance: () => void) => {
+    const original = Response.prototype.json;
+    return vi
+      .spyOn(Response.prototype, "json")
+      .mockImplementation(async function (this: Response) {
+        const value = await original.call(this);
+        advance();
+        return value;
+      });
+  };
+
+  const advanceAfterDecode = (advance: () => void) => {
+    const original = TextDecoder.prototype.decode;
+    return vi
+      .spyOn(TextDecoder.prototype, "decode")
+      .mockImplementation(function (this: TextDecoder, ...args) {
+        const value = original.apply(this, args);
+        advance();
+        return value;
+      });
+  };
+
+  it("does not return a parsed body after the deadline passed during parsing", async () => {
+    const elapsed = await withClockJump(async (advance) => {
+      const spy = advanceAfterJsonParse(advance);
+      try {
+        await expect(
+          fetchJson(
+            mockFetch(() => jsonResponse({ ok: true })),
+            "https://a.example.com/meta",
+            "Metadata",
+            { timeoutMs: 2000 },
+          ),
+        ).rejects.toMatchObject({ code: "request_timeout" });
+      } finally {
+        spy.mockRestore();
+      }
+    });
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  it("keeps the parsed result when the deadline has not passed", async () => {
+    const spy = advanceAfterJsonParse(() => undefined);
+    try {
+      await expect(
+        fetchJson(
+          mockFetch(() => jsonResponse({ ok: true })),
+          "https://a.example.com/meta",
+          "Metadata",
+          { timeoutMs: 2000 },
+        ),
+      ).resolves.toEqual({ ok: true });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it.each([
+    [
+      "postForm",
+      (f: typeof fetch) =>
+        postForm(
+          f,
+          "https://a.example.com/token",
+          { a: "1" },
+          {
+            timeoutMs: 2000,
+          },
+        ),
+    ],
+    [
+      "postJson",
+      (f: typeof fetch) =>
+        postJson(f, "https://a.example.com/register", {}, { timeoutMs: 2000 }),
+    ],
+  ])(
+    "%s does not return a body decoded after the deadline passed",
+    async (_name, send) => {
+      const elapsed = await withClockJump(async (advance) => {
+        const spy = advanceAfterDecode(advance);
+        try {
+          await expect(
+            send(mockFetch(() => jsonResponse({ access_token: "late" }))),
+          ).rejects.toMatchObject({ code: "request_timeout" });
+        } finally {
+          spy.mockRestore();
+        }
+      });
+      expect(elapsed).toBeLessThan(500);
+    },
+  );
+
+  it("applies the same check when the response has no readable stream", async () => {
+    const response = jsonResponse({ ok: true });
+    Object.defineProperty(response, "body", { value: undefined });
+    const elapsed = await withClockJump(async (advance) => {
+      const spy = advanceAfterDecode(advance);
+      try {
+        await expect(
+          fetchJson(
+            mockFetch(() => response),
+            "https://a.example.com/meta",
+            "Metadata",
+            { timeoutMs: 2000 },
+          ),
+        ).rejects.toMatchObject({ code: "request_timeout" });
+      } finally {
+        spy.mockRestore();
+      }
+    });
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  it("keeps the decoded body when the deadline has not passed", async () => {
+    const spy = advanceAfterDecode(() => undefined);
+    try {
+      const response = await postForm(
+        mockFetch(() => jsonResponse({ access_token: "ok" })),
+        "https://a.example.com/token",
+        { a: "1" },
+        { timeoutMs: 2000 },
+      );
+      expect(await response.json()).toEqual({ access_token: "ok" });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
