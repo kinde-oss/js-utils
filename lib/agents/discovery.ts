@@ -256,6 +256,7 @@ export const discoverAgentAuth = async (
     );
   }
   assertSecureUrl(resourceUrl, "resourceUrl");
+  resolveFetch(options.fetch);
 
   const challengeMetadataUrl = challenge?.resourceMetadata;
   const candidates = challengeMetadataUrl

@@ -1,7 +1,69 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AgentAuthError } from "./errors";
-import { fetchJson, isPrivateHost, postForm, postJson } from "./http";
+import {
+  fetchJson,
+  isPrivateHost,
+  postForm,
+  postJson,
+  resolveFetch,
+} from "./http";
 import { jsonResponse, mockFetch } from "./testUtils";
+
+describe("resolveFetch on React Native", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("refuses the default fetch because it cannot enforce the redirect policy", () => {
+    vi.stubGlobal("navigator", { product: "ReactNative" });
+    expect(() => resolveFetch()).toThrowError(
+      expect.objectContaining({ code: "unsupported_transport" }),
+    );
+  });
+
+  it("uses a custom fetch that the caller supplies", () => {
+    vi.stubGlobal("navigator", { product: "ReactNative" });
+    const custom = mockFetch(() => jsonResponse({}));
+    expect(resolveFetch(custom)).toBe(custom);
+  });
+
+  it("keeps the default fetch on runtimes that enforce the policy", () => {
+    expect(resolveFetch()).toBe(globalThis.fetch);
+    vi.stubGlobal("navigator", { product: "Gecko" });
+    expect(resolveFetch()).toBe(globalThis.fetch);
+  });
+
+  it("sends nothing from fetchJson-based discovery, token and registration calls without a custom fetch", async () => {
+    vi.stubGlobal("navigator", { product: "ReactNative" });
+    const sent = vi.spyOn(globalThis, "fetch");
+    const { discoverAgentAuth } = await import("./discovery");
+    const { registerClient } = await import("./clientIdentity");
+    const { refreshAccessToken } = await import("./token");
+
+    await expect(
+      discoverAgentAuth({
+        wwwAuthenticate: "Bearer",
+        resourceUrl: "https://api.example.com/mcp",
+      }),
+    ).rejects.toMatchObject({ code: "unsupported_transport" });
+    await expect(
+      registerClient("https://auth.example.com/register", {
+        clientName: "a",
+        redirectUris: ["https://app.example.com/cb"],
+      }),
+    ).rejects.toMatchObject({ code: "unsupported_transport" });
+    await expect(
+      refreshAccessToken({
+        tokenEndpoint: "https://auth.example.com/token",
+        clientId: "c",
+        refreshToken: "r",
+        resource: "https://api.example.com/mcp",
+      }),
+    ).rejects.toMatchObject({ code: "unsupported_transport" });
+    expect(sent).not.toHaveBeenCalled();
+  });
+});
 
 describe("isPrivateHost", () => {
   it.each([

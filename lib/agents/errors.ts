@@ -21,6 +21,7 @@ export type AgentAuthErrorCode =
   | "request_timeout"
   | "unsupported_token_auth_method"
   | "response_too_large"
+  | "unsupported_transport"
   | (string & {});
 
 export class AgentAuthError extends Error {

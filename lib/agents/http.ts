@@ -15,7 +15,16 @@ const PRIVATE_SUFFIXES = [
   ".home.arpa",
 ];
 
+const isReactNative = (): boolean =>
+  typeof navigator !== "undefined" && navigator.product === "ReactNative";
+
 export const resolveFetch = (custom?: FetchLike): FetchLike => {
+  if (!custom && isReactNative()) {
+    throw new AgentAuthError(
+      "unsupported_transport",
+      "The default React Native fetch follows redirects before JavaScript can validate them. Pass a fetch implementation that honors redirect: manual and redirect: error.",
+    );
+  }
   const impl = custom ?? globalThis.fetch;
   if (typeof impl !== "function") {
     throw new AgentAuthError("fetch_unavailable", "No fetch implementation");
