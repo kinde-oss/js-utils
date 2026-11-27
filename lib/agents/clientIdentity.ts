@@ -109,6 +109,12 @@ export const registerClient = async (
 
   if (assignedAuthMethod !== undefined) {
     assertSupportedAuthMethod(assignedAuthMethod);
+    if (assignedAuthMethod === "client_secret_post" && !clientSecret) {
+      throw new AgentAuthError(
+        "invalid_response",
+        "Registration response assigns client_secret_post but omits client_secret",
+      );
+    }
   }
 
   return {

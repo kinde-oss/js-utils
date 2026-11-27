@@ -213,6 +213,9 @@ describe("registerClient", () => {
           {
             client_id: "dcr-1",
             token_endpoint_auth_method: tokenEndpointAuthMethod,
+            ...(tokenEndpointAuthMethod === "client_secret_post" && {
+              client_secret: "s",
+            }),
           },
           { status: 201 },
         ),
@@ -226,6 +229,38 @@ describe("registerClient", () => {
       expect(sent.token_endpoint_auth_method).toBe(tokenEndpointAuthMethod);
     },
   );
+
+  it.each([undefined, "", null])(
+    "rejects an assigned client_secret_post without a usable client_secret (%j)",
+    async (clientSecret) => {
+      await expect(
+        registerClient(serverMetadata.registration_endpoint, registration, {
+          fetch: mockFetch(() =>
+            jsonResponse({
+              client_id: "dcr-1",
+              token_endpoint_auth_method: "client_secret_post",
+              ...(clientSecret !== undefined && {
+                client_secret: clientSecret,
+              }),
+            }),
+          ),
+        }),
+      ).rejects.toMatchObject({ code: "invalid_response" });
+    },
+  );
+
+  it("accepts a secret-free response assigned the none method", async () => {
+    await expect(
+      registerClient(serverMetadata.registration_endpoint, registration, {
+        fetch: mockFetch(() =>
+          jsonResponse({
+            client_id: "dcr-1",
+            token_endpoint_auth_method: "none",
+          }),
+        ),
+      }),
+    ).resolves.toEqual({ method: "dcr", clientId: "dcr-1" });
+  });
 
   it("refuses a registration whose assigned auth method is unsupported", async () => {
     await expect(
