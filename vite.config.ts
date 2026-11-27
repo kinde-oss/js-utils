@@ -13,16 +13,21 @@ export default defineConfig({
   build: {
     copyPublicDir: false,
     lib: {
-      entry: resolve(rootDir, "lib/main.ts"),
+      entry: {
+        "js-utils": resolve(rootDir, "lib/main.ts"),
+        agents: resolve(rootDir, "lib/agents/index.ts"),
+        "agents-node": resolve(rootDir, "lib/agents/node.ts"),
+      },
       formats: ["es", "cjs"],
       name: "@kinde/js-utils",
-      fileName: "js-utils",
+      fileName: (format, entryName) =>
+        `${entryName}.${format === "es" ? "js" : "cjs"}`,
     },
     target: "esnext",
     outDir: "dist",
     emptyOutDir: true,
     rolldownOptions: {
-      external: ["/src/tests/**"],
+      external: ["/src/tests/**", /^node:/],
     },
   },
   root: "",
