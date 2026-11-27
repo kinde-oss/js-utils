@@ -266,10 +266,71 @@ const tooLarge = (maxBytes: number) =>
     `Response exceeded ${maxBytes} bytes`,
   );
 
+const decodeUtf8Lossy = (bytes: Uint8Array): string => {
+  let out = "";
+  let codePoint = 0;
+  let needed = 0;
+  let seen = 0;
+  let lower = 0x80;
+  let upper = 0xbf;
+
+  for (let i = 0; i < bytes.length; i++) {
+    const byte = bytes[i];
+    if (needed === 0) {
+      if (byte <= 0x7f) {
+        out += String.fromCharCode(byte);
+      } else if (byte >= 0xc2 && byte <= 0xdf) {
+        needed = 1;
+        codePoint = byte & 0x1f;
+      } else if (byte >= 0xe0 && byte <= 0xef) {
+        if (byte === 0xe0) lower = 0xa0;
+        if (byte === 0xed) upper = 0x9f;
+        needed = 2;
+        codePoint = byte & 0x0f;
+      } else if (byte >= 0xf0 && byte <= 0xf4) {
+        if (byte === 0xf0) lower = 0x90;
+        if (byte === 0xf4) upper = 0x8f;
+        needed = 3;
+        codePoint = byte & 0x07;
+      } else {
+        out += "\uFFFD";
+      }
+      continue;
+    }
+    if (byte < lower || byte > upper) {
+      codePoint = 0;
+      needed = 0;
+      seen = 0;
+      lower = 0x80;
+      upper = 0xbf;
+      out += "\uFFFD";
+      i--;
+      continue;
+    }
+    lower = 0x80;
+    upper = 0xbf;
+    codePoint = (codePoint << 6) | (byte & 0x3f);
+    seen++;
+    if (seen === needed) {
+      out += String.fromCodePoint(codePoint);
+      codePoint = 0;
+      needed = 0;
+      seen = 0;
+    }
+  }
+  if (needed !== 0) out += "\uFFFD";
+  return out.charCodeAt(0) === 0xfeff ? out.slice(1) : out;
+};
+
 const decodeUtf8 = (bytes: Uint8Array, strict = true): string => {
+  if (!strict) {
+    return typeof TextDecoder !== "undefined"
+      ? new TextDecoder("utf-8").decode(bytes)
+      : decodeUtf8Lossy(bytes);
+  }
   try {
     if (typeof TextDecoder !== "undefined") {
-      return new TextDecoder("utf-8", { fatal: strict }).decode(bytes);
+      return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     }
     const percentEncoded = Array.from(
       bytes,
@@ -277,7 +338,6 @@ const decodeUtf8 = (bytes: Uint8Array, strict = true): string => {
     ).join("");
     return decodeURIComponent(percentEncoded).replace(/^\uFEFF/, "");
   } catch (cause) {
-    if (!strict) return "";
     throw new AgentAuthError(
       "invalid_response",
       "Response body is not valid UTF-8",

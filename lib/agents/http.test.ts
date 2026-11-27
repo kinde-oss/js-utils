@@ -926,21 +926,88 @@ describe("malformed UTF-8 in failed responses", () => {
     },
   );
 
-  it("still recovers an OAuth error body that contains a stray invalid byte", async () => {
-    const encoder = new TextEncoder();
-    const bytes = new Uint8Array([
-      ...encoder.encode('{"error":"invalid_request","error_description":"bad '),
-      0xff,
-      ...encoder.encode(' byte"}'),
+  const encoder = new TextEncoder();
+  const errorBody = (
+    description: Uint8Array,
+    prefix: Uint8Array = new Uint8Array(),
+  ) =>
+    new Uint8Array([
+      ...prefix,
+      ...encoder.encode('{"error":"invalid_request","error_description":"A'),
+      ...description,
+      ...encoder.encode('B"}'),
     ]);
-    await expect(
-      fetchJson(
-        mockFetch(() => new Response(bodyOf(bytes), { status: 400 })),
-        "https://a.example.com/meta",
-        "Metadata",
-      ),
-    ).rejects.toMatchObject({ code: "invalid_request", status: 400 });
-  });
+  const failWith = (bytes: Uint8Array, status = 400) =>
+    fetchJson(
+      mockFetch(() => new Response(bodyOf(bytes), { status })),
+      "https://a.example.com/meta",
+      "Metadata",
+    ).then(
+      () => {
+        throw new Error("expected the request to fail");
+      },
+      (error: AgentAuthError) => error,
+    );
+
+  it.each([
+    ["with TextDecoder", () => undefined],
+    ["without TextDecoder", () => vi.stubGlobal("TextDecoder", undefined)],
+  ])(
+    "still recovers an OAuth error body that contains a stray invalid byte %s",
+    async (_label, setup) => {
+      setup();
+      const error = await failWith(errorBody(new Uint8Array([0xff])));
+      expect(error).toMatchObject({ code: "invalid_request", status: 400 });
+    },
+  );
+
+  const malformed: [string, number[]][] = [
+    ["a lone continuation byte", [0x80]],
+    ["an invalid lead byte", [0xff, 0xfe]],
+    ["an overlong two-byte sequence", [0xc0, 0x80]],
+    ["an overlong three-byte sequence", [0xe0, 0x80, 0x80]],
+    ["a surrogate encoded in UTF-8", [0xed, 0xa0, 0x80]],
+    ["a code point above U+10FFFF", [0xf4, 0x90, 0x80, 0x80]],
+    ["a truncated three-byte sequence", [0xe2, 0x82]],
+    ["a truncated four-byte sequence", [0xf0, 0x9f, 0x98]],
+    ["a truncated sequence followed by ASCII", [0xe2, 0x82, 0x41]],
+    [
+      "valid multi-byte text",
+      [0xc3, 0xa9, 0xe6, 0x97, 0xa5, 0xf0, 0x9f, 0x9a, 0x80],
+    ],
+    [
+      "valid text mixed with invalid bytes",
+      [0xc3, 0xa9, 0xff, 0xe6, 0x97, 0xf0, 0x9f, 0x9a, 0x80],
+    ],
+  ];
+
+  it.each(malformed)(
+    "decodes %s without TextDecoder exactly as TextDecoder does",
+    async (_label, pattern) => {
+      const bytes = errorBody(new Uint8Array(pattern));
+      const expected = `A${new TextDecoder().decode(new Uint8Array(pattern))}B`;
+      const withDecoder = await failWith(bytes);
+      vi.stubGlobal("TextDecoder", undefined);
+      const withoutDecoder = await failWith(bytes);
+      expect(withDecoder.description).toBe(expected);
+      expect(withoutDecoder.description).toBe(expected);
+      expect(withoutDecoder.code).toBe("invalid_request");
+    },
+  );
+
+  it.each([
+    ["with TextDecoder", () => undefined],
+    ["without TextDecoder", () => vi.stubGlobal("TextDecoder", undefined)],
+  ])(
+    "strips a leading byte order mark from a failed response %s",
+    async (_label, setup) => {
+      setup();
+      const error = await failWith(
+        errorBody(new Uint8Array(), new Uint8Array([0xef, 0xbb, 0xbf])),
+      );
+      expect(error).toMatchObject({ code: "invalid_request", status: 400 });
+    },
+  );
 
   it.each([
     ["with TextDecoder", () => undefined],
