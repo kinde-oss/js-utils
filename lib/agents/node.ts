@@ -1,7 +1,11 @@
 import { lookup as dnsLookup } from "node:dns";
 import type { LookupAddress } from "node:dns";
 import { request as httpRequest } from "node:http";
-import type { ClientRequest } from "node:http";
+import type {
+  ClientRequest,
+  IncomingHttpHeaders,
+  IncomingMessage,
+} from "node:http";
 import { request as httpsRequest } from "node:https";
 import type { LookupFunction } from "node:net";
 import { types } from "node:util";
@@ -20,6 +24,73 @@ export interface SafeFetchOptions {
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const NULL_BODY_STATUSES = new Set([204, 205, 304]);
 const CREDENTIAL_HEADERS = ["authorization", "proxy-authorization", "cookie"];
+
+const toResponseHeaders = (headers: IncomingHttpHeaders): Headers => {
+  const result = new Headers();
+  for (const [name, value] of Object.entries(headers)) {
+    if (Array.isArray(value)) {
+      value.forEach((v) => result.append(name, v));
+    } else if (value !== undefined) {
+      result.set(name, value);
+    }
+  }
+  return result;
+};
+
+const streamIncoming = (
+  incoming: IncomingMessage,
+  maxBytes: number,
+  onFinish: () => void,
+  registerTimeout: (handler: (error: Error) => void) => void,
+): ReadableStream<Uint8Array> => {
+  let received = 0;
+  let finished = false;
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      const finish = () => {
+        finished = true;
+        onFinish();
+      };
+      registerTimeout((error) => {
+        if (finished) return;
+        finish();
+        controller.error(error);
+        incoming.destroy();
+      });
+      incoming.on("data", (chunk: Buffer) => {
+        if (finished) return;
+        received += chunk.byteLength;
+        if (received > maxBytes) {
+          finish();
+          controller.error(
+            new AgentAuthError(
+              "response_too_large",
+              `Response exceeded ${maxBytes} bytes`,
+            ),
+          );
+          incoming.destroy();
+          return;
+        }
+        controller.enqueue(new Uint8Array(chunk));
+      });
+      incoming.on("end", () => {
+        if (finished) return;
+        finish();
+        controller.close();
+      });
+      incoming.on("error", (error) => {
+        if (finished) return;
+        finish();
+        controller.error(error);
+      });
+    },
+    cancel() {
+      finished = true;
+      onFinish();
+      incoming.destroy();
+    },
+  });
+};
 
 const isBlockedAddress = (entry: LookupAddress): boolean => {
   try {
@@ -185,18 +256,24 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
     headers: Record<string, string>,
     body: Buffer | undefined,
     signal: AbortSignal | null | undefined,
+    discardRedirectBody: boolean,
   ): Promise<Response> =>
     new Promise<Response>((resolve, reject) => {
+      let streamTimeout: ((error: Error) => void) | undefined;
       const timer = setTimeout(() => {
         const error = new AgentAuthError(
           "request_timeout",
           `Request exceeded ${timeoutMs}ms`,
         );
+        if (streamTimeout) {
+          streamTimeout(error);
+          return;
+        }
         request?.destroy(error);
         fail(error);
       }, timeoutMs);
-      const succeed = (response: Response) => {
-        clearTimeout(timer);
+      const succeed = (response: Response, keepTimer = false) => {
+        if (!keepTimer) clearTimeout(timer);
         resolve(response);
       };
       const fail = (error: unknown) => {
@@ -220,9 +297,41 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
             ...(signal && { signal }),
           },
           (incoming) => {
+            incoming.on("error", fail);
+            const responseStatus = incoming.statusCode ?? 0;
             const canCarryBody =
-              method !== "HEAD" &&
-              !NULL_BODY_STATUSES.has(incoming.statusCode ?? 0);
+              method !== "HEAD" && !NULL_BODY_STATUSES.has(responseStatus);
+            if (
+              canCarryBody &&
+              REDIRECT_STATUSES.has(responseStatus) &&
+              incoming.headers.location !== undefined
+            ) {
+              const redirectInit = {
+                status: responseStatus,
+                statusText: incoming.statusMessage,
+                headers: toResponseHeaders(incoming.headers),
+              };
+              if (discardRedirectBody) {
+                incoming.destroy();
+                succeed(new Response(null, redirectInit));
+              } else {
+                succeed(
+                  new Response(
+                    streamIncoming(
+                      incoming,
+                      maxResponseBytes,
+                      () => clearTimeout(timer),
+                      (handler) => {
+                        streamTimeout = handler;
+                      },
+                    ),
+                    redirectInit,
+                  ),
+                  true,
+                );
+              }
+              return;
+            }
             const declared = Number(incoming.headers["content-length"]);
             if (
               canCarryBody &&
@@ -255,7 +364,6 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
               }
               chunks.push(chunk);
             });
-            incoming.on("error", fail);
             incoming.on("end", () => {
               try {
                 const status = incoming.statusCode ?? 0;
@@ -266,14 +374,7 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
                     status,
                   );
                 }
-                const responseHeaders = new Headers();
-                for (const [name, value] of Object.entries(incoming.headers)) {
-                  if (Array.isArray(value)) {
-                    value.forEach((v) => responseHeaders.append(name, v));
-                  } else if (value !== undefined) {
-                    responseHeaders.set(name, value);
-                  }
-                }
+                const responseHeaders = toResponseHeaders(incoming.headers);
                 succeed(
                   new Response(
                     canCarryBody
@@ -360,7 +461,14 @@ export const createSafeFetch = (options: SafeFetchOptions = {}): FetchLike => {
 
     for (let hop = 0; hop <= maxRedirects; hop++) {
       assertDestination(target);
-      const response = await send(target, method, headers, body, signal);
+      const response = await send(
+        target,
+        method,
+        headers,
+        body,
+        signal,
+        redirect !== "manual",
+      );
 
       if (!REDIRECT_STATUSES.has(response.status) || redirect === "manual") {
         return response;

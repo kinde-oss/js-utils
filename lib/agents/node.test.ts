@@ -42,6 +42,7 @@ vi.mock("node:dns", async (importOriginal) => {
 
 import { AgentAuthError } from "./errors";
 import { discoverAgentAuth } from "./discovery";
+import { fetchJson } from "./http";
 import { createSafeFetch } from "./node";
 
 type Handler = (
@@ -694,6 +695,169 @@ describe("createSafeFetch transport", () => {
       );
       expect(await response.text()).toBe("ok");
       expect(seen).toEqual([{ method: "POST", body: "hello world" }]);
+    });
+  });
+
+  describe("redirect responses with large or stalled bodies", () => {
+    const open: ServerResponse[] = [];
+    afterEach(() => {
+      open.splice(0).forEach((res) => res.destroy());
+    });
+
+    const base = () => `http://127.0.0.1:${port}`;
+    const capped = { ...options, maxResponseBytes: 1000, timeoutMs: 5000 };
+
+    const huge = (res: ServerResponse) => {
+      res.end("x".repeat(5000));
+    };
+    const stalled = (res: ServerResponse) => {
+      res.write("partial");
+    };
+
+    const serve = (
+      startBody: (res: ServerResponse) => void,
+      withLocation = true,
+    ) => {
+      const closed: string[] = [];
+      handler = (req, res) => {
+        if (req.url === "/final") {
+          res.setHeader("content-type", "application/json");
+          res.end('{"ok":true}');
+          return;
+        }
+        res.statusCode = 302;
+        if (withLocation) res.setHeader("location", "/final");
+        open.push(res);
+        res.on("close", () => closed.push("start"));
+        startBody(res);
+      };
+      return closed;
+    };
+
+    const waitFor = async (condition: () => boolean) => {
+      const end = performance.now() + 1500;
+      while (!condition() && performance.now() < end) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    };
+
+    it("returns a manual redirect with an oversized body at once and bounds reading it", async () => {
+      serve(huge);
+      const response = await createSafeFetch(capped)(`${base()}/start`, {
+        redirect: "manual",
+      });
+      expect(response.status).toBe(302);
+      expect(response.headers.get("location")).toBe("/final");
+      await expect(response.text()).rejects.toMatchObject({
+        code: "response_too_large",
+      });
+    });
+
+    it("does not wait for a stalled manual redirect body and lets the caller cancel it", async () => {
+      const closed = serve(stalled);
+      const started = performance.now();
+      const response = await createSafeFetch(capped)(`${base()}/start`, {
+        redirect: "manual",
+      });
+      expect(performance.now() - started).toBeLessThan(1000);
+      expect(response.status).toBe(302);
+      await response.body?.cancel();
+      await waitFor(() => closed.length > 0);
+      expect(closed).toEqual(["start"]);
+    });
+
+    it("lets fetchJson follow a redirect whose body is above the cap", async () => {
+      serve(huge);
+      await expect(
+        fetchJson(createSafeFetch(capped), `${base()}/start`, "Metadata", {
+          allowPrivateNetworks: true,
+        }),
+      ).resolves.toEqual({ ok: true });
+    });
+
+    it("lets fetchJson follow a redirect whose body is stalled and cancels that body", async () => {
+      const closed = serve(stalled);
+      const started = performance.now();
+      await expect(
+        fetchJson(createSafeFetch(capped), `${base()}/start`, "Metadata", {
+          allowPrivateNetworks: true,
+        }),
+      ).resolves.toEqual({ ok: true });
+      expect(performance.now() - started).toBeLessThan(1000);
+      await waitFor(() => closed.length > 0);
+      expect(closed).toEqual(["start"]);
+    });
+
+    it.each([
+      ["an oversized", huge],
+      ["a stalled", stalled],
+    ])(
+      "follows a redirect that has %s body when the transport follows redirects",
+      async (_label, body) => {
+        serve(body);
+        const started = performance.now();
+        const response = await createSafeFetch(capped)(`${base()}/start`);
+        expect(await response.json()).toEqual({ ok: true });
+        expect(performance.now() - started).toBeLessThan(1000);
+      },
+    );
+
+    it("keeps the redirect outcome in error mode and for non-GET requests", async () => {
+      serve(huge);
+      await expect(
+        createSafeFetch(capped)(`${base()}/start`, { redirect: "error" }),
+      ).rejects.toMatchObject({ code: "redirect_blocked" });
+      await expect(
+        createSafeFetch(capped)(`${base()}/start`, {
+          method: "POST",
+          body: "x",
+        }),
+      ).rejects.toMatchObject({ code: "redirect_blocked" });
+    });
+
+    it("keeps a small manual redirect body readable", async () => {
+      serve((res) => {
+        res.end("hello");
+      });
+      const response = await createSafeFetch(capped)(`${base()}/start`, {
+        redirect: "manual",
+      });
+      expect(response.status).toBe(302);
+      expect(await response.text()).toBe("hello");
+    });
+
+    it("bounds the time spent reading a streamed redirect body", async () => {
+      serve((res) => {
+        res.write("x");
+        const trickle = setInterval(() => res.write("x"), 20);
+        res.on("close", () => clearInterval(trickle));
+      });
+      const response = await createSafeFetch({
+        ...options,
+        maxResponseBytes: 1_000_000,
+        timeoutMs: 150,
+      })(`${base()}/start`, { redirect: "manual" });
+      const started = performance.now();
+      await expect(response.text()).rejects.toMatchObject({
+        code: "request_timeout",
+      });
+      expect(performance.now() - started).toBeLessThan(1500);
+    });
+
+    it("keeps buffering and capping responses that are not redirects with a location", async () => {
+      serve(huge, false);
+      await expect(
+        createSafeFetch(capped)(`${base()}/start`, { redirect: "manual" }),
+      ).rejects.toMatchObject({ code: "response_too_large" });
+
+      serve((res) => {
+        res.end("hello");
+      }, false);
+      const response = await createSafeFetch(capped)(`${base()}/start`, {
+        redirect: "manual",
+      });
+      expect(response.status).toBe(302);
+      expect(await response.text()).toBe("hello");
     });
   });
 
