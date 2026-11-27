@@ -70,35 +70,53 @@ export const registerClient = async (
     throw await toOAuthError(response, "Dynamic client registration");
   }
 
-  const data = await readJson<{
-    client_id?: string;
-    client_secret?: string;
-    token_endpoint_auth_method?: string;
-    registration_access_token?: string;
-    registration_client_uri?: string;
-  }>(response, "Dynamic client registration");
+  const data = await readJson<Record<string, unknown> | null>(
+    response,
+    "Dynamic client registration",
+  );
 
-  if (!data?.client_id) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
     throw new AgentAuthError(
       "invalid_response",
-      "Registration response is missing client_id",
+      "Registration response must be a JSON object",
     );
   }
 
-  if (data.token_endpoint_auth_method !== undefined) {
-    assertSupportedAuthMethod(data.token_endpoint_auth_method);
+  const clientId = data.client_id;
+  if (typeof clientId !== "string" || !clientId) {
+    throw new AgentAuthError(
+      "invalid_response",
+      "Registration response is missing a valid client_id",
+    );
+  }
+
+  const optionalString = (field: string): string | undefined => {
+    const value = data[field];
+    if (value === undefined || value === null) return undefined;
+    if (typeof value !== "string") {
+      throw new AgentAuthError(
+        "invalid_response",
+        `Registration response field ${field} must be a string`,
+      );
+    }
+    return value;
+  };
+
+  const clientSecret = optionalString("client_secret");
+  const assignedAuthMethod = optionalString("token_endpoint_auth_method");
+  const registrationAccessToken = optionalString("registration_access_token");
+  const registrationClientUri = optionalString("registration_client_uri");
+
+  if (assignedAuthMethod !== undefined) {
+    assertSupportedAuthMethod(assignedAuthMethod);
   }
 
   return {
     method: "dcr",
-    clientId: data.client_id,
-    ...(data.client_secret && { clientSecret: data.client_secret }),
-    ...(data.registration_access_token && {
-      registrationAccessToken: data.registration_access_token,
-    }),
-    ...(data.registration_client_uri && {
-      registrationClientUri: data.registration_client_uri,
-    }),
+    clientId,
+    ...(clientSecret && { clientSecret }),
+    ...(registrationAccessToken && { registrationAccessToken }),
+    ...(registrationClientUri && { registrationClientUri }),
   };
 };
 

@@ -290,6 +290,54 @@ describe("registerClient", () => {
     ).rejects.toMatchObject({ code: "invalid_redirect_uri", status: 400 });
   });
 
+  it.each([
+    ["an object client_id", { client_id: { value: "dcr-1" } }],
+    ["a numeric client_id", { client_id: 7 }],
+    ["an empty client_id", { client_id: "" }],
+    ["a non-string client_secret", { client_id: "a", client_secret: 1 }],
+    [
+      "a non-string registration_access_token",
+      { client_id: "a", registration_access_token: {} },
+    ],
+    [
+      "a non-string registration_client_uri",
+      { client_id: "a", registration_client_uri: ["x"] },
+    ],
+    [
+      "a non-string token_endpoint_auth_method",
+      { client_id: "a", token_endpoint_auth_method: 5 },
+    ],
+    ["an array body", ["a"]],
+    ["a null body", null],
+  ])("rejects a registration response with %s", async (_name, body) => {
+    await expect(
+      registerClient(serverMetadata.registration_endpoint, registration, {
+        fetch: mockFetch(() => jsonResponse(body)),
+      }),
+    ).rejects.toMatchObject({ code: "invalid_response" });
+  });
+
+  it("returns the registration credentials when they are strings", async () => {
+    await expect(
+      registerClient(serverMetadata.registration_endpoint, registration, {
+        fetch: mockFetch(() =>
+          jsonResponse({
+            client_id: "dcr-1",
+            client_secret: "s",
+            registration_access_token: "t",
+            registration_client_uri: "https://auth.example.com/register/dcr-1",
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      method: "dcr",
+      clientId: "dcr-1",
+      clientSecret: "s",
+      registrationAccessToken: "t",
+      registrationClientUri: "https://auth.example.com/register/dcr-1",
+    });
+  });
+
   it("requires client_id in the response", async () => {
     await expect(
       registerClient(serverMetadata.registration_endpoint, registration, {
